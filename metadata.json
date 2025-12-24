@@ -1,0 +1,19 @@
+{
+  "name": "f Cathedra Digital",
+  "short_name": "Cathedra",
+  "description": "Plataforma profissional de estudos teológicos católicos com busca relacional.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfcf8",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/ios-filled/512/d4af37/cross.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
