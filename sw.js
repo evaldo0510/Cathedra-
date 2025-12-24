@@ -6,7 +6,8 @@ const STATIC_ASSETS = [
   '/index.tsx',
   '/metadata.json',
   'https://cdn.tailwindcss.com',
-  'https://www.transparenttextures.com/patterns/natural-paper.png'
+  'https://www.transparenttextures.com/patterns/natural-paper.png',
+  'https://img.icons8.com/ios-filled/512/d4af37/cross.png'
 ];
 
 const STALE_WHILE_REVALIDATE_URLS = [
@@ -19,7 +20,7 @@ const STALE_WHILE_REVALIDATE_URLS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching assets');
+      console.log('[SW] Pre-caching core assets for PWA installability');
       return cache.addAll(STATIC_ASSETS);
     })
   );
@@ -40,12 +41,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
-  // Ignora chamadas da API Gemini (o app gerencia via LocalStorage/withRetry)
+  // Skip Gemini API calls (managed via LocalStorage/withRetry)
   if (url.includes('generativelanguage.googleapis.com')) {
     return;
   }
 
-  // Estratégia Stale-While-Revalidate para recursos externos (fontes, imagens)
+  // Strategy: Stale-While-Revalidate for external resources
   const isExternalResource = STALE_WHILE_REVALIDATE_URLS.some(domain => url.includes(domain));
 
   if (isExternalResource) {
@@ -66,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estratégia Cache-First para ativos locais do manifesto
+  // Strategy: Cache-First for local assets
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).then((networkResponse) => {
@@ -80,7 +81,7 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       });
     }).catch(() => {
-      // Fallback para navegação
+      // Navigation Fallback
       if (event.request.mode === 'navigate') {
         return caches.match('/index.html');
       }

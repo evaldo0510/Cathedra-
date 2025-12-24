@@ -3,17 +3,35 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cathedra Digital - Inteligência Teológica</title>
     <meta name="description" content="A plataforma definitiva para estudos católicos com busca relacional entre Bíblia, Catecismo e Magistério.">
+    
+    <!-- PWA Primary Color -->
     <meta name="theme-color" content="#1a1a1a">
+    
+    <!-- iOS / Safari Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cathedra">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/ios-filled/512/d4af37/cross.png">
+    
+    <!-- Manifest -->
     <link rel="manifest" href="/metadata.json">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #fdfcf8; color: #1a1a1a; margin: 0; overflow-x: hidden; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #fdfcf8; 
+            color: #1a1a1a; 
+            margin: 0; 
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
         .font-serif { font-family: 'Playfair Display', serif; }
         
         ::-webkit-scrollbar { width: 6px; }
@@ -22,14 +40,13 @@
         
         .sacred-gradient { background: linear-gradient(135deg, #1a1a1a 0%, #3a0000 100%); }
         
-        /* Efeito Parallax Sutil no Fundo */
         .parchment { 
             background-color: #fdfcf8;
             background-image: 
                 url("https://www.transparenttextures.com/patterns/natural-paper.png"),
                 radial-gradient(#efe7d1 0.5px, transparent 0.5px);
             background-size: auto, 30px 30px;
-            background-attachment: fixed; /* Cria a base do parallax sutil */
+            background-attachment: fixed;
         }
 
         .sacred-background {
@@ -46,11 +63,11 @@
         .sacred-background::before {
             content: "";
             position: absolute;
-            inset: -10%; /* Extra space for parallax feel */
+            inset: -10%;
             background-image: url('https://images.unsplash.com/photo-1544145945-f904253d0c7b?q=80&w=1500');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed; /* Parallax effect */
+            background-attachment: fixed;
             opacity: 0.03;
             filter: sepia(100%) contrast(110%);
             pointer-events: none;
