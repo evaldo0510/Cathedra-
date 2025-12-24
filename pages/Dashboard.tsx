@@ -2,12 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from '../constants';
 import { getDailySaint, getDailyGospel, getDogmas, getDailyQuote, generateSpeech } from '../services/gemini';
-import { Saint, Gospel, Dogma, AppRoute } from '../types';
+import { Saint, Gospel, Dogma, AppRoute, User } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
+import MemberBanner from '../components/MemberBanner';
 
 interface DashboardProps {
   onSearch: (topic: string) => void;
   onNavigate: (route: AppRoute) => void;
+  user: User | null;
 }
 
 const LITURGY_COLORS: Record<string, string> = {
@@ -25,7 +27,7 @@ const TRILHAS = [
   { title: 'Defesa da Fé', desc: 'Apologética para os tempos atuais.', route: AppRoute.DOGMAS, icon: Icons.Feather },
 ];
 
-const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => {
   const [saint, setSaint] = useState<Saint | null>(null);
   const [gospel, setGospel] = useState<Gospel | null>(null);
   const [recentDogma, setRecentDogma] = useState<Dogma | null>(null);
@@ -106,7 +108,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate }) => {
 
   return (
     <div className="space-y-16 md:space-y-24 page-enter pb-32">
-      {/* Status Litúrgico Profissional (Inspirado no Liturgical-Calendar GitHub) */}
+      {/* Banner de Membro para não logados ou Peregrinos */}
+      {!user && (
+        <MemberBanner onJoin={() => onNavigate(AppRoute.LOGIN)} />
+      )}
+
+      {/* Status Litúrgico Profissional */}
       {!loadingDaily && gospel?.calendar && (
         <div className="animate-in slide-in-from-top duration-1000">
           <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 bg-white/80 backdrop-blur-2xl p-6 rounded-[3rem] border border-stone-200 shadow-sacred max-w-4xl mx-auto group hover:border-[#d4af37]/40 transition-all duration-700">
@@ -205,6 +212,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate }) => {
                 </div>
                 <h4 className="text-2xl font-serif font-bold text-stone-900 mb-4">{trilha.title}</h4>
                 <p className="text-stone-400 text-[12px] font-serif italic leading-relaxed">{trilha.desc}</p>
+                {/* Badge Grátis */}
+                <span className="mt-4 inline-block text-[8px] font-black text-green-500 uppercase tracking-widest">Acesso Aberto</span>
               </button>
             ))}
           </div>
@@ -342,23 +351,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate }) => {
              </div>
           </div>
 
-          {/* Chamada para o Aquinate */}
-          <div className="bg-[#1a1a1a] p-14 rounded-[5rem] text-white space-y-10 relative overflow-hidden group shadow-3xl transition-all duration-1000 hover:scale-[1.02]">
-             <div className="absolute -top-10 -right-10 p-12 opacity-[0.05] group-hover:rotate-12 transition-transform duration-1000">
-                <Icons.Feather className="w-48 h-48 text-[#d4af37]" />
-             </div>
+          {/* Chamada para a Comunidade Aula Magna */}
+          <div className="bg-[#8b0000] p-14 rounded-[5rem] text-white space-y-10 relative overflow-hidden group shadow-3xl transition-all duration-1000 hover:scale-[1.02]">
+             <Icons.Users className="absolute -top-10 -right-10 w-48 h-48 text-white/10 group-hover:rotate-12 transition-transform duration-1000" />
              <div className="space-y-4 relative z-10">
-                <h4 className="text-[12px] font-black uppercase tracking-[0.6em] text-[#d4af37]">Disputatio Escolástica</h4>
-                <h3 className="text-5xl font-serif font-bold leading-none tracking-tight">Biblioteca do Aquinate</h3>
+                <h4 className="text-[12px] font-black uppercase tracking-[0.6em] text-[#d4af37]">Aula Magna</h4>
+                <h3 className="text-5xl font-serif font-bold leading-none tracking-tight">Comunidade Viva</h3>
              </div>
-             <p className="text-white/50 font-serif italic text-2xl leading-relaxed relative z-10">
-               Submeta suas dúvidas ao método do Doutor Angélico.
+             <p className="text-white/70 font-serif italic text-2xl leading-relaxed relative z-10">
+               Traga suas dúvidas e debata com outros estudiosos.
              </p>
              <button 
-               onClick={() => onNavigate(AppRoute.AQUINAS)}
+               onClick={() => onNavigate(AppRoute.COMMUNITY)}
                className="w-full py-9 bg-white text-stone-900 rounded-[2.5rem] font-black uppercase tracking-widest text-xs hover:bg-[#d4af37] transition-all shadow-2xl relative z-10 active:scale-95"
              >
-               Iniciar Disputa Teológica
+               Entrar na Aula Magna
              </button>
           </div>
           

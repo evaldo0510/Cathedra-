@@ -1,27 +1,35 @@
 
 import React from 'react';
 import { Icons } from '../constants';
-import { AppRoute } from '../types';
+import { AppRoute, User } from '../types';
 
 interface SidebarProps {
   currentPath: AppRoute;
   onNavigate: (p: AppRoute) => void;
   onClose?: () => void;
+  user: User | null;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user, onLogout }) => {
   const items = [
-    { r: AppRoute.DASHBOARD, l: 'Início', i: Icons.Home },
-    { r: AppRoute.LITURGICAL_CALENDAR, l: 'Calendário Litúrgico', i: Icons.History },
-    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout },
-    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather },
-    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather },
-    { r: AppRoute.BIBLE, l: 'Bíblia Sagrada', i: Icons.Book },
-    { r: AppRoute.CATECHISM, l: 'Catecismo', i: Icons.Cross },
-    { r: AppRoute.DOGMAS, l: 'Dogmas e Verdades', i: Icons.Feather },
-    { r: AppRoute.SAINTS, l: 'Nuvem de Testemunhas', i: Icons.Users },
-    { r: AppRoute.SOCIAL_DOCTRINE, l: 'Compêndio Social', i: Icons.Globe },
+    { r: AppRoute.DASHBOARD, l: 'Início', i: Icons.Home, guest: true },
+    { r: AppRoute.LITURGICAL_CALENDAR, l: 'Calendário Litúrgico', i: Icons.History, guest: true },
+    { r: AppRoute.COMMUNITY, l: 'Aula Magna', i: Icons.Users, guest: true },
+    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: false, premium: true },
+    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: false, premium: true },
+    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather, guest: false, premium: true },
+    { r: AppRoute.BIBLE, l: 'Bíblia Sagrada', i: Icons.Book, guest: true },
+    { r: AppRoute.CATECHISM, l: 'Catecismo', i: Icons.Cross, guest: true, freeBadge: true },
+    { r: AppRoute.MAGISTERIUM, l: 'Magistério', i: Icons.Globe, guest: true, freeBadge: true },
+    { r: AppRoute.DOGMAS, l: 'Dogmas e Verdades', i: Icons.Feather, guest: true },
+    { r: AppRoute.SAINTS, l: 'Nuvem de Testemunhas', i: Icons.Users, guest: true },
+    { r: AppRoute.SOCIAL_DOCTRINE, l: 'Compêndio Social', i: Icons.Globe, guest: true },
   ];
+
+  if (user?.role === 'admin') {
+    items.push({ r: AppRoute.ADMIN, l: 'Administração', i: Icons.Layout, guest: false, premium: false });
+  }
 
   return (
     <aside className="h-full sacred-gradient text-white flex flex-col p-8 md:p-10 shadow-2xl border-r border-[#d4af37]/20 z-50 overflow-y-auto custom-scrollbar">
@@ -43,35 +51,73 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose }) =
       </div>
       
       <nav className="flex-1 space-y-1 md:space-y-2">
-        {items.map(item => (
-          <button 
-            key={item.l}
-            onClick={() => {
-              onNavigate(item.r);
-              if (onClose) onClose();
-            }}
-            className={`w-full flex items-center gap-4 md:gap-5 px-5 md:px-7 py-4 md:py-5 rounded-[1.2rem] md:rounded-[1.5rem] transition-all duration-300 group relative ${currentPath === item.r ? 'bg-[#d4af37] text-stone-900 shadow-xl scale-[1.02]' : 'hover:bg-white/5 text-white/60'}`}
-          >
-            {currentPath === item.r && (
-              <div className="absolute left-0 w-1.5 h-6 md:h-8 bg-[#8b0000] rounded-r-full" />
-            )}
-            <item.i className={`w-5 h-5 transition-colors duration-300 ${currentPath === item.r ? 'text-stone-900' : 'text-[#d4af37] group-hover:text-white'}`} />
-            <span className={`font-semibold tracking-wide text-sm md:text-base ${currentPath === item.r ? 'font-bold' : ''}`}>{item.l}</span>
-          </button>
-        ))}
+        {items.map(item => {
+          const isLocked = !item.guest && !user;
+          return (
+            <button 
+              key={item.l}
+              onClick={() => {
+                if (isLocked) {
+                  onNavigate(AppRoute.LOGIN);
+                } else {
+                  onNavigate(item.r);
+                }
+                if (onClose) onClose();
+              }}
+              className={`w-full flex items-center gap-4 md:gap-5 px-5 md:px-7 py-4 md:py-5 rounded-[1.2rem] md:rounded-[1.5rem] transition-all duration-300 group relative ${currentPath === item.r ? 'bg-[#d4af37] text-stone-900 shadow-xl scale-[1.02]' : 'hover:bg-white/5 text-white/60'}`}
+            >
+              {currentPath === item.r && (
+                <div className="absolute left-0 w-1.5 h-6 md:h-8 bg-[#8b0000] rounded-r-full" />
+              )}
+              <item.i className={`w-5 h-5 transition-colors duration-300 ${currentPath === item.r ? 'text-stone-900' : isLocked ? 'text-white/20' : 'text-[#d4af37] group-hover:text-white'}`} />
+              <div className="flex-1 text-left">
+                <span className={`font-semibold tracking-wide text-sm md:text-base ${currentPath === item.r ? 'font-bold' : ''} ${isLocked ? 'text-white/20' : ''}`}>
+                  {item.l}
+                </span>
+                {item.freeBadge && (
+                  <span className="ml-2 text-[7px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full uppercase font-black tracking-tighter">Aberto</span>
+                )}
+              </div>
+              {item.premium && !user && (
+                <div className="ml-auto opacity-40">
+                  <Icons.Audio className="w-3 h-3 text-[#d4af37]" />
+                </div>
+              )}
+            </button>
+          );
+        })}
       </nav>
       
       <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
-        <button 
-          onClick={() => { onNavigate(AppRoute.ABOUT); if(onClose) onClose(); }}
-          className={`w-full flex items-center gap-4 px-5 py-3 rounded-xl transition-all ${currentPath === AppRoute.ABOUT ? 'text-[#d4af37] bg-white/5' : 'text-white/30 hover:text-white/60'}`}
-        >
-          <Icons.Feather className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Sobre o Projeto</span>
-        </button>
-        <p className="text-[10px] italic text-white/20 uppercase tracking-[0.3em] text-center font-serif">
-          Ad Maiorem Dei Gloriam
-        </p>
+        {user ? (
+          <div className="space-y-4">
+             <button 
+              onClick={() => { onNavigate(AppRoute.PROFILE); if(onClose) onClose(); }}
+              className="w-full flex items-center gap-4 px-5 py-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all group"
+            >
+              <div className="w-8 h-8 rounded-full bg-[#d4af37] flex items-center justify-center text-stone-900 font-black text-[10px]">
+                {user.name.charAt(0)}
+              </div>
+              <div className="flex-1 text-left overflow-hidden">
+                <p className="text-xs font-bold truncate">{user.name}</p>
+                <p className="text-[8px] text-[#d4af37] uppercase tracking-widest">{user.role}</p>
+              </div>
+            </button>
+            <button 
+              onClick={onLogout}
+              className="w-full py-3 text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-[#8b0000] transition-colors"
+            >
+              Sair do Santuário
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => { onNavigate(AppRoute.LOGIN); if(onClose) onClose(); }}
+            className="w-full py-5 bg-[#d4af37] text-stone-900 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95"
+          >
+            Acesso do Membro
+          </button>
+        )}
       </div>
     </aside>
   );

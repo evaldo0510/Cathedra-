@@ -31,44 +31,75 @@ export interface Dogma {
   period?: string;
 }
 
-export interface SocialDoctrineTheme {
-  id: string;
-  title: string;
-  icon: string;
-  questions: Array<{
-    q: string;
-    a: string;
-    ref: string;
-  }>;
-}
-
+// Added missing interface LiturgyInfo to fix reported errors
 export interface LiturgyInfo {
-  color: 'green' | 'purple' | 'white' | 'red' | 'rose' | 'black';
+  color: string;
   season: string;
   rank: string;
   dayName: string;
-  cycle?: string; // Ex: Ano B, Ano II
-  week?: string;  // Ex: III Semana do Tempo Comum
+  cycle: string;
+  week: string;
   date?: string;
 }
 
+// Added missing interface Gospel to fix reported errors
 export interface Gospel {
   reference: string;
   text: string;
   reflection: string;
-  calendar?: LiturgyInfo;
-  sources?: any[];
+  calendar: LiturgyInfo;
 }
 
+// Added missing interface StudyResult to fix reported errors
 export interface StudyResult {
   topic: string;
   summary: string;
   bibleVerses: Verse[];
   catechismParagraphs: CatechismParagraph[];
-  magisteriumDocs: Array<{ title: string; content: string; source: string }>;
-  saintsQuotes: Array<{ saint: string; quote: string }>;
-  dogmasRelated?: Dogma[];
-  sources?: any[];
+  magisteriumDocs: {
+    title: string;
+    content: string;
+    source: string;
+  }[];
+  saintsQuotes: {
+    saint: string;
+    quote: string;
+  }[];
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'pilgrim' | 'scholar' | 'admin';
+  joinedAt: string;
+  avatar?: string;
+  stats: {
+    versesSaved: number;
+    studiesPerformed: number;
+    daysActive: number;
+  };
+}
+
+export interface CommunityQuestion {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  votes: number;
+  category: string;
+  replies: CommunityReply[];
+}
+
+export interface CommunityReply {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: string;
+  isAI?: boolean;
 }
 
 export enum AppRoute {
@@ -83,5 +114,9 @@ export enum AppRoute {
   COLLOQUIUM = '/colloquium',
   ABOUT = '/about',
   AQUINAS = '/aquinas',
-  LITURGICAL_CALENDAR = '/calendar'
+  LITURGICAL_CALENDAR = '/calendar',
+  LOGIN = '/login',
+  PROFILE = '/profile',
+  ADMIN = '/admin',
+  COMMUNITY = '/community'
 }
