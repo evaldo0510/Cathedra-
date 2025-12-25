@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import StudyMode from './pages/StudyMode';
 import Bible from './pages/Bible';
@@ -24,6 +25,7 @@ import { getIntelligentStudy } from './services/gemini';
 import { trackAccess } from './services/adminService';
 import { fetchUserData, syncUserData } from './services/supabase';
 import { Icons } from './constants';
+import { notificationService } from './services/notifications';
 
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
@@ -63,6 +65,9 @@ const App: React.FC = () => {
       setShowInstallBanner(true);
     });
 
+    // Lembrete Diário ao abrir o app
+    notificationService.scheduleDailyReminder();
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -84,6 +89,8 @@ const App: React.FC = () => {
     const { outcome } = await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setShowInstallBanner(false);
+    // Pedir permissão de notificação após instalar
+    await notificationService.requestPermission();
   };
 
   const syncWithSupabase = async (userId: string) => {
@@ -113,6 +120,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
     trackAccess(!!user, isPremiumRoute);
+    
+    // Scroll to top on route change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route, user]);
 
   const handleLogout = () => {
@@ -130,7 +140,7 @@ const App: React.FC = () => {
       setRoute(AppRoute.STUDY_MODE);
     } catch (e: any) {
       console.error("Erro na busca:", e);
-      setSearchError("O santuário digital está sobrecarregado. Tente uma busca mais curta ou verifique sua cota.");
+      setSearchError("O santuário digital está sobrecarregado. Tente uma busca mais curta.");
       setTimeout(() => setSearchError(null), 5000);
     } finally {
       setLoading(false);
@@ -185,21 +195,15 @@ const App: React.FC = () => {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest leading-none">Cota de Pesquisa Atingida</p>
-              <p className="text-[9px] opacity-80 font-serif italic mt-0.5">
-                Para alta performance sem limites, use sua própria chave. 
-                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline ml-1 font-bold">Verificar Billing</a>
-              </p>
+              <p className="text-[9px] opacity-80 font-serif italic mt-0.5">Para alta performance sem limites, use sua própria chave.</p>
             </div>
           </div>
-          <div className="flex gap-4">
-            <button onClick={() => setQuotaExceeded(false)} className="text-[9px] font-black uppercase tracking-widest opacity-60 hover:opacity-100">Ignorar</button>
-            <button 
-              onClick={handleOpenKeyDialog}
-              className="px-6 py-2.5 bg-[#d4af37] text-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95"
-            >
-              Fornecer Minha Chave
-            </button>
-          </div>
+          <button 
+            onClick={handleOpenKeyDialog}
+            className="px-6 py-2.5 bg-[#d4af37] text-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95"
+          >
+            Fornecer Minha Chave
+          </button>
         </div>
       )}
 
@@ -210,8 +214,8 @@ const App: React.FC = () => {
               <Icons.Layout className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Instalar Cathedra Pro</p>
-              <p className="text-[9px] opacity-60 font-serif italic mt-0.5">Acesse o santuário offline da sua tela inicial.</p>
+              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Instalar Cathedra Digital</p>
+              <p className="text-[9px] opacity-60 font-serif italic mt-0.5">Acesse o santuário da sua tela inicial.</p>
             </div>
           </div>
           <div className="flex gap-4">
@@ -238,7 +242,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar - Oculta em modo compacto se não for mobile */}
       <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'} ${(isCompact && !isSidebarOpen) ? 'lg:hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsSidebarOpen(false)} />
         <div className={`relative h-full w-80 max-w-[85vw] transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
@@ -262,7 +265,6 @@ const App: React.FC = () => {
            </div>
         </div>
 
-        {/* Botão para restaurar do modo compacto (Apenas Desktop) */}
         {isCompact && (
           <button 
             onClick={() => setIsCompact(false)}
@@ -273,10 +275,15 @@ const App: React.FC = () => {
           </button>
         )}
 
-        <div className={`flex-1 transition-all duration-500 ${isCompact ? 'p-2' : 'p-6 md:p-12 lg:p-16'}`}>
-          <div className={`mx-auto h-full no-print transition-all duration-500 ${isCompact ? 'max-w-4xl' : 'max-w-[1500px]'}`}>
+        <div className={`flex-1 transition-all duration-500`}>
+          <div className={`mx-auto h-full no-print transition-all duration-500 ${isCompact ? 'max-w-4xl p-2' : 'max-w-[1500px] p-6 md:p-12 lg:p-16'}`}>
             {renderContent()}
           </div>
+          
+          {/* Footer Global em todas as páginas exceto checkout/login */}
+          {![AppRoute.CHECKOUT, AppRoute.LOGIN].includes(route) && (
+            <Footer onNavigate={setRoute} />
+          )}
         </div>
       </main>
     </div>

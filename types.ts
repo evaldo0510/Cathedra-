@@ -19,6 +19,7 @@ export interface Saint {
   biography: string;
   image?: string;
   quote?: string;
+  sources?: { title: string; uri: string }[];
 }
 
 export interface Dogma {
@@ -54,6 +55,7 @@ export interface Gospel extends LiturgyReading {
   firstReading?: LiturgyReading;
   psalm?: LiturgyReading;
   secondReading?: LiturgyReading;
+  sources?: { title: string; uri: string }[];
 }
 
 export interface StudyResult {
@@ -70,6 +72,7 @@ export interface StudyResult {
     saint: string;
     quote: string;
   }[];
+  sources?: { title: string; uri: string }[];
 }
 
 export interface User {

@@ -1,10 +1,10 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 2.3.0-push-enabled
+ * Versão: 2.4.0-push-enabled
  */
 
-const CACHE_NAME = 'cathedra-v2.3-push';
+const CACHE_NAME = 'cathedra-v2.4';
 
 const STATIC_ASSETS = [
   './',
@@ -39,17 +39,25 @@ self.addEventListener('activate', (event) => {
 
 // Lógica de Push Notification
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {
+  let data = {
     title: 'Cathedra Digital',
-    body: 'O Pão Espiritual do dia está pronto para você.',
+    body: 'O pão espiritual do dia está pronto para você.',
     icon: 'https://img.icons8.com/ios-filled/192/d4af37/cross.png'
   };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
 
   const options = {
     body: data.body,
     icon: data.icon || 'https://img.icons8.com/ios-filled/192/d4af37/cross.png',
     badge: 'https://img.icons8.com/ios-filled/96/d4af37/cross.png',
-    vibrate: [200, 100, 200],
+    vibrate: [200, 100, 200, 100, 200],
     data: {
       url: data.url || '/'
     }
@@ -63,18 +71,25 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data.url)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      if (clientList.length > 0) {
+        return clientList[0].focus();
+      }
+      return clients.openWindow(event.notification.data.url || '/');
+    })
   );
 });
 
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
+  // Não cachear chamadas de API ou pagamento
   if (url.includes('generativelanguage.googleapis.com') || url.includes('stripe.com')) return;
 
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).then(netRes => {
-        if (netRes && netRes.status === 200 && url.includes('unsplash.com')) {
+        // Cachear imagens externas dinamicamente (Santos, etc)
+        if (netRes && netRes.status === 200 && (url.includes('unsplash.com') || url.includes('wikimedia.org'))) {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, netRes.clone()));
         }
         return netRes;
