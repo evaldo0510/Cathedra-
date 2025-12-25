@@ -8,7 +8,8 @@ REGRAS:
 1. Retorne APENAS JSON puro quando solicitado.
 2. Grounding: Sempre use Google Search para buscar informações precisas e recentes.
 3. Imagens: Ao buscar santos, você DEVE retornar URLs de imagens PÚBLICAS e ESTÁVEIS (prioridade: Wikimedia Commons, Vatican.va, ou Unsplash). Certifique-se de que o link termine em .jpg, .png ou .webp.
-4. Se não encontrar uma imagem real, use uma URL de alta qualidade de uma catedral clássica do Unsplash.`;
+4. Se não encontrar uma imagem real, use uma URL de alta qualidade de uma catedral clássica do Unsplash.
+5. Liturgia: Ao retornar a cor litúrgica, use apenas as strings: 'green', 'purple', 'white', 'red' ou 'rose'.`;
 
 const IMAGE_BACKUPS = [
   "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800",
@@ -18,7 +19,7 @@ const IMAGE_BACKUPS = [
 const FALLBACK_GOSPEL: Gospel = {
   reference: "Jo 1, 1-5",
   text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus.",
-  reflection: "Hoje contemplamos o mistério do Verbo Encarnado.",
+  reflection: "Hoje contemplamos o mistério do Verbo Encarnado, a Luz que brilha nas trevas e que nos convida a sermos, também nós, portadores dessa luz no mundo.",
   title: "Evangelho segundo João",
   calendar: {
     color: "white",
@@ -29,15 +30,11 @@ const FALLBACK_GOSPEL: Gospel = {
     week: "I Semana"
   },
   firstReading: { title: "1ª Leitura", reference: "Gn 1, 1", text: "No princípio Deus criou o céu e a terra." },
-  psalm: { title: "Salmo Responsorial", reference: "Sl 22", text: "O Senhor é o meu pastor." }
+  psalm: { title: "Salmo Responsorial", reference: "Sl 22", text: "O Senhor é o meu pastor, nada me faltará." }
 };
 
-// CRITICAL: Always create a fresh instance before API calls
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-/**
- * Extracts grounding sources from a response object as required by guidelines.
- */
 const extractSources = (response: any) => {
   return response.candidates?.[0]?.groundingMetadata?.groundingChunks
     ?.map((chunk: any) => ({
@@ -62,13 +59,22 @@ export const getDailyGospel = async (): Promise<Gospel> => {
     const today = new Date().toLocaleDateString('pt-BR');
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Pesquise a Liturgia Católica de hoje (${today}). Retorne JSON: 
+      contents: `Pesquise a Liturgia Católica oficial de hoje (${today}). Retorne JSON: 
       { 
-        "reference": "ref", "text": "texto integral", "reflection": "meditação", 
-        "calendar": { "color": "green|purple|white|red", "season": "Tempo", "rank": "string", "dayName": "string", "cycle": "B", "week": "Semana" },
+        "reference": "ref", 
+        "text": "texto integral do evangelho", 
+        "reflection": "uma meditação teológica profunda de 3 parágrafos", 
+        "title": "Evangelho segundo...",
+        "calendar": { 
+          "color": "green|purple|white|red|rose", 
+          "season": "Tempo Litúrgico", 
+          "rank": "Solenidade|Festa|Memória|Féria", 
+          "dayName": "Nome do dia (ex: 4º Domingo do Advento)", 
+          "cycle": "A|B|C", 
+          "week": "Semana do Tempo" 
+        },
         "firstReading": { "title": "1ª Leitura", "reference": "ref", "text": "texto" },
-        "psalm": { "title": "Salmo Responsorial", "reference": "ref", "text": "texto" },
-        "secondReading": { "title": "2ª Leitura", "reference": "ref", "text": "texto (se houver)" }
+        "psalm": { "title": "Salmo Responsorial", "reference": "ref", "text": "texto" }
       }`,
       config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
     });
@@ -84,7 +90,7 @@ export const getDailySaint = async (): Promise<Saint> => {
     const today = new Date().toLocaleDateString('pt-BR');
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Santo do dia de hoje (${today}). Retorne JSON: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": "URL direta de imagem estável (.jpg/.png)", "quote": string }. Use Google Search para garantir que a imagem seja do santo correto.`,
+      contents: `Santo do dia de hoje (${today}). Retorne JSON: { "name": string, "feastDay": string, "patronage": string, "biography": "biografia de 2 parágrafos", "image": "URL direta de imagem estável", "quote": "uma frase famosa do santo" }.`,
       config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
     });
     const parsed = JSON.parse(response.text || "{}");
@@ -94,10 +100,10 @@ export const getDailySaint = async (): Promise<Saint> => {
   }, {
     name: "São Bento",
     feastDay: "11 de Julho",
-    patronage: "Europa",
-    biography: "Pai do monaquismo ocidental.",
+    patronage: "Europa e Monges",
+    biography: "Pai do monaquismo ocidental e autor da famosa Regra que equilibra oração e trabalho.",
     image: IMAGE_BACKUPS[0],
-    quote: "Ora et Labora."
+    quote: "A oração deve ser curta e pura, a menos que se prolongue por um afeto da inspiração divina."
   });
 };
 
@@ -106,7 +112,7 @@ export const getDailyQuote = async () => {
     const ai = getAIInstance();
     const res = await ai.models.generateContent({ 
       model: 'gemini-3-flash-preview', 
-      contents: "Citação inspiradora de um Santo. JSON: { \"quote\": string, \"author\": string }", 
+      contents: "Citação inspiradora de um Santo para o dia de hoje. JSON: { \"quote\": string, \"author\": string }", 
       config: { responseMimeType: "application/json" } 
     });
     return JSON.parse(res.text || '{"quote": "Onde há amor, Deus aí está.", "author": "Ubi Caritas"}');
@@ -116,7 +122,7 @@ export const getDailyQuote = async () => {
 export const getIntelligentStudy = async (topic: string): Promise<StudyResult> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview', // Modelo Pro para maior profundidade teológica
+    model: 'gemini-3-pro-preview',
     contents: `Estudo teológico sobre: "${topic}". JSON Schema: { "topic": string, "summary": string, "bibleVerses": [{"book": string, "chapter": number, "verse": number, "text": string}], "catechismParagraphs": [{"number": number, "content": string}], "magisteriumDocs": [{"title": string, "content": string, "source": string}], "saintsQuotes": [{"saint": string, "quote": string}] }`,
     config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
   });
@@ -129,18 +135,17 @@ export const getLiturgyInsight = async (title: string, reference: string, text: 
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Comentário exegético: "${title} (${reference}): ${text}".`,
-    config: { systemInstruction: "Seja um teólogo profundo e conciso." }
+    contents: `Comentário exegético profundo: "${title} (${reference}): ${text}".`,
+    config: { systemInstruction: "Seja um teólogo profundo, seguindo a tradição patrística e escolástica." }
   });
   return response.text || "Comentário indisponível.";
 };
 
-// Fix: Correct modality and speech config for single speaker TTS
 export const generateSpeech = async (text: string): Promise<string> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text: `Say with solemnity: ${text}` }] }],
+    contents: [{ parts: [{ text: `Diga com solenidade e clareza: ${text}` }] }],
     config: { 
       responseModalities: [Modality.AUDIO],
       speechConfig: {
@@ -157,7 +162,7 @@ export const getSaintsList = async (): Promise<Saint[]> => {
   const ai = getAIInstance();
   const res = await ai.models.generateContent({ 
     model: 'gemini-3-flash-preview', 
-    contents: "Lista de 6 santos populares. JSON.", 
+    contents: "Lista de 6 santos populares com imagens estáveis. JSON.", 
     config: { responseMimeType: "application/json" } 
   });
   return JSON.parse(res.text || "[]");
@@ -167,7 +172,7 @@ export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
   const ai = getAIInstance();
   const res = await ai.models.generateContent({ 
     model: 'gemini-3-flash-preview', 
-    contents: "Calendário litúrgico 7 dias. JSON.", 
+    contents: "Calendário litúrgico dos próximos 7 dias. JSON.", 
     config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" } 
   });
   return JSON.parse(res.text || "[]");
@@ -177,7 +182,7 @@ export const searchVerse = async (query: string): Promise<Verse> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Busque versículo para: "${query}". JSON.`,
+    contents: `Busque o versículo exato para: "${query}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "{}");
@@ -187,16 +192,16 @@ export const getVerseCommentary = async (verse: Verse): Promise<string> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Comentário exegético: ${verse.book} ${verse.chapter}:${verse.verse}.`,
+    contents: `Forneça um comentário exegético católico sobre: ${verse.book} ${verse.chapter}:${verse.verse}.`,
   });
-  return response.text || "Sem comentário.";
+  return response.text || "Sem comentário disponível.";
 };
 
 export const getCatechismSearch = async (query: string): Promise<CatechismParagraph[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Busque no CIC: "${query}". JSON.`,
+    contents: `Busque no Catecismo da Igreja Católica: "${query}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "[]");
@@ -206,7 +211,7 @@ export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagrap
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Dogmas para CIC: ${paragraphs.map(p=>p.number).join(',')}. JSON.`,
+    contents: `Dogmas relacionados aos parágrafos do CIC: ${paragraphs.map(p=>p.number).join(',')}. JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "{}");
@@ -216,7 +221,7 @@ export const getMagisteriumDocs = async (category: string): Promise<any[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Documentos para: "${category}". JSON.`,
+    contents: `Documentos do Magistério para a categoria: "${category}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "[]");
@@ -226,7 +231,7 @@ export const getDogmas = async (query?: string): Promise<Dogma[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Dogmas católicos. JSON.`,
+    contents: `Principais dogmas católicos. JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "[]");
@@ -247,7 +252,7 @@ export const getThomisticSynthesis = async (topic: string): Promise<any> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Síntese tomista: "${topic}". JSON.`,
+    contents: `Síntese tomista sobre: "${topic}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "{}");
@@ -257,7 +262,7 @@ export const getLectioPoints = async (text: string): Promise<string[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Pontos Lectio: "${text}". JSON.`,
+    contents: `Pontos para Lectio Divina: "${text}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
   return JSON.parse(response.text || "[]");
