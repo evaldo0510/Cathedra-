@@ -7,8 +7,15 @@ Sua missão é fornecer informações precisas sobre a fé Católica, baseada no
 REGRAS:
 1. Retorne APENAS JSON puro quando solicitado.
 2. Grounding: Sempre use Google Search para Liturgia Diária e notícias recentes da Igreja.
-3. Imagens de Santos: Para o campo "image", retorne sempre uma URL de alta qualidade do Unsplash focada em arte sacra.
+3. Imagens de Santos: No campo "image", retorne SEMPRE uma URL direta e válida do Unsplash (ex: https://images.unsplash.com/photo-...) focada em arte sacra, vitrais ou ícones. Não invente URLs.
 4. Rigor: Ao citar comentários, prefira Santo Agostinho, São Tomás de Aquino e o Catecismo.`;
+
+// IMAGENS DE BACKUP INFALÍVEIS
+const IMAGE_BACKUPS = [
+  "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800",
+  "https://images.unsplash.com/photo-1544427920-c49ccfb85579?q=80&w=800",
+  "https://images.unsplash.com/photo-1515600051222-73c3393ba0a2?q=80&w=800"
+];
 
 // DADOS DE EMERGÊNCIA (Fallbacks garantidos)
 const FALLBACK_GOSPEL: Gospel = {
@@ -31,7 +38,7 @@ const FALLBACK_SAINT: Saint = {
   feastDay: "11 de Julho",
   patronage: "Padroeiro da Europa e dos Monges",
   biography: "Pai do monaquismo ocidental, São Bento ensinou o equilíbrio entre a oração e o trabalho (Ora et Labora). Sua regra guia milhares até hoje.",
-  image: "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800",
+  image: IMAGE_BACKUPS[0],
   quote: "A oração deve ser curta e pura."
 };
 
@@ -42,7 +49,6 @@ async function withRetry<T>(fn: () => Promise<T>, fallback: T, retries = 1): Pro
     return await fn();
   } catch (error: any) {
     const errStr = JSON.stringify(error).toLowerCase();
-    // Se for erro de cota, não tenta de novo, usa o fallback na hora para ser rápido
     if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("exhausted")) {
         console.warn("Cota atingida, acionando fallback instantâneo.");
         return fallback;
@@ -77,7 +83,10 @@ export const getDailySaint = async (): Promise<Saint> => {
       contents: `Identifique o santo do dia de hoje. JSON: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }`,
       config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
     });
-    return JSON.parse(response.text || JSON.stringify(FALLBACK_SAINT));
+    const parsed = JSON.parse(response.text || JSON.stringify(FALLBACK_SAINT));
+    // Garante que se a imagem vier vazia, usa o backup
+    if (!parsed.image || parsed.image.length < 10) parsed.image = IMAGE_BACKUPS[0];
+    return parsed;
   }, FALLBACK_SAINT);
 };
 

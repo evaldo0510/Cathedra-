@@ -26,6 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const [dailyQuote, setDailyQuote] = useState<{ quote: string; author: string } | null>(null);
   const [loading, setLoading] = useState({ saint: true, gospel: true, quote: true });
   const [errors, setErrors] = useState({ saint: false, gospel: false, quote: false });
+  const [imageError, setImageError] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [activeReading, setActiveReading] = useState<'1a' | 'salmo' | '2a' | 'evangelho'>('evangelho');
@@ -38,6 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const loadSaint = async () => {
     setLoading(prev => ({ ...prev, saint: true }));
     setErrors(prev => ({ ...prev, saint: false }));
+    setImageError(false);
     try {
       const data = await getDailySaint();
       setSaint(data);
@@ -76,8 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
 
   useEffect(() => { 
     const init = async () => {
-      // Dispara em paralelo mas com um stagger muito curto (150ms) para evitar bloqueio de cota
-      // mas parecer instantâneo para o usuário.
       loadSaint();
       await new Promise(r => setTimeout(r, 150));
       loadGospel();
@@ -141,6 +141,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   };
 
   const liturgicalColor = gospel?.calendar?.color ? LITURGY_COLORS[gospel.calendar.color] : '#d4af37';
+  
+  const saintImage = imageError || !saint?.image 
+    ? "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=400" 
+    : saint.image;
 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-24 px-4 md:px-0">
@@ -315,11 +319,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
               <>
                 <div className="absolute inset-0 bg-gradient-to-b from-[#fcf8e8]/30 to-transparent pointer-events-none" />
                 <div className="relative">
-                  <div className="w-48 h-48 rounded-full border-8 border-white dark:border-stone-800 shadow-2xl overflow-hidden mx-auto transform group-hover:scale-105 transition-transform duration-700">
+                  <div className="w-48 h-48 rounded-full border-8 border-white dark:border-stone-800 shadow-2xl overflow-hidden mx-auto transform group-hover:scale-105 transition-transform duration-700 bg-stone-100 dark:bg-stone-800">
                     <img 
-                        src={saint?.image || "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=400"} 
+                        src={saintImage} 
                         className="w-full h-full object-cover" 
                         alt={saint?.name} 
+                        onError={() => setImageError(true)}
                     />
                   </div>
                   <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-[#d4af37] text-stone-900 px-6 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-xl">
