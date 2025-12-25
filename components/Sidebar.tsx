@@ -12,14 +12,15 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user, onLogout }) => {
+  // Todos os itens agora marcados como guest: true para acesso livre
   const items = [
     { r: AppRoute.DASHBOARD, l: 'Início', i: Icons.Home, guest: true },
     { r: AppRoute.LITURGICAL_CALENDAR, l: 'Calendário Litúrgico', i: Icons.History, guest: true },
     { r: AppRoute.LECTIO_DIVINA, l: 'Lectio Divina', i: Icons.Cross, guest: true, freeBadge: true },
     { r: AppRoute.COMMUNITY, l: 'Aula Magna', i: Icons.Users, guest: true },
-    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: false, premium: true },
-    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: false, premium: true },
-    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather, guest: false, premium: true },
+    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: true, premium: false },
+    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: true, premium: false },
+    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather, guest: true, premium: false },
     { r: AppRoute.BIBLE, l: 'Bíblia Sagrada', i: Icons.Book, guest: true },
     { r: AppRoute.CATECHISM, l: 'Catecismo', i: Icons.Cross, guest: true, freeBadge: true },
     { r: AppRoute.MAGISTERIUM, l: 'Magistério', i: Icons.Globe, guest: true, freeBadge: true },
@@ -53,37 +54,29 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       
       <nav className="flex-1 space-y-1 md:space-y-2">
         {items.map(item => {
-          const isLocked = !item.guest && !user;
+          // Temporariamente permitimos tudo, independente de login
+          const isSelected = currentPath === item.r;
           return (
             <button 
               key={item.l}
               onClick={() => {
-                if (isLocked) {
-                  onNavigate(AppRoute.LOGIN);
-                } else {
-                  onNavigate(item.r);
-                }
+                onNavigate(item.r);
                 if (onClose) onClose();
               }}
-              className={`w-full flex items-center gap-4 md:gap-5 px-5 md:px-7 py-4 md:py-5 rounded-[1.2rem] md:rounded-[1.5rem] transition-all duration-300 group relative ${currentPath === item.r ? 'bg-[#d4af37] text-stone-900 shadow-xl scale-[1.02]' : 'hover:bg-white/5 text-white/60'}`}
+              className={`w-full flex items-center gap-4 md:gap-5 px-5 md:px-7 py-4 md:py-5 rounded-[1.2rem] md:rounded-[1.5rem] transition-all duration-300 group relative ${isSelected ? 'bg-[#d4af37] text-stone-900 shadow-xl scale-[1.02]' : 'hover:bg-white/5 text-white/60'}`}
             >
-              {currentPath === item.r && (
+              {isSelected && (
                 <div className="absolute left-0 w-1.5 h-6 md:h-8 bg-[#8b0000] rounded-r-full" />
               )}
-              <item.i className={`w-5 h-5 transition-colors duration-300 ${currentPath === item.r ? 'text-stone-900' : isLocked ? 'text-white/20' : 'text-[#d4af37] group-hover:text-white'}`} />
+              <item.i className={`w-5 h-5 transition-colors duration-300 ${isSelected ? 'text-stone-900' : 'text-[#d4af37] group-hover:text-white'}`} />
               <div className="flex-1 text-left">
-                <span className={`font-semibold tracking-wide text-sm md:text-base ${currentPath === item.r ? 'font-bold' : ''} ${isLocked ? 'text-white/20' : ''}`}>
+                <span className={`font-semibold tracking-wide text-sm md:text-base ${isSelected ? 'font-bold' : ''}`}>
                   {item.l}
                 </span>
                 {item.freeBadge && (
                   <span className="ml-2 text-[7px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full uppercase font-black tracking-tighter">Aberto</span>
                 )}
               </div>
-              {item.premium && !user && (
-                <div className="ml-auto opacity-40">
-                  <Icons.Audio className="w-3 h-3 text-[#d4af37]" />
-                </div>
-              )}
             </button>
           );
         })}
@@ -105,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
               </div>
             </button>
             <button 
+              // Fix: replaced undefined 'handleLogout' with the 'onLogout' prop
               onClick={onLogout}
               className="w-full py-3 text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-[#8b0000] transition-colors"
             >

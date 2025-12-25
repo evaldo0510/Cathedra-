@@ -69,6 +69,7 @@ export interface User {
   name: string;
   email: string;
   role: 'pilgrim' | 'scholar' | 'admin';
+  isPremium?: boolean;
   joinedAt: string;
   avatar?: string;
   stats: {
@@ -79,6 +80,17 @@ export interface User {
   };
 }
 
+// Added CommunityReply to support CommunityQuestion structure
+export interface CommunityReply {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: string;
+  isAI?: boolean;
+}
+
+// Added CommunityQuestion interface to fix import error in pages/Community.tsx
 export interface CommunityQuestion {
   id: string;
   userId: string;
@@ -89,15 +101,6 @@ export interface CommunityQuestion {
   votes: number;
   category: string;
   replies: CommunityReply[];
-}
-
-export interface CommunityReply {
-  id: string;
-  userId: string;
-  userName: string;
-  content: string;
-  createdAt: string;
-  isAI?: boolean;
 }
 
 export enum AppRoute {
@@ -117,5 +120,6 @@ export enum AppRoute {
   PROFILE = '/profile',
   ADMIN = '/admin',
   COMMUNITY = '/community',
-  LECTIO_DIVINA = '/lectio-divina'
+  LECTIO_DIVINA = '/lectio-divina',
+  CHECKOUT = '/checkout'
 }

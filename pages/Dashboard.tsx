@@ -4,7 +4,6 @@ import { Icons } from '../constants';
 import { getDailySaint, getDailyGospel, getDogmas, getDailyQuote, generateSpeech } from '../services/gemini';
 import { Saint, Gospel, Dogma, AppRoute, User } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
-import MemberBanner from '../components/MemberBanner';
 
 interface DashboardProps {
   onSearch: (topic: string) => void;
@@ -103,8 +102,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-24 px-4 md:px-0">
-      {!user && <MemberBanner onJoin={() => onNavigate(AppRoute.LOGIN)} />}
-
       {/* Status Litúrgico Mobile Friendly */}
       {!loadingDaily && gospel?.calendar && (
         <div className="animate-in slide-in-from-top duration-700">

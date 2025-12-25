@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Community from './pages/Community';
 import LectioDivina from './pages/LectioDivina';
+import Checkout from './pages/Checkout';
 import { AppRoute, StudyResult, User } from './types';
 import { getIntelligentStudy } from './services/gemini';
 import { trackAccess } from './services/adminService';
@@ -55,7 +56,6 @@ const App: React.FC = () => {
     if (!navigator.onLine) return;
     const remoteData = await fetchUserData(userId);
     if (remoteData) {
-      // Merge local com remoto (Prioridade para o mais recente)
       if (remoteData.highlights) localStorage.setItem('cathedra_highlights', JSON.stringify(remoteData.highlights));
       if (remoteData.history) localStorage.setItem('cathedra_history', JSON.stringify(remoteData.history));
     }
@@ -76,12 +76,11 @@ const App: React.FC = () => {
     const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
     trackAccess(!!user, isPremiumRoute);
     
-    // Auto-sync a cada mudança de rota se logado
     if (user && navigator.onLine) {
       syncUserData(user.id, {
         highlights: JSON.parse(localStorage.getItem('cathedra_highlights') || '[]'),
         history: JSON.parse(localStorage.getItem('cathedra_history') || '[]'),
-        progress: [] // Adicionar progresso aqui no futuro
+        progress: []
       });
     }
   }, [route, user]);
@@ -93,11 +92,6 @@ const App: React.FC = () => {
   };
 
   const handleSearch = async (topic: string) => {
-    if (!user) {
-      setRoute(AppRoute.LOGIN);
-      return;
-    }
-
     setLoading(true);
     try {
       const result = await getIntelligentStudy(topic);
@@ -111,11 +105,6 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    const premiumRoutes = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS];
-    if (premiumRoutes.includes(route) && !user) {
-      return <Login onLogin={(u) => { setUser(u); setRoute(route); }} />;
-    }
-
     if (route === AppRoute.ADMIN && user?.role !== 'admin') {
       setRoute(AppRoute.DASHBOARD);
       return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
@@ -152,12 +141,15 @@ const App: React.FC = () => {
         return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
       case AppRoute.LECTIO_DIVINA:
         return <LectioDivina />;
+      case AppRoute.CHECKOUT:
+        return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.PROFILE:
         return user ? (
           <Profile 
             user={user} 
             onLogout={handleLogout} 
             onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} 
+            onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)}
           />
         ) : <Login onLogin={setUser} />;
       case AppRoute.LOGIN:

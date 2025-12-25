@@ -13,8 +13,12 @@ const CACHE_KEYS = {
 };
 
 function checkSession() {
+  // Liberado temporariamente para nível profissional de teste de mercado
   const user = localStorage.getItem('cathedra_user');
-  if (!user) throw new Error("UNAUTHORIZED: Session required for AI features");
+  if (!user) {
+    console.warn("Aviso: Acesso em modo visitante.");
+    return { name: "Visitante", role: "scholar" };
+  }
   return JSON.parse(user);
 }
 
@@ -169,13 +173,13 @@ export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
     const result = JSON.parse(response.text || "[]");
     setCache(CACHE_KEYS.WEEKLY_CALENDAR, result);
     return result;
+    // Fix: replaced undefined 'cacheKey' with 'CACHE_KEYS.WEEKLY_CALENDAR'
   }, CACHE_KEYS.WEEKLY_CALENDAR);
 };
 
 export const getCatechismSearch = async (query: string): Promise<CatechismParagraph[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
-    // Fixed typo in model name
     model: 'gemini-3-flash-preview',
     contents: `Busque parágrafos do Catecismo sobre: "${query}". JSON Schema: Array<{ "number": number, "content": string }>`,
     config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
@@ -193,14 +197,30 @@ export const searchVerse = async (query: string): Promise<Verse> => {
   return JSON.parse(response.text || "{}");
 };
 
-export const getDailyQuote = async () => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const res = await ai.models.generateContent({ 
-    model: 'gemini-3-flash-preview', 
-    contents: "Citação católica. JSON: { \"quote\": string, \"author\": string }", 
-    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
-  });
-  return JSON.parse(res.text || "{}");
+export const getDailyQuote = async (): Promise<{ quote: string; author: string }> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const res = await ai.models.generateContent({ 
+      model: 'gemini-3-flash-preview', 
+      contents: "Gere uma citação inspiradora de um santo católico ou do Magistério.", 
+      config: { 
+        systemInstruction: SYSTEM_INSTRUCTION, 
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            quote: { type: Type.STRING, description: "A citação em si." },
+            author: { type: Type.STRING, description: "O autor ou documento da citação." }
+          },
+          required: ["quote", "author"]
+        }
+      } 
+    });
+    return JSON.parse(res.text || '{"quote": "Ama e faz o que quiseres.", "author": "Santo Agostinho"}');
+  } catch (error) {
+    console.error("Erro ao buscar citação:", error);
+    return { quote: "Ama e faz o que quiseres.", author: "Santo Agostinho" };
+  }
 };
 
 export const getMagisteriumDocs = async (category: string) => {
@@ -242,11 +262,6 @@ export const getThomisticSynthesis = async (topic: string) => {
   }, cacheKey);
 };
 
-// New functions added to support Bible, Catechism and Saints features
-
-/**
- * Analisa versículos bíblicos e identifica dogmas católicos relacionados.
- */
 export const getDogmaticLinksForVerses = async (verses: Verse[]): Promise<Record<number, Dogma[]>> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
@@ -259,9 +274,6 @@ export const getDogmaticLinksForVerses = async (verses: Verse[]): Promise<Record
   return JSON.parse(response.text || "{}");
 };
 
-/**
- * Analisa parágrafos do Catecismo e identifica dogmas católicos relacionados.
- */
 export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
@@ -274,9 +286,6 @@ export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagrap
   return JSON.parse(response.text || "{}");
 };
 
-/**
- * Identifica santos relacionados a um determinado santo.
- */
 export const getRelatedSaints = async (saint: Saint): Promise<Saint[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
