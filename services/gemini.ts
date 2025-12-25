@@ -175,7 +175,8 @@ export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
 export const getCatechismSearch = async (query: string): Promise<CatechismParagraph[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
-    model: 'gemism-3-flash-preview',
+    // Fixed typo in model name
+    model: 'gemini-3-flash-preview',
     contents: `Busque parágrafos do Catecismo sobre: "${query}". JSON Schema: Array<{ "number": number, "content": string }>`,
     config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
   });
@@ -239,4 +240,49 @@ export const getThomisticSynthesis = async (topic: string) => {
     setCache(cacheKey, result);
     return result;
   }, cacheKey);
+};
+
+// New functions added to support Bible, Catechism and Saints features
+
+/**
+ * Analisa versículos bíblicos e identifica dogmas católicos relacionados.
+ */
+export const getDogmaticLinksForVerses = async (verses: Verse[]): Promise<Record<number, Dogma[]>> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Analise estes versículos bíblicos e identifique dogmas católicos relacionados. 
+    Versículos: ${JSON.stringify(verses.map(v => ({ verse: v.verse, text: v.text })))}.
+    Retorne um objeto JSON onde a chave é o número do versículo e o valor é um array de Dogmas (campos: title, definition, council, year, tags).`,
+    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+  });
+  return JSON.parse(response.text || "{}");
+};
+
+/**
+ * Analisa parágrafos do Catecismo e identifica dogmas católicos relacionados.
+ */
+export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Analise estes parágrafos do Catecismo e identifique dogmas católicos relacionados. 
+    Parágrafos: ${JSON.stringify(paragraphs.map(p => ({ number: p.number, content: p.content })))}.
+    Retorne um objeto JSON onde a chave é o número do parágrafo e o valor é um array de Dogmas (campos: title, definition, council, year, tags).`,
+    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+  });
+  return JSON.parse(response.text || "{}");
+};
+
+/**
+ * Identifica santos relacionados a um determinado santo.
+ */
+export const getRelatedSaints = async (saint: Saint): Promise<Saint[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Identifique 4 santos relacionados a: "${saint.name}" (mesma época, carisma ou patrocínio). JSON Schema: Array<{ "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }>`,
+    config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+  });
+  return JSON.parse(response.text || "[]");
 };

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icons } from '../constants';
 import { getIntelligentStudy, generateSpeech } from '../services/gemini';
 import { StudyResult } from '../types';
@@ -33,8 +33,7 @@ const StudyMode: React.FC<StudyModeProps> = ({ data: initialData, onSearch }) =>
     return () => window.removeEventListener('highlight-change', handleHighlight);
   }, []);
 
-  const handleStudy = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleStudy = async () => {
     if (!query.trim()) return;
     setLoading(true);
     try {
@@ -67,136 +66,97 @@ const StudyMode: React.FC<StudyModeProps> = ({ data: initialData, onSearch }) =>
       source.start();
       setAudioSource(source);
     } catch (err) {
-      console.error("Erro no áudio:", err);
       setIsReading(false);
     }
   };
 
   return (
-    <div className="h-[calc(100vh-160px)] flex flex-col bg-[#FDFCF8] overflow-hidden -mt-10 -mx-12 rounded-[4rem] border border-stone-200 shadow-3xl animate-in slide-in-from-top-10 duration-1000 relative">
+    <div className="min-h-screen bg-[#FDFCF8] dark:bg-stone-950 flex flex-col pb-24">
       
-      {/* Search Header Fixo */}
-      <div className="bg-white/95 backdrop-blur-md border-b border-stone-100 px-16 py-12 flex flex-col md:flex-row items-center justify-between gap-12 z-50 shadow-sm relative no-print">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#8b0000] via-[#d4af37] to-[#8b0000]" />
-        
-        <div className="flex-1 w-full max-w-4xl relative">
+      {/* Search Header adaptável */}
+      <div className="bg-white dark:bg-stone-900 border-b border-stone-100 dark:border-stone-800 px-6 py-8 flex flex-col gap-6 sticky top-0 z-50 shadow-sm">
+        <div className="relative flex-1">
+          <Icons.Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4af37]" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleStudy()}
-            placeholder="Mergulhe na Veritatis Splendor..."
-            className="w-full pl-16 pr-8 py-8 bg-stone-50 border border-stone-200 rounded-[2.5rem] focus:ring-16 focus:ring-[#d4af37]/5 outline-none font-serif italic text-3xl md:text-4xl shadow-inner transition-all placeholder:text-stone-300"
+            placeholder="Mergulhar na Tradição..."
+            className="w-full pl-12 pr-4 py-4 bg-stone-50 dark:bg-stone-800 dark:text-white border border-stone-200 dark:border-stone-700 rounded-2xl outline-none font-serif italic text-lg"
           />
-          <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 text-[#d4af37] animate-pulse" />
         </div>
         
-        <div className="flex items-center gap-8 w-full md:w-auto">
+        <div className="flex gap-4">
            {data && (
-             <button onClick={toggleSpeech} className={`p-8 rounded-[2rem] transition-all shadow-2xl group ${isReading ? 'bg-[#8b0000] text-white animate-pulse' : 'bg-[#fcf8e8] text-stone-600 hover:bg-[#d4af37] hover:text-white'}`}>
-               <Icons.Audio className={`w-8 h-8 ${isReading ? '' : 'group-hover:scale-125 transition-transform'}`} />
+             <button onClick={toggleSpeech} className={`p-4 rounded-xl transition-all shadow-md ${isReading ? 'bg-[#8b0000] text-white animate-pulse' : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'}`}>
+               <Icons.Audio className="w-5 h-5" />
              </button>
            )}
-           <button onClick={() => handleStudy()} disabled={loading} className="flex-1 md:flex-none px-16 py-8 bg-[#1a1a1a] text-[#d4af37] font-black rounded-[2.5rem] flex items-center justify-center gap-6 hover:bg-[#8b0000] hover:text-white transition-all shadow-3xl uppercase tracking-[0.5em] text-xs active:scale-95 disabled:opacity-50">
-             {loading ? <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <><Icons.Layout className="w-7 h-7" /> <span>Estudo Relacional</span></>}
+           <button onClick={handleStudy} disabled={loading} className="flex-1 py-4 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg disabled:opacity-50">
+             {loading ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" /> : "Iniciar Estudo"}
            </button>
         </div>
       </div>
 
-      {loading && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500 no-print">
-           <div className="w-24 h-24 border-8 border-stone-100 border-t-[#d4af37] rounded-full animate-spin shadow-xl" />
-           <p className="font-serif italic text-3xl text-stone-800 animate-pulse">Cruzando Bíblia e Magistério...</p>
-        </div>
-      )}
-
-      {data && !loading && (
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden no-print">
-          <div className="w-full md:w-1/2 overflow-y-auto border-r border-stone-100 p-12 md:p-24 bg-white custom-scrollbar space-y-24">
-            <header className="text-center">
-              <div className="flex justify-center mb-8">
-                 <div className="p-4 bg-[#fcf8e8] rounded-full border border-[#d4af37]/20">
-                    <Icons.Book className="w-10 h-10 text-[#d4af37]" />
-                 </div>
-              </div>
-              <span className="text-[12px] font-black uppercase tracking-[1em] text-[#8b0000]">Sacra Scriptura</span>
-              <h2 className="text-7xl font-serif font-bold text-stone-900 tracking-tighter mt-6">A Palavra</h2>
-              
-              <div className={`mt-16 p-12 md:p-16 rounded-[4rem] border-l-[16px] text-left shadow-2xl relative overflow-hidden group transition-colors ${highlights.includes(`summary_${data.topic}`) ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-[#fcf8e8] border-[#d4af37]'}`}>
-                 <div className="sacred-watermark opacity-[0.05]" />
-                 
-                 <ActionButtons 
-                    itemId={`summary_${data.topic}`} 
-                    textToCopy={data.summary}
-                    className="absolute top-8 right-8 z-20"
-                 />
-
-                 <div className="relative z-10">
-                   <p className="italic font-serif text-3xl leading-relaxed text-stone-900 mb-10 tracking-tight">"{data.summary}"</p>
-                 </div>
+      {data && (
+        <div className="flex-1 flex flex-col md:flex-row">
+          {/* Coluna Bíblica / Síntese */}
+          <div className="w-full md:w-1/2 p-6 md:p-12 space-y-12">
+            <header className="space-y-6">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#8b0000] dark:text-[#d4af37]">Síntese Teológica</span>
+              <div className="bg-[#fcf8e8] dark:bg-stone-900 p-8 rounded-3xl border border-[#d4af37]/20 shadow-inner relative">
+                <ActionButtons itemId={`summary_${data.topic}`} textToCopy={data.summary} className="absolute top-4 right-4" />
+                <p className="italic font-serif text-xl md:text-2xl leading-relaxed text-stone-900 dark:text-stone-100">"{data.summary}"</p>
               </div>
             </header>
 
-            <div className="space-y-24">
+            <div className="space-y-8">
               {data.bibleVerses.map((v, i) => {
                 const vid = `verse_${v.book}_${v.chapter}_${v.verse}`;
                 return (
-                  <div key={i} className={`group p-12 -mx-12 rounded-[4rem] border-l-[16px] transition-all duration-500 relative ${highlights.includes(vid) ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'hover:bg-stone-50 border-transparent hover:border-[#d4af37]'}`}>
-                    <ActionButtons 
-                      itemId={vid} 
-                      textToCopy={`${v.book} ${v.chapter}:${v.verse} - "${v.text}"`}
-                      className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    />
-                    <span className="text-sm font-black text-[#d4af37] uppercase tracking-[0.5em] mb-4 block">{v.book} {v.chapter}:{v.verse}</span>
-                    <p className="font-serif text-4xl md:text-5xl leading-tight text-stone-900 mt-6 italic font-bold tracking-tighter">"{v.text}"</p>
+                  <div key={i} className={`p-6 rounded-2xl border-l-8 transition-all ${highlights.includes(vid) ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 shadow-sm'}`}>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-black text-[#d4af37] uppercase">{v.book} {v.chapter}:{v.verse}</span>
+                      <ActionButtons itemId={vid} textToCopy={v.text} />
+                    </div>
+                    <p className="font-serif text-lg md:text-xl text-stone-900 dark:text-stone-200 italic leading-snug">"{v.text}"</p>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="w-full md:w-1/2 bg-[#FBF9F5] flex flex-col overflow-hidden no-print">
-            <div className="flex bg-white shadow-2xl border-b border-stone-100 z-30">
+          {/* Coluna Magistério adaptada para Tabs Mobile */}
+          <div className="w-full md:w-1/2 bg-[#FBF9F5] dark:bg-stone-900/50 flex flex-col p-6 md:p-12 space-y-8">
+            <div className="flex overflow-x-auto gap-3 no-scrollbar pb-2">
               {(['catecismo', 'magisterio', 'dogmas', 'santos'] as const).map(tab => (
                 <button 
                   key={tab} 
                   onClick={() => setActiveTab(tab)} 
-                  className={`flex-1 py-12 flex flex-col items-center gap-4 text-[11px] font-black tracking-[0.6em] transition-all relative ${activeTab === tab ? 'text-[#8b0000]' : 'text-stone-300 hover:text-stone-500'}`}
+                  className={`flex-shrink-0 px-6 py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-[#8b0000] text-white' : 'bg-white dark:bg-stone-800 text-stone-400 border border-stone-100 dark:border-stone-700'}`}
                 >
-                  <span className="relative z-10">{tab.toUpperCase()}</span>
-                  {activeTab === tab && (
-                    <div className="absolute bottom-0 left-0 right-0 h-2.5 bg-[#8b0000] animate-in slide-in-from-bottom duration-300" />
-                  )}
+                  {tab}
                 </button>
               ))}
             </div>
             
-            <div className="flex-1 overflow-y-auto p-12 md:p-20 custom-scrollbar space-y-12 pb-32">
-              {activeTab === 'catecismo' && data.catechismParagraphs.map((p, i) => {
-                const pid = `cic_${p.number}`;
-                return (
-                  <div key={i} className={`p-14 rounded-[4rem] shadow-2xl border-l-[20px] transition-all relative group ${highlights.includes(pid) ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-white border-[#d4af37]'}`}>
-                    <ActionButtons 
-                      itemId={pid} 
-                      textToCopy={`CIC ${p.number}: "${p.content}"`}
-                      className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    />
-                    <div className="flex items-center gap-4 mb-8">
-                       <Icons.Cross className="w-6 h-6 text-[#d4af37]" />
-                       <h4 className="font-black text-[#8b0000] uppercase text-xs tracking-[0.5em]">Catecismo • Parágrafo {p.number}</h4>
-                    </div>
-                    <p className="text-stone-900 italic font-serif text-3xl leading-relaxed tracking-tight">"{p.content}"</p>
+            <div className="space-y-6">
+              {activeTab === 'catecismo' && data.catechismParagraphs.map((p, i) => (
+                <div key={i} className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 relative group">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[9px] font-black text-[#8b0000] dark:text-[#d4af37] uppercase tracking-widest">CIC {p.number}</span>
+                    <ActionButtons itemId={`cic_${p.number}`} textToCopy={p.content} />
                   </div>
-                );
-              })}
+                  <p className="text-stone-900 dark:text-stone-200 italic font-serif text-lg leading-relaxed">"{p.content}"</p>
+                </div>
+              ))}
               
               {activeTab === 'magisterio' && data.magisteriumDocs.map((doc, i) => (
-                <div key={i} className="bg-[#1a1a1a] p-16 rounded-[4.5rem] text-white shadow-3xl relative overflow-hidden group">
-                  <Icons.Cross className="absolute -top-16 -right-16 w-64 h-64 text-white/5 group-hover:scale-110 transition-transform duration-1000" />
-                  <ActionButtons itemId={`mag_${doc.title}`} textToCopy={doc.content} className="absolute top-8 right-8 z-20" />
-                  <span className="text-[12px] font-black text-[#d4af37] uppercase tracking-[0.8em] mb-8 block">{doc.source}</span>
-                  <h4 className="font-serif text-5xl font-bold mb-10 text-[#d4af37] leading-tight tracking-tighter">{doc.title}</h4>
-                  <p className="text-3xl text-stone-300 italic font-serif leading-relaxed opacity-95">"{doc.content}"</p>
+                <div key={i} className="bg-[#1a1a1a] p-8 rounded-3xl text-white shadow-lg space-y-4">
+                  <span className="text-[9px] font-black text-[#d4af37] uppercase tracking-widest">{doc.source}</span>
+                  <h4 className="font-serif text-xl font-bold text-[#d4af37] leading-tight">{doc.title}</h4>
+                  <p className="text-base text-stone-300 italic font-serif leading-relaxed opacity-95">"{doc.content}"</p>
                 </div>
               ))}
             </div>
