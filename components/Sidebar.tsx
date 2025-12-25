@@ -88,10 +88,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         })}
       </nav>
 
-      {/* Links de Desenvolvedor e Redes Sociais */}
       <div className="mt-10 pt-8 border-t border-white/10 space-y-6">
         <div className="space-y-3">
-          <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-4">Desenvolvedor & Apoio</p>
+          <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-4">Apoio & Comunidade</p>
           <a 
             href="https://instagram.com/seu-perfil" 
             target="_blank" 
@@ -102,17 +101,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
                <Icons.Globe className="w-4 h-4 text-[#d4af37]" />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest">Siga no Instagram</span>
-          </a>
-          <a 
-            href="https://github.com/Dancrf/liturgia-diaria" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-white/5 text-stone-300 hover:text-[#d4af37] hover:bg-white/10 transition-all group"
-          >
-            <div className="p-2 bg-[#d4af37]/10 rounded-lg group-hover:scale-110 transition-transform">
-               <Icons.Layout className="w-4 h-4 text-[#d4af37]" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest">Código no Github</span>
           </a>
         </div>
       </div>

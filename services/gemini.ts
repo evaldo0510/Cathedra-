@@ -17,7 +17,31 @@ const IMAGE_FALLBACKS = [
   "https://images.unsplash.com/photo-1590070183023-e5757f72236d?q=80&w=800"
 ];
 
-// Utilitário de Retentativa com Backoff Exponencial
+// DADOS DE EMERGÊNCIA (Caso a API falhe)
+const FALLBACK_GOSPEL: Gospel = {
+  reference: "Jo 1, 1-5",
+  text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus. Ele estava no princípio com Deus. Tudo foi feito por meio dele.",
+  reflection: "Hoje somos convidados a contemplar a luz de Cristo que brilha nas trevas de nossa história.",
+  title: "Evangelho segundo João",
+  calendar: {
+    color: "white",
+    season: "Tempo Comum",
+    rank: "Féria",
+    dayName: "Dia do Senhor",
+    cycle: "B",
+    week: "I Semana"
+  }
+};
+
+const FALLBACK_SAINT: Saint = {
+  name: "São Bento de Núrsia",
+  feastDay: "11 de Julho",
+  patronage: "Padroeiro da Europa e dos Monges",
+  biography: "Pai do monaquismo ocidental, São Bento ensinou o equilíbrio entre a oração e o trabalho (Ora et Labora). Sua regra guia milhares até hoje.",
+  image: "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800",
+  quote: "A oração deve ser curta e pura."
+};
+
 async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1500): Promise<T> {
   try {
     return await fn();
@@ -26,7 +50,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1500): Pr
     const isQuotaError = errorStr.includes("429") || errorStr.includes("resource_exhausted") || errorStr.includes("quota");
     
     if (isQuotaError && retries > 0) {
-      console.warn(`Cota atingida. Tentando novamente em ${delay}ms... (Restam ${retries} tentativas)`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return withRetry(fn, retries - 1, delay * 2);
     }
@@ -34,9 +57,9 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1500): Pr
   }
 }
 
-const handleApiError = async (error: any) => {
+const handleApiError = (error: any) => {
   const errorMessage = JSON.stringify(error).toLowerCase();
-  if (errorMessage.includes("429") || errorMessage.includes("resource_exhausted") || errorMessage.includes("requested entity was not found")) {
+  if (errorMessage.includes("429") || errorMessage.includes("resource_exhausted") || errorMessage.includes("not found")) {
     window.dispatchEvent(new CustomEvent('cathedra-api-quota-exceeded'));
   }
   throw error;
@@ -51,64 +74,14 @@ export const getDailyGospel = async (): Promise<Gospel> => {
       const today = new Date().toLocaleDateString('pt-BR');
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Pesquise a Liturgia da Palavra de hoje (${today}). JSON Schema: { "reference": string, "text": string, "reflection": string, "firstReading": { "title": string, "reference": string, "text": string }, "psalm": { "title": string, "reference": string, "text": string }, "secondReading": { "title": string, "reference": string, "text": string }, "calendar": { "color": string, "season": string, "rank": string, "dayName": string, "cycle": string, "week": string } }`,
+        contents: `Pesquise a Liturgia de hoje (${today}). JSON: { "reference": string, "text": string, "reflection": string, "calendar": { "color": string, "season": string, "rank": string, "dayName": string, "cycle": string, "week": string } }`,
         config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
       });
       return JSON.parse(response.text || "{}");
     } catch (error) {
-      return handleApiError(error);
-    }
-  });
-};
-
-export const getIntelligentStudy = async (topic: string): Promise<StudyResult> => {
-  const runStudy = async (modelName: string) => {
-    const ai = getAIInstance();
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: `Realize um estudo teológico profundo sobre: "${topic}". JSON Schema: { "topic": string, "summary": string, "bibleVerses": [{"book": string, "chapter": number, "verse": number, "text": string}], "catechismParagraphs": [{"number": number, "content": string}], "magisteriumDocs": [{"title": string, "content": string, "source": string}], "saintsQuotes": [{"saint": string, "quote": string}] }`,
-      config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
-    });
-    const result = JSON.parse(response.text || "{}");
-    const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
-    const newHistory = [result, ...history.filter((h: any) => h.topic !== result.topic)].slice(0, 20);
-    localStorage.setItem('cathedra_history', JSON.stringify(newHistory));
-    return result;
-  };
-
-  return withRetry(async () => {
-    try {
-      return await runStudy('gemini-3-pro-preview');
-    } catch (error: any) {
-      const errorStr = JSON.stringify(error).toLowerCase();
-      if (errorStr.includes("429") || errorStr.includes("resource_exhausted")) {
-        console.warn("Cota Pro atingida em Estudo, tentando com Flash...");
-        try {
-          return await runStudy('gemini-3-flash-preview');
-        } catch (innerError) {
-          return handleApiError(innerError);
-        }
-      }
-      return handleApiError(error);
-    }
-  });
-};
-
-export const generateSpeech = async (text: string): Promise<string> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Leia solenemente: ${text}` }] }],
-        config: { 
-          responseModalities: [Modality.AUDIO], 
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } 
-        }
-      });
-      return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
-    } catch (error) {
-      return handleApiError(error);
+      console.warn("Usando Fallback para Evangelho");
+      handleApiError(error);
+      return FALLBACK_GOSPEL;
     }
   });
 };
@@ -119,169 +92,175 @@ export const getDailySaint = async (): Promise<Saint> => {
       const ai = getAIInstance();
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Identifique o santo celebrado hoje. Forneça biografia e imagem REAL de arte sacra. JSON Schema: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }`,
+        contents: `Identifique o santo de hoje. JSON: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }`,
         config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
       });
-      const data = JSON.parse(response.text || "{}");
-      if (!data.image || data.image.includes("fallback")) {
-        data.image = IMAGE_FALLBACKS[Math.floor(Math.random() * IMAGE_FALLBACKS.length)];
-      }
-      return data;
+      return JSON.parse(response.text || "{}");
     } catch (error) {
-      return handleApiError(error);
-    }
-  });
-};
-
-export const getSaintsList = async (): Promise<Saint[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const res = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: "Gere uma lista de 6 grandes santos da Igreja com URLs de imagens válidas de arte sacra. JSON: Array<{ \"name\": string, \"feastDay\": string, \"patronage\": string, \"biography\": string, \"image\": string, \"quote\": string }>", 
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
-      });
-      const saints = JSON.parse(res.text || "[]");
-      return saints.map((s: Saint, idx: number) => ({
-        ...s,
-        image: s.image && s.image.startsWith("http") ? s.image : IMAGE_FALLBACKS[idx % IMAGE_FALLBACKS.length]
-      }));
-    } catch (error) {
-      return handleApiError(error);
+      console.warn("Usando Fallback para Santo");
+      handleApiError(error);
+      return FALLBACK_SAINT;
     }
   });
 };
 
 export const getDailyQuote = async () => {
+  try {
+    const ai = getAIInstance();
+    const res = await ai.models.generateContent({ 
+      model: 'gemini-3-flash-preview', 
+      contents: "Citação curta de um santo. JSON: { \"quote\": string, \"author\": string }", 
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
+    });
+    return JSON.parse(res.text || "{}");
+  } catch {
+    return { quote: "Onde há amor e caridade, Deus aí está.", author: "Hino Antigo" };
+  }
+};
+
+export const getIntelligentStudy = async (topic: string): Promise<StudyResult> => {
   return withRetry(async () => {
     try {
       const ai = getAIInstance();
-      const res = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: "Citação profunda de um santo para hoje. JSON: { \"quote\": string, \"author\": string }", 
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Estudo teológico sobre: "${topic}". JSON Schema: { "topic": string, "summary": string, "bibleVerses": [{"book": string, "chapter": number, "verse": number, "text": string}], "catechismParagraphs": [{"number": number, "content": string}], "magisteriumDocs": [{"title": string, "content": string, "source": string}], "saintsQuotes": [{"saint": string, "quote": string}] }`,
+        config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
       });
-      return JSON.parse(res.text || "{}");
+      return JSON.parse(response.text || "{}");
     } catch (error) {
       return handleApiError(error);
     }
   });
+};
+
+export const generateSpeech = async (text: string): Promise<string> => {
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Leia: ${text}` }] }],
+      config: { 
+        responseModalities: [Modality.AUDIO], 
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } 
+      }
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const getSaintsList = async (): Promise<Saint[]> => {
+  try {
+    const ai = getAIInstance();
+    const res = await ai.models.generateContent({ 
+      model: 'gemini-3-flash-preview', 
+      contents: "Lista de 6 santos. JSON.", 
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
+    });
+    return JSON.parse(res.text || "[]");
+  } catch {
+    return [FALLBACK_SAINT];
+  }
 };
 
 export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const res = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
-        contents: "Calendário litúrgico próximos 7 dias. JSON: Array<{ \"color\": string, \"season\": string, \"rank\": string, \"dayName\": string, \"cycle\": string, \"week\": string, \"date\": string }>", 
-        config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" } 
-      });
-      return JSON.parse(res.text || "[]");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const res = await ai.models.generateContent({ 
+      model: 'gemini-3-flash-preview', 
+      contents: "Calendário litúrgico 7 dias. JSON.", 
+      config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" } 
+    });
+    return JSON.parse(res.text || "[]");
+  } catch {
+    return [FALLBACK_GOSPEL.calendar];
+  }
 };
 
 export const searchVerse = async (query: string): Promise<Verse> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Encontre um versículo bíblico católico que corresponda a: "${query}". JSON Schema: { "book": string, "chapter": number, "verse": number, "text": string }`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "{}");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Busque versículo: "${query}". JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch {
+    return { book: "Salmos", chapter: 23, verse: 1, text: "O Senhor é o meu pastor, nada me faltará." };
+  }
 };
 
 export const getVerseCommentary = async (verse: Verse): Promise<string> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: `Forneça um comentário exegético e espiritual profundo para o versículo: ${verse.book} ${verse.chapter}:${verse.verse} ("${verse.text}"). Baseie-se nos Padres da Igreja e no Magistério.`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION }
-      });
-      return response.text || "Comentário indisponível no momento.";
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Comente: ${verse.book} ${verse.chapter}:${verse.verse}.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION }
+    });
+    return response.text || "";
+  } catch {
+    return "Comentário indisponível.";
+  }
 };
 
 export const getCatechismSearch = async (query: string): Promise<CatechismParagraph[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Busque parágrafos do Catecismo da Igreja Católica relacionados a: "${query}". JSON Schema: Array<{ "number": number, "content": string }>`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "[]");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Catecismo sobre: "${query}". JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch {
+    return [{ number: 1, content: "Deus, infinitamente Perfeito e Bem-aventurado em Si mesmo..." }];
+  }
 };
 
 export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const numbers = paragraphs.map(p => p.number).join(', ');
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Para os seguintes parágrafos do Catecismo (${numbers}), identifique dogmas católicos relacionados. JSON Schema: { [paragraphNumber: number]: Array<{ "title": string, "definition": string, "council": string, "year": string, "tags": string[] }> }`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "{}");
-    } catch (error) {
-      console.error("Erro ao vincular dogmas:", error);
-      return {};
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Dogmas para parágrafos ${paragraphs.map(p=>p.number).join(',')}. JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch {
+    return {};
+  }
 };
 
 export const getMagisteriumDocs = async (category: string): Promise<any[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Liste os principais documentos do Magistério na categoria: "${category}". JSON Schema: Array<{ "title": string, "source": string, "content": string, "year": string }>`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "[]");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Docs magistério: "${category}". JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch {
+    return [];
+  }
 };
 
 export const getDogmas = async (query?: string): Promise<Dogma[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const prompt = query ? `Busque dogmas da Igreja Católica relacionados a: "${query}".` : "Liste os dogmas fundamentais da Igreja Católica.";
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `${prompt} JSON Schema: Array<{ "title": string, "definition": string, "council": string, "year": string, "tags": string[], "period": string, "sourceUrl": string }>`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "[]");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Dogmas católicos ${query||''}. JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch {
+    return [];
+  }
 };
 
 export async function* getTheologicalDialogueStream(message: string): AsyncGenerator<string> {
@@ -295,40 +274,35 @@ export async function* getTheologicalDialogueStream(message: string): AsyncGener
     for await (const chunk of response) {
       yield chunk.text || "";
     }
-  } catch (error) {
-    console.error("Erro no stream teológico:", error);
-    yield "Desculpe, ocorreu um erro na conexão com o santuário digital.";
+  } catch {
+    yield "Erro na conexão.";
   }
 }
 
 export const getThomisticSynthesis = async (topic: string): Promise<any> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: `Realize uma síntese escolástica sobre: "${topic}". JSON Schema: { "title": string, "objections": string[], "sedContra": string, "respondeo": string, "replies": string[] }`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "{}");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Síntese tomista: "${topic}". JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch {
+    return null;
+  }
 };
 
 export const getLectioPoints = async (text: string): Promise<string[]> => {
-  return withRetry(async () => {
-    try {
-      const ai = getAIInstance();
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Forneça 3 a 5 pontos curtos de reflexão para o texto: "${text}". JSON Schema: Array<string>`,
-        config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-      });
-      return JSON.parse(response.text || "[]");
-    } catch (error) {
-      return handleApiError(error);
-    }
-  });
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Pontos lectio: "${text}". JSON.`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch {
+    return ["Reflexão silenciosa."];
+  }
 };
