@@ -4,17 +4,23 @@ import { Icons } from '../constants';
 import { getSaintsList } from '../services/gemini';
 import { Saint } from '../types';
 
+/**
+ * Componente de imagem resiliente para arte sacra
+ */
 const SacredImage: React.FC<{ src: string, alt: string, className: string }> = ({ src, alt, className }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  const fallback = "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800"; // Arte sacra clássica
+  // Imagem de fallback: Detalhe de uma catedral clássica
+  const fallback = "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800";
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {loading && <div className="absolute inset-0 bg-stone-100 dark:bg-stone-800 animate-pulse" />}
+      {loading && <div className="absolute inset-0 bg-stone-100 dark:bg-stone-800 animate-pulse flex items-center justify-center">
+        <Icons.Cross className="w-12 h-12 text-stone-200 dark:text-stone-700" />
+      </div>}
       <img 
-        src={error ? fallback : src} 
+        src={error || !src ? fallback : src} 
         alt={alt}
         onLoad={() => setLoading(false)}
         onError={() => { setError(true); setLoading(false); }}

@@ -33,6 +33,8 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [user, setUser] = useState<User | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   
   // PWA & Notifications State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -48,10 +50,12 @@ const App: React.FC = () => {
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleQuotaError = () => setQuotaExceeded(true);
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('cathedra-api-quota-exceeded', handleQuotaError);
 
-    // PWA Install Prompt Logic
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -61,14 +65,22 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('cathedra-api-quota-exceeded', handleQuotaError);
     };
   }, []);
+
+  const handleOpenKeyDialog = async () => {
+    if (window.aistudio && window.aistudio.openSelectKey) {
+      await window.aistudio.openSelectKey();
+      setQuotaExceeded(false);
+      window.location.reload();
+    }
+  };
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to install prompt: ${outcome}`);
     setDeferredPrompt(null);
     setShowInstallBanner(false);
   };
@@ -96,14 +108,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
     trackAccess(!!user, isPremiumRoute);
-    
-    if (user && navigator.onLine) {
-      syncUserData(user.id, {
-        highlights: JSON.parse(localStorage.getItem('cathedra_highlights') || '[]'),
-        history: JSON.parse(localStorage.getItem('cathedra_history') || '[]'),
-        progress: []
-      });
-    }
   }, [route, user]);
 
   const handleLogout = () => {
@@ -114,12 +118,15 @@ const App: React.FC = () => {
 
   const handleSearch = async (topic: string) => {
     setLoading(true);
+    setSearchError(null);
     try {
       const result = await getIntelligentStudy(topic);
       setStudyData(result);
       setRoute(AppRoute.STUDY_MODE);
     } catch (e: any) {
       console.error("Erro na busca:", e);
+      setSearchError("O santuário digital está sobrecarregado. Tente uma busca mais curta ou verifique sua cota.");
+      setTimeout(() => setSearchError(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -132,59 +139,66 @@ const App: React.FC = () => {
     }
 
     switch (route) {
-      case AppRoute.DASHBOARD:
-        return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
-      case AppRoute.STUDY_MODE:
-        return <StudyMode data={studyData} onSearch={handleSearch} />;
-      case AppRoute.BIBLE:
-        return <Bible onDeepDive={handleSearch} />;
-      case AppRoute.CATECHISM:
-        return <Catechism onDeepDive={handleSearch} />;
-      case AppRoute.SAINTS:
-        return <Saints />;
-      case AppRoute.MAGISTERIUM:
-        return <Magisterium onDeepDive={handleSearch} />;
-      case AppRoute.DOGMAS:
-        return <Dogmas />;
-      case AppRoute.SOCIAL_DOCTRINE:
-        return <SocialDoctrine />;
-      case AppRoute.COLLOQUIUM:
-        return <Colloquium />;
-      case AppRoute.ABOUT:
-        return <About />;
-      case AppRoute.AQUINAS:
-        return <Aquinas />;
-      case AppRoute.LITURGICAL_CALENDAR:
-        return <LiturgicalCalendar />;
-      case AppRoute.ADMIN:
-        return <Admin />;
-      case AppRoute.COMMUNITY:
-        return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
-      case AppRoute.LECTIO_DIVINA:
-        return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.CHECKOUT:
-        return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.PROFILE:
-        return user ? (
-          <Profile 
-            user={user} 
-            onLogout={handleLogout} 
-            onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} 
-            onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)}
-          />
-        ) : <Login onLogin={setUser} />;
-      case AppRoute.LOGIN:
-        return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
-      default:
-        return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
+      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
+      case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
+      case AppRoute.BIBLE: return <Bible onDeepDive={handleSearch} />;
+      case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
+      case AppRoute.SAINTS: return <Saints />;
+      case AppRoute.MAGISTERIUM: return <Magisterium onDeepDive={handleSearch} />;
+      case AppRoute.DOGMAS: return <Dogmas />;
+      case AppRoute.SOCIAL_DOCTRINE: return <SocialDoctrine />;
+      case AppRoute.COLLOQUIUM: return <Colloquium />;
+      case AppRoute.ABOUT: return <About />;
+      case AppRoute.AQUINAS: return <Aquinas />;
+      case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
+      case AppRoute.ADMIN: return <Admin />;
+      case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
+      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
+      case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
+      case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={handleLogout} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
+      case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
+      default: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500">
       
-      {/* PWA Install Banner - Professional Persistent Design */}
-      {showInstallBanner && (
+      {/* Toast de Erro de Busca */}
+      {searchError && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[600] bg-[#8b0000] text-white px-8 py-4 rounded-full shadow-2xl animate-in fade-in slide-in-from-bottom-10">
+          <p className="text-[11px] font-black uppercase tracking-widest">{searchError}</p>
+        </div>
+      )}
+
+      {/* Quota Exceeded Banner */}
+      {quotaExceeded && (
+        <div className="fixed top-0 left-0 right-0 z-[400] bg-[#8b0000] text-white px-6 py-4 flex items-center justify-between shadow-2xl border-b border-[#d4af37]/40 animate-in slide-in-from-top duration-500">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Icons.History className="w-5 h-5 text-[#d4af37]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Cota de Pesquisa Atingida</p>
+              <p className="text-[9px] opacity-80 font-serif italic mt-0.5">
+                Para alta performance sem limites, use sua própria chave. 
+                <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline ml-1 font-bold">Verificar Billing</a>
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={() => setQuotaExceeded(false)} className="text-[9px] font-black uppercase tracking-widest opacity-60 hover:opacity-100">Ignorar</button>
+            <button 
+              onClick={handleOpenKeyDialog}
+              className="px-6 py-2.5 bg-[#d4af37] text-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95"
+            >
+              Fornecer Minha Chave
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showInstallBanner && !quotaExceeded && (
         <div className="fixed top-0 left-0 right-0 z-[300] bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 px-6 py-4 flex items-center justify-between animate-in slide-in-from-top duration-700 shadow-2xl border-b border-[#d4af37]/20">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-white/10 dark:bg-black/10 rounded-lg">
@@ -207,18 +221,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {!isOnline && (
-        <div className="fixed top-6 right-6 z-[200] bg-stone-900/90 text-[#d4af37] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#d4af37]/20 backdrop-blur-md animate-in slide-in-from-right duration-500">
-          <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_10px_#f59e0b]" />
-          <div className="flex flex-col">
-            <span className="text-[9px] font-black uppercase tracking-widest">Estado Offline</span>
-            <span className="text-[8px] text-white/50 uppercase tracking-tighter">Acessando Depósito em Cache</span>
-          </div>
-        </div>
-      )}
-
       {loading && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#fdfcf8]/90 dark:bg-[#0c0a09]/90 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-[#fdfcf8]/90 dark:bg-[#0c0a09]/90 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative mb-12">
             <div className="w-48 h-48 border-[8px] border-[#d4af37]/10 border-t-[#d4af37] rounded-full animate-spin shadow-3xl" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -244,20 +248,13 @@ const App: React.FC = () => {
            <h1 className="font-serif font-bold text-xl tracking-tighter text-stone-900 dark:text-[#d4af37] leading-none">Cathedra</h1>
            <div className="flex gap-2">
              <button onClick={() => setIsDark(!isDark)} className="w-10 h-10 bg-stone-100 dark:bg-stone-800 rounded-xl flex items-center justify-center text-[#d4af37]">
-                {isDark ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>}
+                {isDark ? <Icons.History className="w-5 h-5" /> : <Icons.Globe className="w-5 h-5" />}
              </button>
              <button onClick={() => user ? setRoute(AppRoute.PROFILE) : setRoute(AppRoute.LOGIN)} className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[#d4af37] shadow-lg">
                 {user ? user.name.charAt(0) : <Icons.Users className="w-5 h-5" />}
              </button>
            </div>
         </div>
-
-        <button 
-          onClick={() => setIsDark(!isDark)}
-          className="hidden lg:flex fixed bottom-10 right-10 z-[100] w-14 h-14 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-full items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all group"
-        >
-          {isDark ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg> : <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>}
-        </button>
 
         <div className="p-6 md:p-12 lg:p-16 flex-1">
           <div className="max-w-[1500px] mx-auto h-full no-print">
