@@ -54,12 +54,12 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto animate-in fade-in duration-1000 pb-32">
+    <div className="max-w-[1600px] mx-auto animate-in fade-in duration-300 pb-32">
       
       {/* Modal de Dogma */}
       {selectedDogma && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-[#fdfcf8] dark:bg-stone-950 max-w-2xl w-full rounded-[4rem] p-12 md:p-16 shadow-3xl border-t-[12px] border-[#8b0000] space-y-10 relative overflow-hidden">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+           <div className="bg-[#fdfcf8] dark:bg-stone-950 max-w-2xl w-full rounded-[4rem] p-12 md:p-16 shadow-3xl border-t-[12px] border-[#8b0000] space-y-10 relative overflow-hidden animate-in zoom-in-95 duration-200">
               <button 
                 onClick={() => setSelectedDogma(null)}
                 className="absolute top-8 right-8 p-4 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all shadow-md group active:scale-90"
@@ -92,7 +92,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
       <div className="flex flex-col lg:flex-row gap-8 items-start relative">
         
         {/* Sidebar colapsável de Navegação Canônica */}
-        <aside className={`lg:sticky lg:top-32 transition-all duration-500 z-40 ${isSidebarOpen ? 'lg:w-80 w-full' : 'lg:w-20 w-full'}`}>
+        <aside className={`lg:sticky lg:top-32 transition-all duration-300 z-40 ${isSidebarOpen ? 'lg:w-80 w-full' : 'lg:w-20 w-full'}`}>
           <div className="bg-white dark:bg-stone-900 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden">
             <header className="p-6 border-b border-stone-50 dark:border-stone-800 flex items-center justify-between">
                {isSidebarOpen && <span className="text-[10px] font-black uppercase tracking-widest text-[#d4af37]">Canonicum</span>}
@@ -111,7 +111,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
                   <button 
                     key={pillar.id}
                     onClick={() => { setQuery(pillar.title); handleSearch(pillar.title, pillar.id); }}
-                    className={`w-full group relative flex items-center transition-all duration-500 rounded-2xl ${isSidebarOpen ? 'px-6 py-4 gap-5' : 'p-4 justify-center'} ${isActive ? 'bg-[#fcf8e8] dark:bg-stone-800 border-l-4 border-[#d4af37]' : 'hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                    className={`w-full group relative flex items-center transition-all duration-300 rounded-2xl ${isSidebarOpen ? 'px-6 py-4 gap-5' : 'p-4 justify-center'} ${isActive ? 'bg-[#fcf8e8] dark:bg-stone-800 border-l-4 border-[#d4af37]' : 'hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                   >
                     <div className={`flex-shrink-0 p-2 rounded-lg transition-colors ${isActive ? 'text-[#8b0000]' : 'text-stone-300'}`}>
                       <pillar.icon className="w-6 h-6" />
@@ -185,8 +185,8 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
                 return (
                   <article 
                     key={i} 
-                    className={`p-12 md:p-16 rounded-[4rem] border-l-[20px] shadow-2xl relative group transition-all duration-700 animate-in fade-in slide-in-from-bottom-10 ${isHighlighted ? 'bg-[#fcf8e8] border-[#d4af37]' : 'bg-white dark:bg-stone-900 border-[#8b0000] hover:border-[#d4af37]/40 dark:border-[#8b0000]/50'}`}
-                    style={{ animationDelay: `${i * 100}ms` }}
+                    className={`p-12 md:p-16 rounded-[4rem] border-l-[20px] shadow-2xl relative group transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 ${isHighlighted ? 'bg-[#fcf8e8] border-[#d4af37]' : 'bg-white dark:bg-stone-900 border-[#8b0000] hover:border-[#d4af37]/40 dark:border-[#8b0000]/50'}`}
+                    style={{ animationDelay: `${i * 50}ms` }}
                   >
                     <div className="absolute top-10 right-10 flex items-center gap-6">
                        {relatedDogmas && relatedDogmas.length > 0 && (

@@ -41,9 +41,15 @@ async function withRetry<T>(fn: () => Promise<T>, fallback: T, retries = 1): Pro
   try {
     return await fn();
   } catch (error: any) {
-    console.error("Erro na API Gemini:", error);
+    const errStr = JSON.stringify(error).toLowerCase();
+    // Se for erro de cota, não tenta de novo, usa o fallback na hora para ser rápido
+    if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("exhausted")) {
+        console.warn("Cota atingida, acionando fallback instantâneo.");
+        return fallback;
+    }
+    
     if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       return withRetry(fn, fallback, retries - 1);
     }
     return fallback;
@@ -103,7 +109,7 @@ export const generateSpeech = async (text: string): Promise<string> => {
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: `Leia com voz solene: ${text}` }] }],
     config: { 
-      responseModalities: [Modality.AUDIO], 
+      responseModalalities: [Modality.AUDIO], 
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } 
     }
   });

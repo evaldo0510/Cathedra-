@@ -75,13 +75,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   };
 
   useEffect(() => { 
-    // Carregamento serializado com pequenos intervalos para evitar rate limiting da API
     const init = async () => {
-      await loadSaint();
-      await new Promise(r => setTimeout(r, 600));
-      await loadGospel();
-      await new Promise(r => setTimeout(r, 600));
-      await loadQuote();
+      // Dispara em paralelo mas com um stagger muito curto (150ms) para evitar bloqueio de cota
+      // mas parecer instantâneo para o usuário.
+      loadSaint();
+      await new Promise(r => setTimeout(r, 150));
+      loadGospel();
+      await new Promise(r => setTimeout(r, 150));
+      loadQuote();
     };
     init();
     return () => stopAudio();
@@ -151,7 +152,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
             <div className="h-4 w-32 bg-stone-200 dark:bg-stone-800 rounded-full" />
         </div>
       ) : gospel?.calendar ? (
-        <div className="animate-in slide-in-from-top duration-700">
+        <div className="animate-in slide-in-from-top duration-300">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 bg-white/90 dark:bg-stone-900/90 backdrop-blur-xl p-5 md:p-6 rounded-[2.5rem] md:rounded-[4rem] border border-stone-200 dark:border-stone-800 shadow-2xl max-w-5xl mx-auto">
             <div className="flex items-center gap-4">
                <div className="w-5 h-5 rounded-full shadow-inner" style={{ backgroundColor: liturgicalColor }} />
@@ -253,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                   </div>
                 </header>
                 
-                <div className="min-h-[400px] flex flex-col justify-between animate-in fade-in duration-500" key={activeReading}>
+                <div className="min-h-[400px] flex flex-col justify-between animate-in fade-in duration-300" key={activeReading}>
                   {currentReading() ? (
                     <>
                       <div className="space-y-8">
@@ -329,7 +330,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                     <h3 className="text-4xl font-serif font-bold dark:text-stone-200 tracking-tight">{saint?.name}</h3>
                     <p className="text-[#8b0000] dark:text-[#d4af37] text-[10px] font-black uppercase tracking-widest">{saint?.patronage}</p>
                 </div>
-                <p className={`text-stone-500 dark:text-stone-400 font-serif italic text-lg leading-relaxed transition-all duration-500 ${isExpanded ? '' : 'line-clamp-4'}`}>
+                <p className={`text-stone-500 dark:text-stone-400 font-serif italic text-lg leading-relaxed transition-all duration-300 ${isExpanded ? '' : 'line-clamp-4'}`}>
                   {saint?.biography}
                 </p>
                 <button onClick={() => setIsExpanded(!isExpanded)} className="text-[11px] font-black uppercase tracking-[0.4em] text-[#8b0000] dark:text-[#d4af37] hover:scale-110 transition-transform active:scale-90">
