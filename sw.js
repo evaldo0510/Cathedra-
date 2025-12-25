@@ -1,12 +1,11 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 2.2.0-stable
+ * Versão: 2.3.0-push-enabled
  */
 
-const CACHE_NAME = 'cathedra-v2.2-stable';
+const CACHE_NAME = 'cathedra-v2.3-push';
 
-// Ativos fundamentais para o app funcionar sem internet
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -20,20 +19,9 @@ const STATIC_ASSETS = [
   'https://img.icons8.com/ios-filled/512/d4af37/cross.png'
 ];
 
-// Domínios de recursos externos para estratégia Stale-While-Revalidate
-const EXTERNAL_RESOURCES = [
-  'fonts.googleapis.com',
-  'fonts.gstatic.com',
-  'icons8.com',
-  'unsplash.com'
-];
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Cathedra SW] Preparando Santuário Offline...');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
@@ -49,43 +37,48 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Lógica de Push Notification
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {
+    title: 'Cathedra Digital',
+    body: 'O Pão Espiritual do dia está pronto para você.',
+    icon: 'https://img.icons8.com/ios-filled/192/d4af37/cross.png'
+  };
+
+  const options = {
+    body: data.body,
+    icon: data.icon || 'https://img.icons8.com/ios-filled/192/d4af37/cross.png',
+    badge: 'https://img.icons8.com/ios-filled/96/d4af37/cross.png',
+    vibrate: [200, 100, 200],
+    data: {
+      url: data.url || '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data.url)
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
+  if (url.includes('generativelanguage.googleapis.com') || url.includes('stripe.com')) return;
 
-  // Ignorar APIs dinâmicas e serviços de terceiros (Stripe/Google AI)
-  if (url.includes('generativelanguage.googleapis.com') || url.includes('stripe.com')) {
-    return;
-  }
-
-  // Estratégia Stale-While-Revalidate para imagens e fontes
-  const isExternal = EXTERNAL_RESOURCES.some(r => url.includes(r));
-  if (isExternal) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const networkFetch = fetch(event.request).then((response) => {
-          if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
-          }
-          return response;
-        }).catch(() => cached);
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
-
-  // Estratégia Network-First para navegação (garante que o usuário sempre veja o conteúdo novo se houver conexão)
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-
-  // Estratégia Cache-First para arquivos locais
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).then(netRes => {
+        if (netRes && netRes.status === 200 && url.includes('unsplash.com')) {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, netRes.clone()));
+        }
+        return netRes;
+      });
     })
   );
 });

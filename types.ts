@@ -38,14 +38,22 @@ export interface LiturgyInfo {
   dayName: string;
   cycle: string;
   week: string;
+  psalterWeek?: string;
   date?: string;
 }
 
-export interface Gospel {
+export interface LiturgyReading {
+  title: string;
   reference: string;
   text: string;
+}
+
+export interface Gospel extends LiturgyReading {
   reflection: string;
   calendar: LiturgyInfo;
+  firstReading?: LiturgyReading;
+  psalm?: LiturgyReading;
+  secondReading?: LiturgyReading;
 }
 
 export interface StudyResult {
@@ -80,7 +88,6 @@ export interface User {
   };
 }
 
-// Added CommunityReply to support CommunityQuestion structure
 export interface CommunityReply {
   id: string;
   userId: string;
@@ -90,7 +97,6 @@ export interface CommunityReply {
   isAI?: boolean;
 }
 
-// Added CommunityQuestion interface to fix import error in pages/Community.tsx
 export interface CommunityQuestion {
   id: string;
   userId: string;

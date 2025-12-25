@@ -1,14 +1,14 @@
 {
-  "name": "Cathedra Digital",
+  "name": "Cathedra Digital: Inteligência Teológica",
   "short_name": "Cathedra",
-  "description": "Plataforma profissional de estudos teológicos católicos com busca relacional.",
+  "description": "Plataforma profissional de estudos teológicos católicos com busca relacional entre Escritura, Catecismo e Magistério.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fdfcf8",
   "theme_color": "#1a1a1a",
   "orientation": "portrait",
   "scope": "/",
-  "id": "com.cathedra.app",
+  "id": "com.cathedra.app.v1",
   "categories": [
     "education",
     "books",
@@ -35,6 +35,38 @@
       "type": "image/jpeg",
       "form_factor": "wide",
       "label": "Cathedra Digital Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Estudo Rápido",
+      "url": "/study-mode",
+      "icons": [
+        {
+          "src": "https://img.icons8.com/ios-filled/96/d4af37/feather.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Bíblia Sagrada",
+      "url": "/bible",
+      "icons": [
+        {
+          "src": "https://img.icons8.com/ios-filled/96/d4af37/book.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Liturgia Diária",
+      "url": "/",
+      "icons": [
+        {
+          "src": "https://img.icons8.com/ios-filled/96/d4af37/history.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "requestFramePermissions": []

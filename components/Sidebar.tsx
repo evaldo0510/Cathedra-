@@ -26,7 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
     { r: AppRoute.DOGMAS, l: 'Dogmas e Verdades', i: Icons.Feather, guest: true },
     { r: AppRoute.SAINTS, l: 'Nuvem de Testemunhas', i: Icons.Users, guest: true },
     { r: AppRoute.SOCIAL_DOCTRINE, l: 'Compêndio Social', i: Icons.Globe, guest: true },
-    { r: AppRoute.ABOUT, l: 'Sobre o Projeto', i: Icons.History, guest: true }, // Adicionado link faltante
+    { r: AppRoute.ABOUT, l: 'Sobre o Projeto', i: Icons.History, guest: true },
   ];
 
   if (user?.role === 'admin') {
@@ -36,7 +36,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
   const handleNavigation = (route: AppRoute) => {
     onNavigate(route);
     if (onClose) {
-      // Pequeno delay para permitir que a animação de clique seja vista antes de fechar
       setTimeout(onClose, 100);
     }
   };
@@ -88,6 +87,35 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
           );
         })}
       </nav>
+
+      {/* Links de Desenvolvedor e Redes Sociais */}
+      <div className="mt-10 pt-8 border-t border-white/10 space-y-6">
+        <div className="space-y-3">
+          <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 ml-4">Desenvolvedor & Apoio</p>
+          <a 
+            href="https://instagram.com/seu-perfil" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-white/5 text-stone-300 hover:text-[#d4af37] hover:bg-white/10 transition-all group"
+          >
+            <div className="p-2 bg-[#d4af37]/10 rounded-lg group-hover:scale-110 transition-transform">
+               <Icons.Globe className="w-4 h-4 text-[#d4af37]" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest">Siga no Instagram</span>
+          </a>
+          <a 
+            href="https://github.com/Dancrf/liturgia-diaria" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-white/5 text-stone-300 hover:text-[#d4af37] hover:bg-white/10 transition-all group"
+          >
+            <div className="p-2 bg-[#d4af37]/10 rounded-lg group-hover:scale-110 transition-transform">
+               <Icons.Layout className="w-4 h-4 text-[#d4af37]" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest">Código no Github</span>
+          </a>
+        </div>
+      </div>
       
       <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
         {user ? (

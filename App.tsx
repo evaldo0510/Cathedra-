@@ -33,6 +33,10 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [user, setUser] = useState<User | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
+  
+  // PWA & Notifications State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('cathedra_user');
@@ -46,11 +50,28 @@ const App: React.FC = () => {
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // PWA Install Prompt Logic
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    });
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
 
   const syncWithSupabase = async (userId: string) => {
     if (!navigator.onLine) return;
@@ -161,6 +182,31 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500">
+      
+      {/* PWA Install Banner - Professional Persistent Design */}
+      {showInstallBanner && (
+        <div className="fixed top-0 left-0 right-0 z-[300] bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 px-6 py-4 flex items-center justify-between animate-in slide-in-from-top duration-700 shadow-2xl border-b border-[#d4af37]/20">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-white/10 dark:bg-black/10 rounded-lg">
+              <Icons.Layout className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Instalar Cathedra Pro</p>
+              <p className="text-[9px] opacity-60 font-serif italic mt-0.5">Acesse o santuário offline da sua tela inicial.</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={() => setShowInstallBanner(false)} className="text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity">Agora não</button>
+            <button 
+              onClick={handleInstallClick}
+              className="px-6 py-2.5 bg-[#d4af37] dark:bg-stone-900 text-stone-900 dark:text-[#d4af37] rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform"
+            >
+              Baixar Agora
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isOnline && (
         <div className="fixed top-6 right-6 z-[200] bg-stone-900/90 text-[#d4af37] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#d4af37]/20 backdrop-blur-md animate-in slide-in-from-right duration-500">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_10px_#f59e0b]" />

@@ -22,7 +22,8 @@ const Dogmas: React.FC = () => {
       setDogmas(data);
       // Ao carregar grupos, expandimos todos por padrão para facilitar a navegação inicial
       if (viewMode !== 'list') {
-        const allKeys = new Set(data.map(d => viewMode === 'period' ? (d.period || 'Geral') : (d.council || 'Geral')));
+        // Fix for "Argument of type 'Set<unknown>' is not assignable to parameter of type 'SetStateAction<Set<string>>'"
+        const allKeys = new Set<string>(data.map(d => viewMode === 'period' ? (d.period || 'Geral') : (d.council || 'Geral')));
         setExpandedGroups(allKeys);
       }
     } catch (e) {

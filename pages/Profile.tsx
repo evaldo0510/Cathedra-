@@ -12,11 +12,21 @@ interface ProfileProps {
 
 const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavigateCheckout }) => {
   const [history, setHistory] = useState<StudyResult[]>([]);
+  const [notifEnabled, setNotifEnabled] = useState(Notification.permission === 'granted');
 
   useEffect(() => {
     const saved = localStorage.getItem('cathedra_history');
     if (saved) setHistory(JSON.parse(saved));
   }, []);
+
+  const toggleNotifications = async () => {
+    if (notifEnabled) {
+      alert("Para desativar, altere as permissões do seu navegador.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotifEnabled(permission === 'granted');
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-32">
@@ -66,6 +76,47 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
           </div>
         </div>
       </header>
+
+      {/* App Preferences & Notifications Section */}
+      <section className="bg-white dark:bg-stone-900 p-12 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl space-y-10">
+        <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 border-b border-stone-50 dark:border-stone-800 pb-6 flex items-center gap-4">
+          <Icons.Globe className="w-6 h-6 text-[#d4af37]" />
+          Preferências do Aplicativo
+        </h3>
+        
+        <div className="grid md:grid-cols-2 gap-12">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-serif font-bold text-stone-900 dark:text-stone-100 text-xl">Notificações Diárias</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-stone-400">Liturgia, Santo e Citações</p>
+              </div>
+              <button 
+                onClick={toggleNotifications}
+                className={`w-14 h-7 rounded-full transition-colors relative ${notifEnabled ? 'bg-[#d4af37]' : 'bg-stone-200 dark:bg-stone-800'}`}
+              >
+                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${notifEnabled ? 'translate-x-8' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            <div className="p-6 bg-stone-50 dark:bg-stone-800/50 rounded-3xl border border-stone-100 dark:border-stone-700">
+              <p className="text-xs font-serif italic text-stone-500">
+                {notifEnabled ? 'Você está pronto para receber o alimento espiritual todas as manhãs diretamente no seu dispositivo.' : 'Ative para não perder as atualizações diárias do santuário.'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-6">
+             <p className="font-serif font-bold text-stone-900 dark:text-stone-100 text-xl">Integridade Offline</p>
+             <div className="flex items-center gap-4 text-green-500">
+               <div className="w-3 h-3 bg-current rounded-full animate-pulse" />
+               <span className="text-[10px] font-black uppercase tracking-widest">Santuário Cacheado (Offline Ativo)</span>
+             </div>
+             <p className="text-xs font-serif italic text-stone-500 leading-relaxed">
+               O Cathedra Digital está otimizado para funcionar mesmo sem internet. Seus estudos e marcações estão salvos localmente.
+             </p>
+          </div>
+        </div>
+      </section>
 
       <section className="grid md:grid-cols-3 gap-8">
          {[
