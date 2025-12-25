@@ -122,16 +122,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user, isCom
     }
   };
 
-  const handleOpenInsight = async (reading: LiturgyReading, id: string) => {
-    setInsightLoading(id);
-    setActiveInsight(null);
-    try {
-      const insight = await getLiturgyInsight(reading.title, reading.reference, reading.text);
-      setActiveInsight({ reading, text: insight });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setInsightLoading(null);
+  const handleShareQuote = () => {
+    if (!dailyQuote) return;
+    const text = `"${dailyQuote.quote}" — ${dailyQuote.author}\n\nEnviado via Cathedra Digital 🏛️`;
+    if (navigator.share) {
+      navigator.share({ title: 'Sabedoria dos Santos', text });
+    } else {
+      navigator.clipboard.writeText(text);
+      alert("Citação copiada para a área de transferência!");
     }
   };
 
@@ -142,14 +140,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user, isCom
       
       {/* 1. HERO LITÚRGICO: O Coração do Dia */}
       <section className={`relative overflow-hidden rounded-[3rem] md:rounded-[4rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl transition-all duration-700`}>
-        {/* Background Decorativo Dinâmico */}
         <div className={`absolute inset-0 bg-gradient-to-br ${lColors.gradient} opacity-50`} />
         <div className="absolute top-0 right-0 p-10 opacity-[0.03] pointer-events-none">
           <Icons.Cross className="w-96 h-96" />
         </div>
 
         <div className="relative z-10 p-8 md:p-16 flex flex-col md:flex-row items-center gap-10 md:gap-16">
-          {/* Liturgical Indicator */}
           <div className="flex-shrink-0 relative">
              <div className={`w-32 h-32 md:w-40 md:h-40 rounded-full bg-white dark:bg-stone-800 flex items-center justify-center shadow-xl border-8 border-stone-50 dark:border-stone-700 relative z-20 overflow-hidden`}>
                 <div className={`w-full h-full animate-pulse transition-colors duration-1000 ${lColors.glow}`} style={{ backgroundColor: lColors.main }} />
@@ -157,7 +153,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user, isCom
                   <Icons.Cross className="w-12 h-12 text-white/40" />
                 </div>
              </div>
-             {/* Halo Pulsante */}
              <div className={`absolute inset-0 rounded-full animate-ping opacity-20`} style={{ backgroundColor: lColors.main }} />
           </div>
 
@@ -218,7 +213,55 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user, isCom
         </form>
       </section>
 
-      {/* 3. GRID PRINCIPAL: Santo e Evangelho */}
+      {/* 3. CITAÇÃO DO DIA (SENTENTIA DIEI) - NOVO COMPONENTE DE ALTO IMPACTO */}
+      <section className="px-4 md:px-0">
+        <div className="bg-[#1a1a1a] dark:bg-[#d4af37] p-10 md:p-16 rounded-[4rem] shadow-3xl relative overflow-hidden group">
+          {/* Background Decorativo */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37]/20 to-transparent opacity-50" />
+          <Icons.Feather className="absolute -bottom-10 -right-10 w-64 h-64 text-[#d4af37]/10 dark:text-stone-900/10 group-hover:rotate-12 transition-transform duration-1000 pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-10 md:gap-16">
+            <div className="flex-shrink-0">
+               <div className="p-8 bg-white/5 dark:bg-stone-900/10 rounded-[2.5rem] border border-white/10 dark:border-stone-900/10 shadow-inner">
+                  <Icons.Feather className="w-12 h-12 text-[#d4af37] dark:text-stone-900" />
+               </div>
+            </div>
+
+            <div className="flex-1 space-y-6 text-center md:text-left">
+              <span className="text-[10px] font-black uppercase tracking-[0.8em] text-[#d4af37]/60 dark:text-stone-900/60">Sententia Diei</span>
+              
+              {loading.quote ? (
+                <div className="space-y-4">
+                  <div className="h-10 w-full bg-white/5 dark:bg-stone-900/5 rounded-2xl animate-pulse" />
+                  <div className="h-10 w-4/6 bg-white/5 dark:bg-stone-900/5 rounded-2xl animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <span className="absolute -top-10 -left-6 text-7xl md:text-9xl text-[#d4af37]/20 dark:text-stone-900/10 font-serif leading-none italic pointer-events-none">“</span>
+                    <p className="text-2xl md:text-5xl font-serif italic text-white dark:text-stone-900 leading-tight tracking-tight relative z-10">
+                      {dailyQuote?.quote}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
+                    <cite className="text-[12px] font-black uppercase tracking-[0.4em] text-[#d4af37] dark:text-stone-900">— {dailyQuote?.author}</cite>
+                    <div className="h-px w-12 bg-white/10 dark:bg-stone-900/10" />
+                    <button 
+                      onClick={handleShareQuote}
+                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40 dark:text-stone-900/40 hover:text-[#d4af37] dark:hover:text-stone-900 transition-colors"
+                    >
+                      <Icons.Globe className="w-4 h-4" />
+                      Partilhar Sabedoria
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. GRID PRINCIPAL: Santo e Evangelho */}
       <div className="grid lg:grid-cols-12 gap-8 md:gap-12 px-4 md:px-0">
         
         {/* Coluna do Evangelho e Meditação */}
@@ -339,20 +382,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user, isCom
             )}
           </section>
 
-          {/* Wisdom Quote */}
-          <section className="bg-[#1a1a1a] p-10 rounded-[3.5rem] text-white shadow-3xl text-center relative overflow-hidden group">
-             <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37]/10 to-transparent" />
-             <Icons.Feather className="absolute -bottom-6 -right-6 w-32 h-32 text-[#d4af37]/10 group-hover:rotate-12 transition-transform duration-1000" />
-             
-             {loading.quote ? (
-               <div className="h-40 flex items-center justify-center animate-pulse"><div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" /></div>
-             ) : (
-               <div className="relative z-10 space-y-6">
-                  <span className="text-[9px] font-black uppercase tracking-[0.6em] text-[#d4af37]">Sabedoria dos Santos</span>
-                  <p className="text-2xl font-serif italic leading-snug">"{dailyQuote?.quote}"</p>
-                  <cite className="block text-[10px] font-black uppercase tracking-widest text-stone-500">— {dailyQuote?.author}</cite>
-               </div>
-             )}
+          {/* Banner de Comunidade */}
+          <section className="bg-stone-50 dark:bg-stone-900 p-10 rounded-[3.5rem] border border-stone-200 dark:border-stone-800 shadow-xl text-center space-y-6 group cursor-pointer hover:bg-white dark:hover:bg-stone-800 transition-all">
+             <div className="w-16 h-16 bg-white dark:bg-stone-950 rounded-2xl flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform">
+                <Icons.Users className="w-8 h-8 text-[#d4af37]" />
+             </div>
+             <div className="space-y-2">
+                <h5 className="text-xl font-serif font-bold text-stone-900 dark:text-stone-100">Aula Magna</h5>
+                <p className="text-xs text-stone-400 font-serif italic">Participe dos debates teológicos com outros fiéis.</p>
+             </div>
+             <button onClick={() => onNavigate(AppRoute.COMMUNITY)} className="text-[9px] font-black uppercase tracking-[0.4em] text-[#8b0000] hover:text-[#d4af37] transition-colors">Acessar Fórum</button>
           </section>
         </aside>
 
