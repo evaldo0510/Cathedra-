@@ -15,6 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
   const items = [
     { r: AppRoute.DASHBOARD, l: 'Início', i: Icons.Home, guest: true },
     { r: AppRoute.LITURGICAL_CALENDAR, l: 'Calendário Litúrgico', i: Icons.History, guest: true },
+    { r: AppRoute.LECTIO_DIVINA, l: 'Lectio Divina', i: Icons.Cross, guest: true, freeBadge: true },
     { r: AppRoute.COMMUNITY, l: 'Aula Magna', i: Icons.Users, guest: true },
     { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: false, premium: true },
     { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: false, premium: true },

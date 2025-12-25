@@ -31,7 +31,6 @@ export interface Dogma {
   period?: string;
 }
 
-// Added missing interface LiturgyInfo to fix reported errors
 export interface LiturgyInfo {
   color: string;
   season: string;
@@ -42,7 +41,6 @@ export interface LiturgyInfo {
   date?: string;
 }
 
-// Added missing interface Gospel to fix reported errors
 export interface Gospel {
   reference: string;
   text: string;
@@ -50,7 +48,6 @@ export interface Gospel {
   calendar: LiturgyInfo;
 }
 
-// Added missing interface StudyResult to fix reported errors
 export interface StudyResult {
   topic: string;
   summary: string;
@@ -78,6 +75,7 @@ export interface User {
     versesSaved: number;
     studiesPerformed: number;
     daysActive: number;
+    lastChapterRead?: string;
   };
 }
 
@@ -118,5 +116,6 @@ export enum AppRoute {
   LOGIN = '/login',
   PROFILE = '/profile',
   ADMIN = '/admin',
-  COMMUNITY = '/community'
+  COMMUNITY = '/community',
+  LECTIO_DIVINA = '/lectio-divina'
 }

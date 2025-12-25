@@ -42,8 +42,25 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, class
     }
     localStorage.setItem('cathedra_highlights', JSON.stringify(newHighlights));
     setIsHighlighted(!isHighlighted);
-    // Dispara evento customizado para os pais escutarem se necessário
     window.dispatchEvent(new CustomEvent('highlight-change', { detail: { itemId, status: !isHighlighted } }));
+  };
+
+  const handleShare = async () => {
+    if (!textToCopy) return;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Cathedra Digital - Sabedoria',
+          text: `${textToCopy}\n\nVia: Cathedra Digital 🏛️`,
+          url: window.location.href
+        });
+      } catch (err) {
+        copyToClipboard();
+      }
+    } else {
+      copyToClipboard();
+    }
   };
 
   const copyToClipboard = () => {
@@ -57,24 +74,32 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, class
     <div className={`flex items-center gap-2 ${className}`}>
       <button 
         onClick={toggleHighlight}
-        className={`p-2 rounded-full transition-all hover:bg-stone-100 ${isHighlighted ? 'text-[#d4af37] bg-stone-50' : 'text-stone-300'}`}
+        className={`p-2 rounded-full transition-all hover:bg-stone-100 dark:hover:bg-stone-800 ${isHighlighted ? 'text-[#d4af37] bg-stone-50 dark:bg-stone-900' : 'text-stone-300'}`}
         title="Destacar Texto"
       >
         <Icons.Feather className="w-4 h-4" />
       </button>
       
       <button 
+        onClick={handleShare}
+        className="p-2 rounded-full transition-all hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-300"
+        title="Compartilhar"
+      >
+        <Icons.Globe className="w-4 h-4" />
+      </button>
+
+      <button 
         onClick={toggleBookmark}
-        className={`p-2 rounded-full transition-all hover:bg-stone-100 ${isBookmarked ? 'text-[#8b0000] bg-stone-50' : 'text-stone-300'}`}
-        title="Marcar Página / Favoritar"
+        className={`p-2 rounded-full transition-all hover:bg-stone-100 dark:hover:bg-stone-800 ${isBookmarked ? 'text-[#8b0000] bg-stone-50 dark:bg-stone-900' : 'text-stone-300'}`}
+        title="Marcar Página"
       >
         <Icons.History className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
       </button>
 
       <button 
         onClick={copyToClipboard}
-        className={`p-2 rounded-full transition-all hover:bg-stone-100 ${isCopied ? 'text-green-600' : 'text-stone-300'}`}
-        title="Copiar Link / Conteúdo"
+        className={`p-2 rounded-full transition-all hover:bg-stone-100 dark:hover:bg-stone-800 ${isCopied ? 'text-green-600' : 'text-stone-300'}`}
+        title="Copiar"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {isCopied ? (

@@ -1,9 +1,7 @@
 
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import { StudyResult, Verse, Saint, Gospel, Dogma, CatechismParagraph, LiturgyInfo } from "../types";
 
-// Gateway Protection Simulation: No production app should keep API Key in frontend.
-// This service simulates a call to a backend proxy where the API_KEY would actually live.
 const CACHE_KEYS = {
   SAINT_DAILY: 'cathedra_daily_saint',
   GOSPEL: 'cathedra_daily_gospel',
@@ -51,12 +49,21 @@ REGRAS:
 3. Tom: Solene, acadêmico e devocional.
 4. Idioma: Português do Brasil (PT-BR).`;
 
+export const getLectioPoints = async (text: string): Promise<string[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Com base neste texto bíblico: "${text}", gere 3 pontos profundos de meditação (Meditatio) para uma Lectio Divina. Retorne como um array de strings JSON.`,
+    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+  });
+  return JSON.parse(response.text || "[]");
+};
+
 export const getDailyGospel = async (): Promise<Gospel> => {
   const cached = getCache<Gospel>(CACHE_KEYS.GOSPEL);
   if (cached) return cached;
   
   return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const today = new Date().toLocaleDateString('pt-BR');
     const response = await ai.models.generateContent({
@@ -71,13 +78,12 @@ export const getDailyGospel = async (): Promise<Gospel> => {
 };
 
 export const getIntelligentStudy = async (topic: string): Promise<StudyResult> => {
-  checkSession(); // Protege o recurso
+  checkSession();
   const cacheKey = `${CACHE_KEYS.SEARCH_PREFIX}study_${topic.toLowerCase().replace(/\s+/g, '_')}`;
   const cached = getCache<StudyResult>(cacheKey);
   if (cached) return cached;
   
   return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
@@ -96,7 +102,6 @@ export const getDogmas = async (q?: string): Promise<Dogma[]> => {
   if (cached) return cached;
 
   return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = q ? `Explique dogmas relacionados a: "${q}".` : `Liste os principais dogmas católicos.`;
     const response = await ai.models.generateContent({
@@ -110,28 +115,22 @@ export const getDogmas = async (q?: string): Promise<Dogma[]> => {
   }, cacheKey);
 };
 
-export const getThomisticSynthesis = async (topic: string) => {
+export async function* getTheologicalDialogueStream(message: string) {
   checkSession();
-  const cacheKey = `${CACHE_KEYS.AQUINAS_PREFIX}${topic.toLowerCase().replace(/\s+/g, '_')}`;
-  const cached = getCache<any>(cacheKey);
-  if (cached) return cached;
-
-  return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Disputatio Escolástica sobre: "${topic}". JSON Schema: { "title": string, "objections": string[], "sedContra": string, "respondeo": string, "replies": string[] }`,
-      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-    });
-    const result = JSON.parse(response.text || "{}");
-    setCache(cacheKey, result);
-    return result;
-  }, cacheKey);
-};
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const chat = ai.chats.create({ 
+    model: 'gemini-3-pro-preview',
+    config: { systemInstruction: SYSTEM_INSTRUCTION }
+  });
+  
+  const result = await chat.sendMessageStream({ message });
+  for await (const chunk of result) {
+    const c = chunk as GenerateContentResponse;
+    yield c.text;
+  }
+}
 
 export const generateSpeech = async (text: string): Promise<string> => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
@@ -145,7 +144,6 @@ export const getDailySaint = async (): Promise<Saint> => {
   const cached = getCache<Saint>(CACHE_KEYS.SAINT_DAILY);
   if (cached) return cached;
   return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -162,7 +160,6 @@ export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
   const cached = getCache<LiturgyInfo[]>(CACHE_KEYS.WEEKLY_CALENDAR);
   if (cached) return cached;
   return withRetry(async () => {
-    // Fix: Always use process.env.API_KEY directly for initialization
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -175,20 +172,10 @@ export const getWeeklyCalendar = async (): Promise<LiturgyInfo[]> => {
   }, CACHE_KEYS.WEEKLY_CALENDAR);
 };
 
-export const getTheologicalDialogue = async (message: string) => {
-  checkSession();
-  // Fix: Always use process.env.API_KEY directly for initialization
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const chat = ai.chats.create({ model: 'gemini-3-pro-preview' });
-  const response = await chat.sendMessage({ message });
-  return response.text;
-};
-
 export const getCatechismSearch = async (query: string): Promise<CatechismParagraph[]> => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemism-3-flash-preview',
     contents: `Busque parágrafos do Catecismo sobre: "${query}". JSON Schema: Array<{ "number": number, "content": string }>`,
     config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
   });
@@ -196,7 +183,6 @@ export const getCatechismSearch = async (query: string): Promise<CatechismParagr
 };
 
 export const searchVerse = async (query: string): Promise<Verse> => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -207,7 +193,6 @@ export const searchVerse = async (query: string): Promise<Verse> => {
 };
 
 export const getDailyQuote = async () => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const res = await ai.models.generateContent({ 
     model: 'gemini-3-flash-preview', 
@@ -218,7 +203,6 @@ export const getDailyQuote = async () => {
 };
 
 export const getMagisteriumDocs = async (category: string) => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const res = await ai.models.generateContent({ 
     model: 'gemini-3-flash-preview', 
@@ -229,7 +213,6 @@ export const getMagisteriumDocs = async (category: string) => {
 };
 
 export const getSaintsList = async () => {
-  // Fix: Always use process.env.API_KEY directly for initialization
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const res = await ai.models.generateContent({ 
     model: 'gemini-3-flash-preview', 
@@ -239,49 +222,21 @@ export const getSaintsList = async () => {
   return JSON.parse(res.text || "[]");
 };
 
-export const getRelatedSaints = async (saint: Saint): Promise<Saint[]> => {
-  // Fix: Always use process.env.API_KEY directly for initialization
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Santos relacionados a ${saint.name}. JSON: Array<{ \"name\": string, \"feastDay\": string, \"patronage\": string, \"biography\": string, \"image\": string, \"quote\": string }>`,
-    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-  });
-  return JSON.parse(response.text || "[]");
-};
+export const getThomisticSynthesis = async (topic: string) => {
+  checkSession();
+  const cacheKey = `${CACHE_KEYS.AQUINAS_PREFIX}${topic.toLowerCase().replace(/\s+/g, '_')}`;
+  const cached = getCache<any>(cacheKey);
+  if (cached) return cached;
 
-/**
- * Fix: Added missing export getDogmaticLinksForVerses
- */
-export const getDogmaticLinksForVerses = async (verses: Verse[]): Promise<Record<number, Dogma[]>> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const text = verses.map(v => `${v.book} ${v.chapter}:${v.verse}: ${v.text}`).join('\n');
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Identifique dogmas católicos relacionados a estes versículos bíblicos. 
-    Retorne um objeto onde a chave é o número do versículo e o valor é um array de dogmas.
-    Versículos:
-    ${text}
-    JSON Schema: { [verseNumber: number]: Array<{ "title": string, "definition": string, "council": string, "year": string, "tags": string[] }> }`,
-    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-  });
-  return JSON.parse(response.text || "{}");
-};
-
-/**
- * Fix: Added missing export getDogmaticLinksForCatechism
- */
-export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const text = paragraphs.map(p => `Parágrafo ${p.number}: ${p.content}`).join('\n');
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Identifique dogmas católicos relacionados a estes parágrafos do Catecismo da Igreja Católica.
-    Retorne um objeto onde a chave é o número do parágrafo e o valor é um array de dogmas.
-    Parágrafos:
-    ${text}
-    JSON Schema: { [paragraphNumber: number]: Array<{ "title": string, "definition": string, "council": string, "year": string, "tags": string[] }> }`,
-    config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
-  });
-  return JSON.parse(response.text || "{}");
+  return withRetry(async () => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Disputatio Escolástica sobre: "${topic}". JSON Schema: { "title": string, "objections": string[], "sedContra": string, "respondeo": string, "replies": string[] }`,
+      config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" }
+    });
+    const result = JSON.parse(response.text || "{}");
+    setCache(cacheKey, result);
+    return result;
+  }, cacheKey);
 };
