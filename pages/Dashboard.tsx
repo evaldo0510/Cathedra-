@@ -25,6 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const [gospel, setGospel] = useState<Gospel | null>(null);
   const [dailyQuote, setDailyQuote] = useState<{ quote: string; author: string } | null>(null);
   const [loading, setLoading] = useState({ saint: true, gospel: true, quote: true });
+  const [errors, setErrors] = useState({ saint: false, gospel: false, quote: false });
   const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [activeReading, setActiveReading] = useState<'1a' | 'salmo' | '2a' | 'evangelho'>('evangelho');
@@ -34,34 +35,55 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  useEffect(() => { 
-    const loadAllData = async () => {
-      // Carregamento serializado com delays para evitar estouro de cota
-      try {
-        setLoading(prev => ({ ...prev, saint: true }));
-        const s = await getDailySaint();
-        setSaint(s);
-        setLoading(prev => ({ ...prev, saint: false }));
-        
-        await new Promise(r => setTimeout(r, 800)); // Pequena pausa
-        
-        setLoading(prev => ({ ...prev, gospel: true }));
-        const g = await getDailyGospel();
-        setGospel(g);
-        setLoading(prev => ({ ...prev, gospel: false }));
+  const loadSaint = async () => {
+    setLoading(prev => ({ ...prev, saint: true }));
+    setErrors(prev => ({ ...prev, saint: false }));
+    try {
+      const data = await getDailySaint();
+      setSaint(data);
+    } catch (e) {
+      setErrors(prev => ({ ...prev, saint: true }));
+    } finally {
+      setLoading(prev => ({ ...prev, saint: false }));
+    }
+  };
 
-        await new Promise(r => setTimeout(r, 800)); // Pequena pausa
-        
-        setLoading(prev => ({ ...prev, quote: true }));
-        const q = await getDailyQuote();
-        setDailyQuote(q);
-        setLoading(prev => ({ ...prev, quote: false }));
-      } catch (err) {
-        console.error("Erro no Dashboard, fallbacks ativos.");
-      }
+  const loadGospel = async () => {
+    setLoading(prev => ({ ...prev, gospel: true }));
+    setErrors(prev => ({ ...prev, gospel: false }));
+    try {
+      const data = await getDailyGospel();
+      setGospel(data);
+    } catch (e) {
+      setErrors(prev => ({ ...prev, gospel: true }));
+    } finally {
+      setLoading(prev => ({ ...prev, gospel: false }));
+    }
+  };
+
+  const loadQuote = async () => {
+    setLoading(prev => ({ ...prev, quote: true }));
+    setErrors(prev => ({ ...prev, quote: false }));
+    try {
+      const data = await getDailyQuote();
+      setDailyQuote(data);
+    } catch (e) {
+      setErrors(prev => ({ ...prev, quote: true }));
+    } finally {
+      setLoading(prev => ({ ...prev, quote: false }));
+    }
+  };
+
+  useEffect(() => { 
+    // Carregamento serializado com pequenos intervalos para evitar rate limiting da API
+    const init = async () => {
+      await loadSaint();
+      await new Promise(r => setTimeout(r, 600));
+      await loadGospel();
+      await new Promise(r => setTimeout(r, 600));
+      await loadQuote();
     };
-    
-    loadAllData(); 
+    init();
     return () => stopAudio();
   }, []);
 
@@ -122,15 +144,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-24 px-4 md:px-0">
       
-      {/* Status da Conexão Sagrada */}
-      <div className="flex justify-center -mb-10">
-         <div className="flex items-center gap-2 px-4 py-1.5 bg-white/50 dark:bg-stone-900/50 rounded-full border border-stone-100 dark:border-stone-800 text-[8px] font-black uppercase tracking-widest text-stone-400">
-            <div className={`w-1.5 h-1.5 rounded-full ${(!loading.saint && !loading.gospel) ? 'bg-green-500 animate-pulse' : 'bg-[#d4af37] animate-spin'}`} />
-            {(!loading.saint && !loading.gospel) ? 'Conectado à Tradição' : 'Consultando Arquivos do Vaticano...'}
-         </div>
-      </div>
-
-      {gospel?.calendar && (
+      {/* Banner Litúrgico Superior */}
+      {loading.gospel ? (
+        <div className="max-w-5xl mx-auto h-24 bg-white/50 dark:bg-stone-900/50 rounded-[4rem] animate-pulse flex items-center px-10 gap-4">
+            <div className="w-5 h-5 rounded-full bg-stone-200 dark:bg-stone-800" />
+            <div className="h-4 w-32 bg-stone-200 dark:bg-stone-800 rounded-full" />
+        </div>
+      ) : gospel?.calendar ? (
         <div className="animate-in slide-in-from-top duration-700">
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 bg-white/90 dark:bg-stone-900/90 backdrop-blur-xl p-5 md:p-6 rounded-[2.5rem] md:rounded-[4rem] border border-stone-200 dark:border-stone-800 shadow-2xl max-w-5xl mx-auto">
             <div className="flex items-center gap-4">
@@ -152,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       <header className="text-center space-y-4 md:space-y-6 pt-4">
         <h1 className="text-7xl md:text-9xl lg:text-[12rem] font-serif font-bold text-stone-900 dark:text-[#d4af37] tracking-tighter leading-none select-none">
@@ -187,11 +207,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
           </section>
 
           {/* Liturgia */}
-          <section className="bg-white dark:bg-stone-900 p-8 md:p-16 rounded-[4rem] md:rounded-[6rem] border border-stone-100 dark:border-stone-800 shadow-2xl relative min-h-[500px]">
+          <section className="bg-white dark:bg-stone-900 p-8 md:p-16 rounded-[4rem] md:rounded-[6rem] border border-stone-100 dark:border-stone-800 shadow-2xl relative min-h-[500px] flex flex-col">
             {loading.gospel ? (
               <div className="space-y-12 p-8 animate-pulse">
                 <div className="h-10 w-1/3 bg-stone-100 dark:bg-stone-800 rounded-full" />
                 <div className="h-40 w-full bg-stone-50 dark:bg-stone-800/50 rounded-[4rem]" />
+              </div>
+            ) : errors.gospel ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-20 space-y-6">
+                 <div className="w-20 h-20 rounded-full bg-[#fcf8e8] dark:bg-stone-800 flex items-center justify-center border border-[#d4af37]/20">
+                   <Icons.History className="w-10 h-10 text-[#d4af37]" />
+                 </div>
+                 <h3 className="text-3xl font-serif italic text-stone-500">Não foi possível carregar a liturgia.</h3>
+                 <button 
+                  onClick={loadGospel} 
+                  className="px-12 py-4 bg-[#d4af37] text-stone-900 rounded-full font-black uppercase tracking-widest text-xs shadow-xl active:scale-95"
+                 >
+                   Tentar Novamente
+                 </button>
               </div>
             ) : (
               <>
@@ -265,11 +298,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         <aside className="lg:col-span-4 space-y-12">
           
           {/* Santo do Dia */}
-          <div className="bg-white dark:bg-stone-900 p-10 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-2xl text-center space-y-10 group relative overflow-hidden min-h-[500px]">
+          <div className="bg-white dark:bg-stone-900 p-10 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-2xl text-center space-y-10 group relative overflow-hidden min-h-[500px] flex flex-col">
             {loading.saint ? (
               <div className="space-y-10 animate-pulse py-10">
                  <div className="w-48 h-48 rounded-full bg-stone-100 dark:bg-stone-800 mx-auto" />
                  <div className="h-8 w-2/3 bg-stone-100 dark:bg-stone-800 mx-auto rounded-full" />
+              </div>
+            ) : errors.saint ? (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+                 <Icons.Users className="w-12 h-12 text-stone-200" />
+                 <p className="text-stone-400 font-serif italic">Santo não carregado.</p>
+                 <button onClick={loadSaint} className="text-[10px] font-black text-[#d4af37] uppercase tracking-widest">Tentar</button>
               </div>
             ) : (
               <>
