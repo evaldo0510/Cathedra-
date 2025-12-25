@@ -29,9 +29,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const [imageError, setImageError] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState('');
-  const [activeReading, setActiveReading] = useState<'1a' | 'salmo' | '2a' | 'evangelho'>('evangelho');
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [isReadingAudio, setIsReadingAudio] = useState(false);
+  
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -79,9 +79,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   useEffect(() => { 
     const init = async () => {
       loadSaint();
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 100));
       loadGospel();
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 100));
       loadQuote();
     };
     init();
@@ -93,15 +93,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
       try { audioSourceRef.current.stop(); } catch (e) {}
       audioSourceRef.current = null;
     }
-    setIsReadingAudio(false);
+    setPlayingId(null);
+    setAudioLoading(null);
   };
 
-  const toggleReadingSpeech = async (reading: LiturgyReading) => {
-    if (isReadingAudio || audioLoading) {
+  const toggleSpeech = async (reading: LiturgyReading, id: string) => {
+    if (playingId === id) {
       stopAudio();
       return;
     }
-    setAudioLoading(true);
+    
+    stopAudio();
+    setAudioLoading(id);
+    
     try {
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -118,33 +122,45 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
       const source = audioContextRef.current.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContextRef.current.destination);
-      source.onended = () => setIsReadingAudio(false);
+      source.onended = () => setPlayingId(null);
       
-      setAudioLoading(false);
-      setIsReadingAudio(true);
+      setAudioLoading(null);
+      setPlayingId(id);
       source.start();
       audioSourceRef.current = source;
     } catch (err) {
-      setAudioLoading(false);
+      setAudioLoading(null);
       stopAudio();
     }
   };
 
-  const currentReading = (): LiturgyReading | undefined => {
-    if (!gospel) return undefined;
-    switch (activeReading) {
-      case '1a': return gospel.firstReading;
-      case 'salmo': return gospel.psalm;
-      case '2a': return gospel.secondReading;
-      case 'evangelho': return { title: 'Evangelho', reference: gospel.reference, text: gospel.text };
-    }
-  };
-
-  const liturgicalColor = gospel?.calendar?.color ? LITURGY_COLORS[gospel.calendar.color] : '#d4af37';
-  
+  const liturgicalColor = gospel?.calendar?.color ? (LITURGY_COLORS[gospel.calendar.color] || '#d4af37') : '#d4af37';
   const saintImage = imageError || !saint?.image 
     ? "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=400" 
     : saint.image;
+
+  const renderReadingBlock = (reading: LiturgyReading, id: string) => (
+    <div key={id} className="relative group/reading bg-white dark:bg-stone-900/40 p-8 md:p-10 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-sm hover:shadow-md transition-all">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: liturgicalColor }} />
+          <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#8b0000] dark:text-[#d4af37]">
+            {reading.title}
+          </h4>
+          <span className="text-[10px] text-stone-300 font-serif italic">({reading.reference})</span>
+        </div>
+        <button 
+          onClick={() => toggleSpeech(reading, id)} 
+          className={`p-4 rounded-full transition-all active:scale-95 ${playingId === id ? 'bg-[#8b0000] text-white animate-pulse' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37] hover:bg-stone-100'}`}
+        >
+          {audioLoading === id ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-5 h-5" />}
+        </button>
+      </div>
+      <p className="font-serif italic text-2xl md:text-3xl leading-snug text-stone-900 dark:text-stone-100 tracking-tight">
+        "{reading.text}"
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-24 px-4 md:px-0">
@@ -162,17 +178,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                <div className="w-5 h-5 rounded-full shadow-inner" style={{ backgroundColor: liturgicalColor }} />
                <div className="flex flex-col">
                   <span className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-500 dark:text-stone-400">
-                    {gospel.calendar.season} • {gospel.calendar.week}
+                    {gospel.calendar.season || "Tempo Comum"} • {gospel.calendar.week || "Semana Litúrgica"}
                   </span>
                </div>
             </div>
             <div className="hidden md:block h-10 w-px bg-stone-100 dark:bg-stone-800" />
             <div className="text-center md:text-left flex-1">
                <h2 className="text-xl md:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-none">
-                 {gospel.calendar.dayName}
+                 {gospel.calendar.dayName || "Dia de Estudo"}
                </h2>
                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#8b0000] dark:text-[#d4af37] mt-1">
-                 {gospel.calendar.rank} • Ciclo {gospel.calendar.cycle}
+                 {gospel.calendar.rank || "Féria"} • Ciclo {gospel.calendar.cycle || "B"}
                </p>
             </div>
           </div>
@@ -184,7 +200,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
           Cathedra
         </h1>
         <p className="text-[#8b0000] dark:text-stone-400 font-serif italic text-2xl md:text-5xl opacity-80 max-w-2xl mx-auto leading-tight">
-          Sabedoria Eterna em suas mãos.
+          A Verdade que Liberta.
         </p>
       </header>
 
@@ -211,91 +227,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
             </form>
           </section>
 
-          {/* Liturgia */}
-          <section className="bg-white dark:bg-stone-900 p-8 md:p-16 rounded-[4rem] md:rounded-[6rem] border border-stone-100 dark:border-stone-800 shadow-2xl relative min-h-[500px] flex flex-col">
+          {/* Liturgia Integral */}
+          <section className="space-y-10">
+            <div className="flex items-center gap-5 ml-4">
+                <div className="p-4 bg-[#fcf8e8] dark:bg-stone-900 rounded-2xl shadow-sm border border-[#d4af37]/10">
+                  <Icons.Book className="w-8 h-8 text-[#d4af37]" />
+                </div>
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-stone-400">Liturgia da Palavra</h4>
+                  <p className="text-stone-900 dark:text-stone-100 font-serif italic text-lg">{gospel?.calendar?.dayName || "Hoje"}</p>
+                </div>
+            </div>
+
             {loading.gospel ? (
-              <div className="space-y-12 p-8 animate-pulse">
-                <div className="h-10 w-1/3 bg-stone-100 dark:bg-stone-800 rounded-full" />
-                <div className="h-40 w-full bg-stone-50 dark:bg-stone-800/50 rounded-[4rem]" />
+              <div className="space-y-8 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-48 bg-white dark:bg-stone-900 rounded-[3rem] border border-stone-100 dark:border-stone-800" />
+                ))}
               </div>
             ) : errors.gospel ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-20 space-y-6">
-                 <div className="w-20 h-20 rounded-full bg-[#fcf8e8] dark:bg-stone-800 flex items-center justify-center border border-[#d4af37]/20">
-                   <Icons.History className="w-10 h-10 text-[#d4af37]" />
-                 </div>
-                 <h3 className="text-3xl font-serif italic text-stone-500">Não foi possível carregar a liturgia.</h3>
-                 <button 
-                  onClick={loadGospel} 
-                  className="px-12 py-4 bg-[#d4af37] text-stone-900 rounded-full font-black uppercase tracking-widest text-xs shadow-xl active:scale-95"
-                 >
-                   Tentar Novamente
-                 </button>
+              <div className="bg-white dark:bg-stone-900 p-20 rounded-[4rem] text-center space-y-6">
+                 <Icons.History className="w-16 h-16 text-[#d4af37] mx-auto opacity-20" />
+                 <h3 className="text-2xl font-serif italic text-stone-500">Não foi possível carregar a liturgia.</h3>
+                 <button onClick={loadGospel} className="px-10 py-4 bg-[#d4af37] text-stone-900 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Tentar Novamente</button>
               </div>
             ) : (
-              <>
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12 border-b border-stone-50 dark:border-stone-800 pb-8">
-                  <div className="flex items-center gap-5">
-                      <div className="p-4 bg-[#fcf8e8] dark:bg-stone-800 rounded-2xl">
-                        <Icons.Book className="w-8 h-8 text-[#d4af37]" />
-                      </div>
-                      <div>
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-stone-400">Liturgia da Palavra</h4>
-                        <p className="text-stone-900 dark:text-stone-100 font-serif italic text-lg">{gospel?.calendar?.dayName}</p>
-                      </div>
-                  </div>
-                  
-                  <div className="flex p-1.5 bg-stone-50 dark:bg-stone-800 rounded-full gap-1 overflow-x-auto no-scrollbar shadow-inner">
-                      {gospel?.firstReading && (
-                        <button onClick={() => { stopAudio(); setActiveReading('1a'); }} className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeReading === '1a' ? 'bg-white dark:bg-stone-700 text-[#8b0000] dark:text-[#d4af37] shadow-md' : 'text-stone-400 hover:text-stone-600'}`}>1ª Leit.</button>
-                      )}
-                      {gospel?.psalm && (
-                        <button onClick={() => { stopAudio(); setActiveReading('salmo'); }} className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeReading === 'salmo' ? 'bg-white dark:bg-stone-700 text-[#8b0000] dark:text-[#d4af37] shadow-md' : 'text-stone-400 hover:text-stone-600'}`}>Salmo</button>
-                      )}
-                      {gospel?.secondReading && (
-                        <button onClick={() => { stopAudio(); setActiveReading('2a'); }} className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeReading === '2a' ? 'bg-white dark:bg-stone-700 text-[#8b0000] dark:text-[#d4af37] shadow-md' : 'text-stone-400 hover:text-stone-600'}`}>2ª Leit.</button>
-                      )}
-                      <button onClick={() => { stopAudio(); setActiveReading('evangelho'); }} className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeReading === 'evangelho' ? 'bg-white dark:bg-stone-700 text-[#8b0000] dark:text-[#d4af37] shadow-md' : 'text-stone-400 hover:text-stone-600'}`}>Evangelho</button>
-                  </div>
-                </header>
+              <div className="space-y-8 animate-in fade-in duration-1000">
+                {gospel?.firstReading && renderReadingBlock(gospel.firstReading, '1a')}
+                {gospel?.psalm && renderReadingBlock(gospel.psalm, 'salmo')}
+                {gospel?.secondReading && renderReadingBlock(gospel.secondReading, '2a')}
+                {gospel && renderReadingBlock({ title: 'Evangelho', reference: gospel.reference, text: gospel.text }, 'evangelho')}
                 
-                <div className="min-h-[400px] flex flex-col justify-between animate-in fade-in duration-300" key={activeReading}>
-                  {currentReading() ? (
-                    <>
-                      <div className="space-y-8">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-black text-[#8b0000] dark:text-[#d4af37] uppercase tracking-[0.3em] bg-stone-50 dark:bg-stone-800 px-4 py-1 rounded-full">{currentReading()?.reference}</span>
-                          <button 
-                            onClick={() => toggleReadingSpeech(currentReading()!)} 
-                            className={`p-5 rounded-full transition-all shadow-lg active:scale-95 ${isReadingAudio ? 'bg-[#8b0000] text-white animate-pulse' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37] hover:bg-stone-100'}`}
-                          >
-                            {audioLoading ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-6 h-6" />}
-                          </button>
-                        </div>
-                        <p className="font-serif italic text-3xl md:text-5xl leading-tight text-stone-900 dark:text-stone-100 tracking-tight">
-                          "{currentReading()?.text}"
-                        </p>
-                      </div>
-                      
-                      {activeReading === 'evangelho' && gospel?.reflection && (
-                        <div className="mt-16 pt-12 border-t border-stone-50 dark:border-stone-800 group/reflection">
-                          <h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-400 mb-6 text-center md:text-left flex items-center gap-2">
-                             <Icons.Feather className="w-4 h-4 text-[#d4af37]" />
-                             Meditação do Dia
-                          </h5>
-                          <p className="font-serif text-xl md:text-2xl text-stone-600 dark:text-stone-400 leading-relaxed italic border-l-4 border-[#d4af37]/20 pl-8 group-hover/reflection:border-[#d4af37]/50 transition-colors">
-                            {gospel.reflection}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center opacity-30 py-20">
-                      <Icons.Book className="w-20 h-20 mb-6 text-stone-300" />
-                      <p className="text-2xl font-serif italic text-stone-400">Leitura não disponível para este dia.</p>
+                {gospel?.reflection && (
+                  <div className="mt-12 bg-[#fcf8e8] dark:bg-stone-900/60 p-10 md:p-14 rounded-[4rem] border-l-[12px] border-[#d4af37] shadow-xl relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-110 transition-transform duration-1000 pointer-events-none">
+                       <Icons.Feather className="w-48 h-48 text-[#8b0000]" />
                     </div>
-                  )}
-                </div>
-              </>
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#8b0000] dark:text-[#d4af37] mb-6 flex items-center gap-2">
+                       Meditação do Dia
+                    </h5>
+                    <p className="font-serif text-xl md:text-2xl text-stone-700 dark:text-stone-300 leading-relaxed italic relative z-10">
+                      {gospel.reflection}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </section>
         </div>
@@ -332,11 +308,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                   </div>
                 </div>
                 <div className="space-y-3">
-                    <h3 className="text-4xl font-serif font-bold dark:text-stone-200 tracking-tight">{saint?.name}</h3>
-                    <p className="text-[#8b0000] dark:text-[#d4af37] text-[10px] font-black uppercase tracking-widest">{saint?.patronage}</p>
+                    <h3 className="text-4xl font-serif font-bold dark:text-stone-200 tracking-tight">{saint?.name || "Santo Padroeiro"}</h3>
+                    <p className="text-[#8b0000] dark:text-[#d4af37] text-[10px] font-black uppercase tracking-widest">{saint?.patronage || "Intercessor"}</p>
                 </div>
                 <p className={`text-stone-500 dark:text-stone-400 font-serif italic text-lg leading-relaxed transition-all duration-300 ${isExpanded ? '' : 'line-clamp-4'}`}>
-                  {saint?.biography}
+                  {saint?.biography || "Aguardando biografia completa."}
                 </p>
                 <button onClick={() => setIsExpanded(!isExpanded)} className="text-[11px] font-black uppercase tracking-[0.4em] text-[#8b0000] dark:text-[#d4af37] hover:scale-110 transition-transform active:scale-90">
                   {isExpanded ? 'Recolher' : 'Mergulhar na Vida'}
@@ -357,8 +333,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                     <Icons.Feather className="w-64 h-64 text-[#d4af37]" />
                 </div>
                 <h4 className="text-[11px] font-black uppercase tracking-[0.6em] text-[#d4af37] relative z-10 mb-8">Sabedoria dos Santos</h4>
-                <p className="text-2xl md:text-3xl font-serif italic leading-snug relative z-10">"{dailyQuote?.quote}"</p>
-                <cite className="text-[10px] font-black uppercase tracking-[0.3em] text-[#d4af37] block relative z-10 mt-6">— {dailyQuote?.author}</cite>
+                <p className="text-2xl md:text-3xl font-serif italic leading-snug relative z-10">"{dailyQuote?.quote || "Onde há amor e caridade, Deus aí está."}"</p>
+                <cite className="text-[10px] font-black uppercase tracking-[0.3em] text-[#d4af37] block relative z-10 mt-6">— {dailyQuote?.author || "Ubi Caritas"}</cite>
               </>
             )}
           </div>

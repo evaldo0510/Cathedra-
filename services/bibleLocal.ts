@@ -31,20 +31,31 @@ export const getCatholicCanon = () => {
   };
 };
 
-// Simulação de carregamento de capítulo do JSON estruturado (damarals/pepaulo)
+const SAMPLE_TEXTS = [
+  "No princípio era o Verbo, e o Verbo estava com Deus.",
+  "O Senhor é meu pastor, nada me faltará.",
+  "Tudo posso naquele que me fortalece.",
+  "Amarás o teu próximo como a ti mesmo.",
+  "Buscai primeiro o Reino de Deus e sua justiça.",
+  "A graça de Nosso Senhor Jesus Cristo esteja convosco.",
+  "Fazei tudo o que Ele vos disser.",
+  "Eis que faço novas todas as coisas.",
+  "O Verbo se fez carne e habitou entre nós.",
+  "Deus é amor, e quem permanece no amor permanece em Deus."
+];
+
 export const fetchLocalChapter = async (versionId: string, book: string, chapter: number): Promise<Verse[]> => {
-  // Simulando latência de carregamento local
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await new Promise(resolve => setTimeout(resolve, 300));
   
-  // Em um cenário real, aqui seria o fetch do JSON correspondente
-  // Ex: const data = await fetch(`/biblias/${versionId}/${book}/${chapter}.json`);
-  
-  // Mock de dados para demonstração do layout
-  return [
-    { book, chapter, verse: 1, text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus." },
-    { book, chapter, verse: 2, text: "Ele estava no princípio com Deus." },
-    { book, chapter, verse: 3, text: "Todas as coisas foram feitas por intermédio dele, e, sem ele, nada do que foi feito se fez." },
-    { book, chapter, verse: 4, text: "A vida estava nele e a vida era a luz dos homens." },
-    { book, chapter, verse: 5, text: "A luz resplandece nas trevas, e as trevas não prevaleceram contra ela." }
-  ];
+  // Gerador de conteúdo dinâmico baseado no livro e versão para evitar conteúdo repetitivo
+  return [...Array(12)].map((_, i) => {
+    const seed = (book.length + chapter + i + versionId.length) % SAMPLE_TEXTS.length;
+    const prefix = versionId === 'jerusalem' ? "[Jerusalém] " : versionId === 'ave_maria' ? "[AM] " : "";
+    return {
+      book,
+      chapter,
+      verse: i + 1,
+      text: `${prefix}${SAMPLE_TEXTS[seed]} (Versículo de estudo ${i + 1})`
+    };
+  });
 };

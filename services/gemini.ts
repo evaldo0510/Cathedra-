@@ -6,58 +6,47 @@ const SYSTEM_INSTRUCTION = `Você é o Cathedra AI, uma inteligência teológica
 Sua missão é fornecer informações precisas sobre a fé Católica, baseada no Magistério, Sagrada Escritura e Tradição.
 REGRAS:
 1. Retorne APENAS JSON puro quando solicitado.
-2. Grounding: Sempre use Google Search para Liturgia Diária e notícias recentes da Igreja.
-3. Imagens de Santos: No campo "image", retorne SEMPRE uma URL direta e válida do Unsplash (ex: https://images.unsplash.com/photo-...) focada em arte sacra, vitrais ou ícones. Não invente URLs.
-4. Rigor: Ao citar comentários, prefira Santo Agostinho, São Tomás de Aquino e o Catecismo.`;
+2. Grounding: Sempre use Google Search para buscar a Liturgia Diária INTEGRAL do dia solicitado.
+3. Integridade Total: Para Liturgia, você DEVE retornar a 1ª Leitura, o Salmo Responsorial e o Evangelho. Em domingos e solenidades, a 2ª Leitura também é OBRIGATÓRIA.
+4. Nunca retorne campos de texto vazios ou curtos demais. Busque o texto bíblico completo.`;
 
-// IMAGENS DE BACKUP INFALÍVEIS
 const IMAGE_BACKUPS = [
   "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800",
-  "https://images.unsplash.com/photo-1544427920-c49ccfb85579?q=80&w=800",
-  "https://images.unsplash.com/photo-1515600051222-73c3393ba0a2?q=80&w=800"
+  "https://images.unsplash.com/photo-1544427920-c49ccfb85579?q=80&w=800"
 ];
 
-// DADOS DE EMERGÊNCIA (Fallbacks garantidos)
 const FALLBACK_GOSPEL: Gospel = {
   reference: "Jo 1, 1-5",
-  text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus. Ele estava no princípio com Deus. Tudo foi feito por meio dele.",
-  reflection: "Hoje contemplamos o Verbo Encarnado que ilumina as trevas do mundo.",
+  text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus. Ele estava no princípio com Deus. Tudo foi feito por meio dele. Nele estava a vida, e a vida era a luz dos homens.",
+  reflection: "Hoje contemplamos o mistério do Verbo Encarnado que ilumina toda a humanidade.",
   title: "Evangelho segundo João",
   calendar: {
     color: "white",
     season: "Tempo Comum",
     rank: "Féria",
-    dayName: "Dia do Senhor",
+    dayName: "Feria de Estudo",
     cycle: "B",
     week: "I Semana"
+  },
+  firstReading: { 
+    title: "1ª Leitura", 
+    reference: "Gn 1, 1", 
+    text: "No princípio Deus criou o céu e a terra. A terra estava deserta e vazia, as trevas cobriam o abismo e o Espírito de Deus pairava sobre as águas." 
+  },
+  psalm: { 
+    title: "Salmo Responsorial", 
+    reference: "Sl 22", 
+    text: "O Senhor é o meu pastor, nada me faltará. Em verdes pastagens me faz repousar." 
   }
-};
-
-const FALLBACK_SAINT: Saint = {
-  name: "São Bento de Núrsia",
-  feastDay: "11 de Julho",
-  patronage: "Padroeiro da Europa e dos Monges",
-  biography: "Pai do monaquismo ocidental, São Bento ensinou o equilíbrio entre a oração e o trabalho (Ora et Labora). Sua regra guia milhares até hoje.",
-  image: IMAGE_BACKUPS[0],
-  quote: "A oração deve ser curta e pura."
 };
 
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-async function withRetry<T>(fn: () => Promise<T>, fallback: T, retries = 1): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await fn();
   } catch (error: any) {
-    const errStr = JSON.stringify(error).toLowerCase();
-    if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("exhausted")) {
-        console.warn("Cota atingida, acionando fallback instantâneo.");
-        return fallback;
-    }
-    
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return withRetry(fn, fallback, retries - 1);
-    }
+    console.error("Cathedra API Sync Error:", error);
     return fallback;
   }
 }
@@ -68,10 +57,26 @@ export const getDailyGospel = async (): Promise<Gospel> => {
     const today = new Date().toLocaleDateString('pt-BR');
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Pesquise a Liturgia Católica de hoje (${today}). JSON: { "reference": string, "text": string, "reflection": string, "calendar": { "color": string, "season": string, "rank": string, "dayName": string, "cycle": string, "week": string } }`,
+      contents: `Pesquise a Liturgia Católica Completa de hoje (${today}). Retorne este JSON INTEGRAL: 
+      { 
+        "reference": "ref do evangelho", 
+        "text": "texto integral do evangelho", 
+        "reflection": "meditação profunda sobre as leituras", 
+        "calendar": { "color": "green|purple|white|red", "season": "Tempo", "rank": "Solenidade|Festa|Memória|Féria", "dayName": "Nome do Dia", "cycle": "B", "week": "Semana" },
+        "firstReading": { "title": "1ª Leitura", "reference": "ref", "text": "texto integral" },
+        "psalm": { "title": "Salmo Responsorial", "reference": "ref", "text": "texto integral com refrão" },
+        "secondReading": { "title": "2ª Leitura", "reference": "ref", "text": "texto integral (se houver)" }
+      }`,
       config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
     });
-    return JSON.parse(response.text || JSON.stringify(FALLBACK_GOSPEL));
+    const parsed = JSON.parse(response.text || JSON.stringify(FALLBACK_GOSPEL));
+    
+    // Verificações de integridade para evitar conteúdo faltando
+    if (!parsed.firstReading) parsed.firstReading = FALLBACK_GOSPEL.firstReading;
+    if (!parsed.psalm) parsed.psalm = FALLBACK_GOSPEL.psalm;
+    if (!parsed.text || parsed.text.length < 50) parsed.text = FALLBACK_GOSPEL.text;
+    
+    return parsed;
   }, FALLBACK_GOSPEL);
 };
 
@@ -80,14 +85,20 @@ export const getDailySaint = async (): Promise<Saint> => {
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Identifique o santo do dia de hoje. JSON: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }`,
+      contents: `Identifique o santo do dia de hoje. Retorne JSON: { "name": string, "feastDay": string, "patronage": string, "biography": string, "image": string, "quote": string }`,
       config: { systemInstruction: SYSTEM_INSTRUCTION, tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
     });
-    const parsed = JSON.parse(response.text || JSON.stringify(FALLBACK_SAINT));
-    // Garante que se a imagem vier vazia, usa o backup
+    const parsed = JSON.parse(response.text || "{}");
     if (!parsed.image || parsed.image.length < 10) parsed.image = IMAGE_BACKUPS[0];
     return parsed;
-  }, FALLBACK_SAINT);
+  }, {
+    name: "São Bento",
+    feastDay: "11 de Julho",
+    patronage: "Europa",
+    biography: "Pai do monaquismo ocidental, São Bento ensinou o equilíbrio entre a oração e o trabalho.",
+    image: IMAGE_BACKUPS[0],
+    quote: "A oração deve ser curta e pura."
+  });
 };
 
 export const getDailyQuote = async () => {
@@ -95,7 +106,7 @@ export const getDailyQuote = async () => {
     const ai = getAIInstance();
     const res = await ai.models.generateContent({ 
       model: 'gemini-3-flash-preview', 
-      contents: "Uma citação curta e inspiradora de um santo. JSON: { \"quote\": string, \"author\": string }", 
+      contents: "Citação inspiradora de um santo. JSON: { \"quote\": string, \"author\": string }", 
       config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
     });
     return JSON.parse(res.text || '{"quote": "Onde há amor e caridade, Deus aí está.", "author": "Ubi Caritas"}');
