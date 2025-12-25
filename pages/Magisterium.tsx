@@ -10,7 +10,11 @@ interface MagisteriumDoc {
   year: string;
 }
 
-const Magisterium: React.FC = () => {
+interface MagisteriumProps {
+  onDeepDive?: (topic: string) => void;
+}
+
+const Magisterium: React.FC<MagisteriumProps> = ({ onDeepDive }) => {
   const [docs, setDocs] = useState<MagisteriumDoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -23,13 +27,12 @@ const Magisterium: React.FC = () => {
     const cacheKey = getCacheKey(category);
     const cached = localStorage.getItem(cacheKey);
     
-    // Se houver cache, exibe imediatamente
     if (cached) {
       setDocs(JSON.parse(cached));
-      setIsRefreshing(true); // Indica que está atualizando em background
+      setIsRefreshing(true);
     } else {
       setLoading(true);
-      setDocs([]); // Limpa se não houver cache para mostrar o loader limpo
+      setDocs([]);
     }
 
     try {
@@ -46,7 +49,6 @@ const Magisterium: React.FC = () => {
     }
   };
 
-  // Carrega uma categoria inicial por padrão
   useEffect(() => {
     fetchDocs('Concílios Ecumênicos');
   }, []);
@@ -60,18 +62,18 @@ const Magisterium: React.FC = () => {
             <Icons.Globe className="w-16 h-16 text-[#8b0000] relative z-10" />
           </div>
         </div>
-        <h2 className="text-7xl font-serif font-bold text-stone-900 tracking-tight text-shadow-sacred">Magistério da Igreja</h2>
+        <h2 className="text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight text-shadow-sacred">Magistério da Igreja</h2>
         <p className="text-stone-400 italic font-serif text-2xl max-w-2xl mx-auto">
           "O Depósito da Fé guardado sob a guia segura do Espírito Santo."
         </p>
       </header>
 
-      <div className="flex flex-wrap justify-center gap-4 bg-white/50 p-4 rounded-[3rem] border border-stone-100 backdrop-blur-sm max-w-4xl mx-auto">
+      <div className="flex flex-wrap justify-center gap-4 bg-white/50 dark:bg-stone-900/50 p-4 rounded-[3rem] border border-stone-100 dark:border-stone-800 backdrop-blur-sm max-w-4xl mx-auto">
         {['Concílios Ecumênicos', 'Encíclicas Papais', 'Doutrina Social', 'Credos Antigos'].map(cat => (
           <button 
             key={cat}
             onClick={() => fetchDocs(cat)}
-            className={`px-10 py-4 rounded-full font-serif italic text-xl transition-all shadow-sm border ${activeCategory === cat ? 'bg-[#8b0000] text-white border-[#8b0000] shadow-sacred scale-105' : 'bg-white text-stone-600 border-stone-100 hover:border-[#d4af37]'}`}
+            className={`px-10 py-4 rounded-full font-serif italic text-xl transition-all shadow-sm border ${activeCategory === cat ? 'bg-[#8b0000] text-white border-[#8b0000] shadow-sacred scale-105' : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400 border-stone-100 dark:border-stone-700 hover:border-[#d4af37]'}`}
           >
             {cat}
           </button>
@@ -89,7 +91,7 @@ const Magisterium: React.FC = () => {
         {loading ? (
           <div className="space-y-12">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-64 bg-white rounded-[4rem] animate-pulse border border-stone-100" />
+              <div key={i} className="h-64 bg-white dark:bg-stone-900 rounded-[4rem] animate-pulse border border-stone-100 dark:border-stone-800" />
             ))}
           </div>
         ) : (
@@ -97,17 +99,17 @@ const Magisterium: React.FC = () => {
             {docs.map((doc, i) => (
               <article 
                 key={i} 
-                className="bg-white p-12 md:p-16 rounded-[4.5rem] border border-stone-100 shadow-xl group relative overflow-hidden transition-all duration-700 hover:shadow-sacred/5 animate-in slide-in-from-bottom-8"
+                className="bg-white dark:bg-stone-900 p-12 md:p-16 rounded-[4.5rem] border border-stone-100 dark:border-stone-800 shadow-xl group relative overflow-hidden transition-all duration-700 hover:shadow-sacred/5 animate-in slide-in-from-bottom-8"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000 pointer-events-none">
                   <Icons.Cross className="w-64 h-64 text-[#8b0000]" />
                 </div>
                 
-                <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-10 border-b border-stone-50 pb-10">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-10 border-b border-stone-50 dark:border-stone-800 pb-10">
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
-                      <span className="bg-[#fcf8e8] text-[#8b0000] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#d4af37]/10">
+                      <span className="bg-[#fcf8e8] dark:bg-stone-800 text-[#8b0000] dark:text-[#d4af37] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-[#d4af37]/10">
                         {doc.source}
                       </span>
                       <span className="text-stone-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -115,15 +117,15 @@ const Magisterium: React.FC = () => {
                         A.D. {doc.year}
                       </span>
                     </div>
-                    <h3 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 leading-tight tracking-tight">{doc.title}</h3>
+                    <h3 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">{doc.title}</h3>
                   </div>
-                  <div className="p-6 bg-stone-50 rounded-3xl text-[#d4af37]/30 group-hover:text-[#d4af37]/60 transition-colors">
+                  <div className="p-6 bg-stone-50 dark:bg-stone-800 rounded-3xl text-[#d4af37]/30 group-hover:text-[#d4af37]/60 transition-colors">
                     <Icons.Feather className="w-10 h-10" />
                   </div>
                 </div>
 
                 <div className="relative z-10">
-                  <p className="text-stone-700 font-serif italic text-2xl md:text-3xl leading-relaxed tracking-tight border-l-8 border-[#fcf8e8] pl-10">
+                  <p className="text-stone-700 dark:text-stone-300 font-serif italic text-2xl md:text-3xl leading-relaxed tracking-tight border-l-8 border-[#fcf8e8] dark:border-stone-800 pl-10">
                     "{doc.content}"
                   </p>
                 </div>
@@ -134,7 +136,10 @@ const Magisterium: React.FC = () => {
                       <div className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/50" />
                       <div className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/30" />
                    </div>
-                   <button className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-300 hover:text-[#8b0000] transition-colors">
+                   <button 
+                    onClick={() => onDeepDive?.(`${doc.source}: ${doc.title}`)}
+                    className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-300 hover:text-[#d4af37] transition-colors"
+                   >
                       Explorar Documento Integral →
                    </button>
                 </footer>
@@ -142,9 +147,9 @@ const Magisterium: React.FC = () => {
             ))}
 
             {docs.length === 0 && !loading && (
-              <div className="h-96 flex flex-col items-center justify-center text-center p-20 bg-white/40 rounded-[5rem] border-2 border-dashed border-stone-200 shadow-inner">
-                <Icons.Cross className="w-24 h-24 text-stone-200 mb-8 opacity-20" />
-                <h3 className="text-3xl font-serif italic text-stone-300">Selecione uma categoria para consultar o Magistério.</h3>
+              <div className="h-96 flex flex-col items-center justify-center text-center p-20 bg-white/40 dark:bg-stone-900/40 rounded-[5rem] border-2 border-dashed border-stone-200 dark:border-stone-800 shadow-inner">
+                <Icons.Cross className="w-24 h-24 text-stone-200 dark:text-stone-700 mb-8 opacity-20" />
+                <h3 className="text-3xl font-serif italic text-stone-300 dark:text-stone-600">Selecione uma categoria para consultar o Magistério.</h3>
               </div>
             )}
           </div>
@@ -153,9 +158,9 @@ const Magisterium: React.FC = () => {
 
       <footer className="text-center pt-24 border-t border-[#d4af37]/10 pb-16">
          <div className="flex items-center justify-center gap-8 mb-8">
-            <div className="h-px w-20 bg-stone-100" />
-            <p className="text-[12px] font-black uppercase tracking-[1em] text-stone-300">Magisterium Ecclesiae</p>
-            <div className="h-px w-20 bg-stone-100" />
+            <div className="h-px w-20 bg-stone-100 dark:bg-stone-800" />
+            <p className="text-[12px] font-black uppercase tracking-[1em] text-stone-300 dark:text-stone-700">Magisterium Ecclesiae</p>
+            <div className="h-px w-20 bg-stone-100 dark:bg-stone-800" />
          </div>
          <p className="text-stone-400 font-serif italic text-2xl">"Quem vos ouve, a Mim ouve." — Lc 10, 16</p>
       </footer>

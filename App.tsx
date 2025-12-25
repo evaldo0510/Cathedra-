@@ -122,7 +122,7 @@ const App: React.FC = () => {
       case AppRoute.SAINTS:
         return <Saints />;
       case AppRoute.MAGISTERIUM:
-        return <Magisterium />;
+        return <Magisterium onDeepDive={handleSearch} />;
       case AppRoute.DOGMAS:
         return <Dogmas />;
       case AppRoute.SOCIAL_DOCTRINE:
@@ -140,7 +140,7 @@ const App: React.FC = () => {
       case AppRoute.COMMUNITY:
         return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
       case AppRoute.LECTIO_DIVINA:
-        return <LectioDivina />;
+        return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.CHECKOUT:
         return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.PROFILE:

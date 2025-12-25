@@ -12,7 +12,11 @@ enum LectioStep {
   CONTEMPLATIO = 4
 }
 
-const LectioDivina: React.FC = () => {
+interface LectioProps {
+  onNavigateDashboard?: () => void;
+}
+
+const LectioDivina: React.FC<LectioProps> = ({ onNavigateDashboard }) => {
   const [step, setStep] = useState<LectioStep>(LectioStep.PREPARATION);
   const [text, setText] = useState<Gospel | null>(null);
   const [loading, setLoading] = useState(false);
@@ -123,7 +127,20 @@ const LectioDivina: React.FC = () => {
             </div>
             <header><span className="text-[9px] font-black uppercase tracking-widest text-[#d4af37]">Degrau IV: Contemplatio</span><h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 mt-4">Silêncio de Amor</h3></header>
             <p className="text-xl font-serif italic text-stone-500 dark:text-stone-400 leading-relaxed max-w-sm mx-auto">Permaneça em silêncio por alguns minutos na presença do Senhor.</p>
-            <button onClick={() => setStep(LectioStep.PREPARATION)} className="w-full py-5 bg-stone-50 dark:bg-stone-800 text-stone-400 rounded-2xl font-black uppercase tracking-widest text-[10px]">Encerrar Oração</button>
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={() => setStep(LectioStep.PREPARATION)} 
+                className="w-full py-5 bg-stone-50 dark:bg-stone-800 text-stone-400 rounded-2xl font-black uppercase tracking-widest text-[10px]"
+              >
+                Reiniciar Prática
+              </button>
+              <button 
+                onClick={onNavigateDashboard} 
+                className="w-full py-5 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl"
+              >
+                Retornar ao Dashboard
+              </button>
+            </div>
           </div>
         );
     }

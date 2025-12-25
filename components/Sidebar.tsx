@@ -12,26 +12,34 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user, onLogout }) => {
-  // Todos os itens agora marcados como guest: true para acesso livre
   const items = [
     { r: AppRoute.DASHBOARD, l: 'Início', i: Icons.Home, guest: true },
     { r: AppRoute.LITURGICAL_CALENDAR, l: 'Calendário Litúrgico', i: Icons.History, guest: true },
     { r: AppRoute.LECTIO_DIVINA, l: 'Lectio Divina', i: Icons.Cross, guest: true, freeBadge: true },
     { r: AppRoute.COMMUNITY, l: 'Aula Magna', i: Icons.Users, guest: true },
-    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: true, premium: false },
-    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: true, premium: false },
-    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather, guest: true, premium: false },
+    { r: AppRoute.STUDY_MODE, l: 'Estudo Relacional', i: Icons.Layout, guest: true },
+    { r: AppRoute.COLLOQUIUM, l: 'Colloquium', i: Icons.Feather, guest: true },
+    { r: AppRoute.AQUINAS, l: 'Biblioteca do Aquinate', i: Icons.Feather, guest: true },
     { r: AppRoute.BIBLE, l: 'Bíblia Sagrada', i: Icons.Book, guest: true },
     { r: AppRoute.CATECHISM, l: 'Catecismo', i: Icons.Cross, guest: true, freeBadge: true },
     { r: AppRoute.MAGISTERIUM, l: 'Magistério', i: Icons.Globe, guest: true, freeBadge: true },
     { r: AppRoute.DOGMAS, l: 'Dogmas e Verdades', i: Icons.Feather, guest: true },
     { r: AppRoute.SAINTS, l: 'Nuvem de Testemunhas', i: Icons.Users, guest: true },
     { r: AppRoute.SOCIAL_DOCTRINE, l: 'Compêndio Social', i: Icons.Globe, guest: true },
+    { r: AppRoute.ABOUT, l: 'Sobre o Projeto', i: Icons.History, guest: true }, // Adicionado link faltante
   ];
 
   if (user?.role === 'admin') {
-    items.push({ r: AppRoute.ADMIN, l: 'Administração', i: Icons.Layout, guest: false, premium: false });
+    items.push({ r: AppRoute.ADMIN, l: 'Administração', i: Icons.Layout, guest: false });
   }
+
+  const handleNavigation = (route: AppRoute) => {
+    onNavigate(route);
+    if (onClose) {
+      // Pequeno delay para permitir que a animação de clique seja vista antes de fechar
+      setTimeout(onClose, 100);
+    }
+  };
 
   return (
     <aside className="h-full sacred-gradient text-white flex flex-col p-8 md:p-10 shadow-2xl border-r border-[#d4af37]/20 z-50 overflow-y-auto custom-scrollbar">
@@ -44,7 +52,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       </button>
 
       <div className="mb-12 md:mb-16 flex flex-col items-center">
-        <div className="w-14 h-14 md:w-16 md:h-16 bg-[#d4af37] rounded-2xl md:rounded-3xl flex items-center justify-center mb-6 shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500">
+        <div 
+          onClick={() => handleNavigation(AppRoute.DASHBOARD)}
+          className="w-14 h-14 md:w-16 md:h-16 bg-[#d4af37] rounded-2xl md:rounded-3xl flex items-center justify-center mb-6 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 cursor-pointer"
+        >
           <Icons.Cross className="w-8 h-8 md:w-10 md:h-10 text-stone-900" />
         </div>
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#d4af37] tracking-[0.1em] text-center">CATHEDRA</h1>
@@ -54,15 +65,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       
       <nav className="flex-1 space-y-1 md:space-y-2">
         {items.map(item => {
-          // Temporariamente permitimos tudo, independente de login
           const isSelected = currentPath === item.r;
           return (
             <button 
               key={item.l}
-              onClick={() => {
-                onNavigate(item.r);
-                if (onClose) onClose();
-              }}
+              onClick={() => handleNavigation(item.r)}
               className={`w-full flex items-center gap-4 md:gap-5 px-5 md:px-7 py-4 md:py-5 rounded-[1.2rem] md:rounded-[1.5rem] transition-all duration-300 group relative ${isSelected ? 'bg-[#d4af37] text-stone-900 shadow-xl scale-[1.02]' : 'hover:bg-white/5 text-white/60'}`}
             >
               {isSelected && (
@@ -86,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         {user ? (
           <div className="space-y-4">
              <button 
-              onClick={() => { onNavigate(AppRoute.PROFILE); if(onClose) onClose(); }}
+              onClick={() => handleNavigation(AppRoute.PROFILE)}
               className="w-full flex items-center gap-4 px-5 py-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all group"
             >
               <div className="w-8 h-8 rounded-full bg-[#d4af37] flex items-center justify-center text-stone-900 font-black text-[10px]">
@@ -98,7 +105,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
               </div>
             </button>
             <button 
-              // Fix: replaced undefined 'handleLogout' with the 'onLogout' prop
               onClick={onLogout}
               className="w-full py-3 text-[9px] font-black uppercase tracking-[0.4em] text-white/20 hover:text-[#8b0000] transition-colors"
             >
@@ -107,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
           </div>
         ) : (
           <button 
-            onClick={() => { onNavigate(AppRoute.LOGIN); if(onClose) onClose(); }}
+            onClick={() => handleNavigation(AppRoute.LOGIN)}
             className="w-full py-5 bg-[#d4af37] text-stone-900 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95"
           >
             Acesso do Membro
