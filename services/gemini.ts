@@ -106,7 +106,7 @@ export const getDailyQuote = async () => {
     const ai = getAIInstance();
     const res = await ai.models.generateContent({ 
       model: 'gemini-3-flash-preview', 
-      contents: "Citação inspiradora de um santo. JSON: { \"quote\": string, \"author\": string }", 
+      contents: "Selecione uma citação poderosa e inspiradora de um Santo, Doutor da Igreja ou Místico Católico (como S. Tomás de Aquino, S. Teresa d'Ávila, S. Agostinho, S. João Paulo II). Retorne apenas este JSON: { \"quote\": string, \"author\": string }", 
       config: { systemInstruction: SYSTEM_INSTRUCTION, responseMimeType: "application/json" } 
     });
     return JSON.parse(res.text || '{"quote": "Onde há amor e caridade, Deus aí está.", "author": "Ubi Caritas"}');

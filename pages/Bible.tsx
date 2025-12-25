@@ -22,9 +22,18 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
   const [selectedVerseForCommentary, setSelectedVerseForCommentary] = useState<Verse | null>(null);
   const [commentary, setCommentary] = useState<string>('');
   const [loadingCommentary, setLoadingCommentary] = useState(false);
+  const [lastRead, setLastRead] = useState<{ book: string; chapter: number } | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  // Carregar progresso salvo ao montar o componente
+  useEffect(() => {
+    const saved = localStorage.getItem('cathedra_last_read');
+    if (saved) {
+      setLastRead(JSON.parse(saved));
+    }
+  }, []);
 
   const stopAudio = () => {
     if (audioSourceRef.current) {
@@ -68,6 +77,12 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     setLoading(true);
     setVerses([]);
     stopAudio();
+
+    // Persistir progresso
+    const progress = { book, chapter };
+    localStorage.setItem('cathedra_last_read', JSON.stringify(progress));
+    setLastRead(progress);
+
     try {
       const data = await fetchLocalChapter(selectedVersion.id, book, chapter);
       setVerses(data);
@@ -177,16 +192,46 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
           )}
         </div>
 
-        <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 justify-center">
-           {BIBLE_VERSIONS.map(v => (
+        {/* Retomar Leitura Banner */}
+        {showBookSelector && lastRead && (
+          <div className="max-w-2xl mx-auto animate-in slide-in-from-top-4 duration-500">
              <button 
-               key={v.id}
-               onClick={() => setSelectedVersion(v)}
-               className={`flex-shrink-0 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 ${selectedVersion.id === v.id ? 'bg-[#8b0000] text-white border-[#8b0000] shadow-lg' : 'bg-white dark:bg-stone-900 text-stone-400 border-stone-100 dark:border-stone-800 hover:border-[#d4af37]'}`}
+              onClick={() => loadChapter(lastRead.book, lastRead.chapter)}
+              className="w-full flex items-center justify-between p-6 bg-[#fcf8e8] dark:bg-stone-900 border border-[#d4af37]/30 rounded-[2rem] shadow-lg group hover:bg-[#d4af37] transition-all"
              >
-               {v.name}
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white dark:bg-stone-800 rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <Icons.History className="w-5 h-5 text-[#8b0000] dark:text-[#d4af37]" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 group-hover:text-stone-900">Continuar Lendo</p>
+                    <p className="text-xl font-serif font-bold text-stone-900">{lastRead.book} {lastRead.chapter}</p>
+                  </div>
+                </div>
+                <Icons.Feather className="w-6 h-6 text-[#d4af37] group-hover:text-stone-900" />
              </button>
-           ))}
+          </div>
+        )}
+
+        {/* Seletor de Versão com Indicador Claro */}
+        <div className="space-y-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-400">Versão Selecionada: <span className="text-[#8b0000] dark:text-[#d4af37]">{selectedVersion.name}</span></p>
+          <div className="flex overflow-x-auto gap-4 no-scrollbar pb-2 justify-center">
+             {BIBLE_VERSIONS.map(v => (
+               <button 
+                 key={v.id}
+                 onClick={() => setSelectedVersion(v)}
+                 className={`flex-shrink-0 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 relative ${selectedVersion.id === v.id ? 'bg-[#8b0000] text-white border-[#8b0000] shadow-lg scale-105' : 'bg-white dark:bg-stone-900 text-stone-400 border-stone-100 dark:border-stone-800 hover:border-[#d4af37]'}`}
+               >
+                 {v.name}
+                 {selectedVersion.id === v.id && (
+                   <div className="absolute -top-1 -right-1 bg-[#d4af37] text-stone-900 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                      <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg>
+                   </div>
+                 )}
+               </button>
+             ))}
+          </div>
         </div>
       </header>
 

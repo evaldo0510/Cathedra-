@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [user, setUser] = useState<User | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
+  const [isCompact, setIsCompact] = useState(() => localStorage.getItem('cathedra_compact') === 'true');
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   
@@ -106,6 +107,10 @@ const App: React.FC = () => {
   }, [isDark]);
 
   useEffect(() => {
+    localStorage.setItem('cathedra_compact', String(isCompact));
+  }, [isCompact]);
+
+  useEffect(() => {
     const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
     trackAccess(!!user, isPremiumRoute);
   }, [route, user]);
@@ -135,11 +140,11 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (route === AppRoute.ADMIN && user?.role !== 'admin') {
       setRoute(AppRoute.DASHBOARD);
-      return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
+      return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
     }
 
     switch (route) {
-      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
+      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
       case AppRoute.BIBLE: return <Bible onDeepDive={handleSearch} />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
@@ -157,12 +162,12 @@ const App: React.FC = () => {
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={handleLogout} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
-      default: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
+      default: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
     }
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500">
+    <div className={`flex h-screen overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500`}>
       
       {/* Toast de Erro de Busca */}
       {searchError && (
@@ -233,15 +238,16 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'}`}>
+      {/* Sidebar - Oculta em modo compacto se não for mobile */}
+      <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'} ${(isCompact && !isSidebarOpen) ? 'lg:hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsSidebarOpen(false)} />
         <div className={`relative h-full w-80 max-w-[85vw] transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
           <Sidebar currentPath={route} onNavigate={setRoute} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={handleLogout} />
         </div>
       </div>
       
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative flex flex-col">
-        <div className="lg:hidden p-5 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140] shadow-sm">
+      <main className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col transition-all duration-500 ${isCompact ? 'px-2 py-2' : ''}`}>
+        <div className={`lg:hidden p-5 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140] shadow-sm ${isCompact ? 'hidden' : ''}`}>
            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-xl active:scale-95">
               <Icons.Menu className="w-6 h-6 text-stone-800 dark:text-stone-200" />
            </button>
@@ -256,8 +262,19 @@ const App: React.FC = () => {
            </div>
         </div>
 
-        <div className="p-6 md:p-12 lg:p-16 flex-1">
-          <div className="max-w-[1500px] mx-auto h-full no-print">
+        {/* Botão para restaurar do modo compacto (Apenas Desktop) */}
+        {isCompact && (
+          <button 
+            onClick={() => setIsCompact(false)}
+            className="fixed top-4 right-4 z-[200] p-4 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-full shadow-2xl hover:scale-110 active:scale-90 transition-all group hidden lg:flex items-center gap-3 px-6"
+          >
+            <Icons.Layout className="w-5 h-5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Sair do Modo Foco</span>
+          </button>
+        )}
+
+        <div className={`flex-1 transition-all duration-500 ${isCompact ? 'p-2' : 'p-6 md:p-12 lg:p-16'}`}>
+          <div className={`mx-auto h-full no-print transition-all duration-500 ${isCompact ? 'max-w-4xl' : 'max-w-[1500px]'}`}>
             {renderContent()}
           </div>
         </div>
