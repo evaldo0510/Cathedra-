@@ -5,7 +5,7 @@ import { getDailySaint, getDailyGospel, getDailyQuote, generateSpeech, getLiturg
 import { Saint, Gospel, AppRoute, User, LiturgyReading } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
 
-const CACHE_KEY = 'cathedra_daily_cache_v3.0';
+const CACHE_KEY = 'cathedra_daily_cache_v3.1';
 const INSIGHT_CACHE_PREFIX = 'cath_ins_';
 
 const CardSkeleton = ({ className }: { className: string }) => (
@@ -15,8 +15,6 @@ const CardSkeleton = ({ className }: { className: string }) => (
 const SacredImage = memo(({ src, alt, className }: { src: string, alt: string, className: string }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Otimização de URL Unsplash para mobile
   const optimizedSrc = src.includes('unsplash.com') ? `${src}&w=600&q=80` : src;
 
   return (
@@ -58,24 +56,59 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [insightLoading, setInsightLoading] = useState<string | null>(null);
   const [activeInsight, setActiveInsight] = useState<{ reading: LiturgyReading, text: string } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  // Pre-warming agressivo: Busca o insight teológico ANTES do usuário clicar
   const warmUpInsight = useCallback(async (g: Gospel) => {
     const key = `${INSIGHT_CACHE_PREFIX}${g.reference}`;
-    const cached = localStorage.getItem(key);
-    if (cached) return;
-    
+    if (localStorage.getItem(key)) return;
     try {
-      // Fazemos o fetch de forma silenciosa e guardamos no cache
       const insight = await getLiturgyInsight(g.title, g.reference, g.text);
       localStorage.setItem(key, insight);
-    } catch (e) {
-      console.debug("Silent warmup failed:", e);
-    }
+    } catch (e) {}
   }, []);
+
+  const fetchFreshData = useCallback(async (force = false) => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    
+    if (force) {
+      setIsSyncing(true);
+      setLoading({ saint: true, gospel: true, quote: true });
+      localStorage.removeItem(CACHE_KEY);
+    }
+
+    const gospelPromise = getDailyGospel().then(res => {
+      setGospel(res);
+      setLoading(p => ({ ...p, gospel: false }));
+      warmUpInsight(res);
+      updateCache('gospel', res);
+    });
+
+    const saintPromise = getDailySaint().then(res => {
+      setSaint(res);
+      setLoading(p => ({ ...p, saint: false }));
+      updateCache('saint', res);
+    });
+
+    const quotePromise = getDailyQuote().then(res => {
+      setDailyQuote(res);
+      setLoading(p => ({ ...p, quote: false }));
+      updateCache('quote', res);
+    });
+
+    await Promise.all([gospelPromise, saintPromise, quotePromise]);
+    if (force) setIsSyncing(false);
+  }, [warmUpInsight]);
+
+  const updateCache = (key: string, value: any) => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const current = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    current.date = today;
+    current[key] = value;
+    localStorage.setItem(CACHE_KEY, JSON.stringify(current));
+  };
 
   useEffect(() => {
     const today = new Date().toLocaleDateString('pt-BR');
@@ -89,43 +122,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         setDailyQuote(parsed.quote);
         setLoading({ saint: false, gospel: false, quote: false });
         if (parsed.gospel) warmUpInsight(parsed.gospel);
+        return;
       }
     }
-
-    const fetchFreshData = async () => {
-      // Prioridade 1: Gospel
-      getDailyGospel().then(res => {
-        setGospel(res);
-        setLoading(p => ({ ...p, gospel: false }));
-        warmUpInsight(res);
-        updateCache('gospel', res);
-      });
-
-      // Prioridade 2: Saint
-      getDailySaint().then(res => {
-        setSaint(res);
-        setLoading(p => ({ ...p, saint: false }));
-        updateCache('saint', res);
-      });
-
-      // Prioridade 3: Quote
-      getDailyQuote().then(res => {
-        setDailyQuote(res);
-        setLoading(p => ({ ...p, quote: false }));
-        updateCache('quote', res);
-      });
-    };
-
-    const updateCache = (key: string, value: any) => {
-      const current = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-      current.date = today;
-      current[key] = value;
-      localStorage.setItem(CACHE_KEY, JSON.stringify(current));
-    };
-
     fetchFreshData();
-    return () => stopAudio();
-  }, [warmUpInsight]);
+  }, [fetchFreshData, warmUpInsight]);
 
   const stopAudio = () => {
     if (audioSourceRef.current) {
@@ -161,28 +162,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const handleOpenInsight = async (reading: LiturgyReading, id: string) => {
     const key = `${INSIGHT_CACHE_PREFIX}${reading.reference}`;
     const cached = localStorage.getItem(key);
-    
-    if (cached) {
-      setActiveInsight({ reading, text: cached });
-      return;
-    }
-
+    if (cached) { setActiveInsight({ reading, text: cached }); return; }
     setInsightLoading(id);
     try {
       const insight = await getLiturgyInsight(reading.title, reading.reference, reading.text);
       localStorage.setItem(key, insight);
       setActiveInsight({ reading, text: insight });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setInsightLoading(null);
-    }
+    } catch (err) { console.error(err); } finally { setInsightLoading(null); }
   };
 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-32 overflow-x-hidden">
       
-      {/* 1. HERO LITÚRGICO */}
+      {/* HERO LITÚRGICO */}
       <section className="relative overflow-hidden rounded-[2rem] md:rounded-[4rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl min-h-[220px] md:min-h-[300px] flex items-center">
         {loading.gospel && !gospel ? (
           <div className="w-full h-full p-6 md:p-16 flex flex-col md:flex-row items-center gap-6 md:gap-10">
@@ -199,6 +191,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                   <div className="absolute inset-0 bg-[#d4af37] opacity-20 animate-pulse" />
                   <Icons.Cross className="w-8 h-8 md:w-12 md:h-12 text-[#d4af37]" />
                </div>
+               {/* Botão de Sincronização Forçada */}
+               <button 
+                  onClick={() => fetchFreshData(true)}
+                  disabled={isSyncing}
+                  className={`absolute -bottom-2 -right-2 p-3 bg-white dark:bg-stone-800 rounded-full shadow-lg border border-stone-100 dark:border-stone-700 text-[#d4af37] active:scale-90 transition-all ${isSyncing ? 'animate-spin' : ''}`}
+               >
+                  <Icons.History className="w-4 h-4" />
+               </button>
             </div>
 
             <div className="flex-1 text-center md:text-left space-y-2 md:space-y-4">
@@ -219,7 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         )}
       </section>
 
-      {/* 2. BUSCA */}
+      {/* BUSCA */}
       <section className="max-w-4xl mx-auto -mt-12 md:-mt-20 relative z-20 px-4">
         <form onSubmit={(e) => { e.preventDefault(); if(query.trim()) onSearch(query); }} className="bg-white dark:bg-stone-900 p-2 md:p-4 rounded-[1.8rem] md:rounded-[2.5rem] shadow-3xl border border-stone-100 dark:border-stone-800 flex items-center gap-2 md:gap-4">
           <input 
@@ -236,32 +236,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         </form>
       </section>
 
-      {/* 3. GRID PRINCIPAL */}
       <div className="grid lg:grid-cols-12 gap-8 md:gap-12 px-4 md:px-0">
-        
         <main className="lg:col-span-8 space-y-8 md:space-y-10 order-2 lg:order-1">
-          {loading.gospel && !gospel ? (
-            <CardSkeleton className="h-64 md:h-96" />
-          ) : (
+          {loading.gospel && !gospel ? ( <CardSkeleton className="h-64 md:h-96" /> ) : (
             <article className="bg-white dark:bg-stone-900 p-6 md:p-14 rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-stone-100 dark:border-stone-800 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
                <div className="flex items-center justify-between mb-6 md:mb-8">
                  <div className="flex items-center gap-3 md:gap-4">
-                   <div className="p-2 md:p-3 bg-stone-50 dark:bg-stone-800 rounded-xl md:rounded-2xl text-[#8b0000]">
-                     <Icons.Book className="w-5 h-5 md:w-6 md:h-6" />
-                   </div>
+                   <div className="p-2 md:p-3 bg-stone-50 dark:bg-stone-800 rounded-xl md:rounded-2xl text-[#8b0000]"><Icons.Book className="w-5 h-5 md:w-6 md:h-6" /></div>
                    <p className="text-lg md:text-xl font-serif font-bold text-stone-900 dark:text-stone-100">{gospel?.reference}</p>
                  </div>
                  <div className="flex gap-2 md:gap-3">
-                   <button 
-                      onClick={() => handleOpenInsight({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')}
-                      className="p-3 md:p-4 bg-stone-50 dark:bg-stone-800 rounded-full text-[#d4af37] active:scale-90 transition-all hover:bg-[#d4af37]/10"
-                   >
+                   <button onClick={() => handleOpenInsight({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')} className="p-3 md:p-4 bg-stone-50 dark:bg-stone-800 rounded-full text-[#d4af37] active:scale-90 transition-all hover:bg-[#d4af37]/10">
                       {insightLoading === 'gospel' ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Feather className="w-5 h-5" />}
                    </button>
-                   <button 
-                      onClick={() => toggleSpeech({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')} 
-                      className={`p-3 md:p-4 rounded-full transition-all active:scale-90 ${playingId === 'gospel' ? 'bg-[#8b0000] text-white shadow-inner' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37]'}`}
-                   >
+                   <button onClick={() => toggleSpeech({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')} className={`p-3 md:p-4 rounded-full transition-all active:scale-90 ${playingId === 'gospel' ? 'bg-[#8b0000] text-white shadow-inner' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37]'}`}>
                       {audioLoading === 'gospel' ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-5 h-5" />}
                    </button>
                  </div>
@@ -275,9 +263,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         </main>
 
         <aside className="lg:col-span-4 space-y-8 md:space-y-10 order-1 lg:order-2">
-          {loading.saint && !saint ? (
-            <CardSkeleton className="h-[400px] md:h-[500px]" />
-          ) : (
+          {loading.saint && !saint ? ( <CardSkeleton className="h-[400px] md:h-[500px]" /> ) : (
             <section className="bg-white dark:bg-stone-900 p-6 md:p-10 rounded-[2rem] md:rounded-[3.5rem] border border-stone-100 dark:border-stone-800 shadow-2xl text-center flex flex-col items-center group animate-in fade-in slide-in-from-right-4 duration-700">
                 <div className="relative mb-6 md:mb-8">
                    <div className="w-24 h-24 md:w-40 md:h-40 rounded-full border-4 md:border-8 border-white dark:border-stone-800 shadow-2xl overflow-hidden relative z-10">
@@ -295,9 +281,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
             </section>
           )}
 
-          {loading.quote && !dailyQuote ? (
-             <CardSkeleton className="h-40 md:h-48" />
-          ) : (
+          {loading.quote && !dailyQuote ? ( <CardSkeleton className="h-40 md:h-48" /> ) : (
             <section className="bg-[#1a1a1a] p-8 md:p-10 rounded-[2rem] md:rounded-[3rem] text-white shadow-3xl text-center relative overflow-hidden animate-in fade-in duration-1000">
                <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37]/20 to-transparent" />
                <Icons.Feather className="absolute -bottom-4 md:-bottom-6 -right-4 md:-right-6 w-24 md:w-32 h-24 md:h-32 text-[#d4af37]/10" />
@@ -311,7 +295,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         </aside>
       </div>
 
-      {/* Insight Modal Otimizado */}
       {activeInsight && (
         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300" onClick={() => setActiveInsight(null)}>
            <div className="bg-[#fdfcf8] dark:bg-stone-950 w-full max-w-4xl rounded-[2.5rem] md:rounded-[4rem] p-6 md:p-16 shadow-3xl border-t-[8px] md:border-t-[16px] border-[#d4af37] relative overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>

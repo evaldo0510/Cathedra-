@@ -15,37 +15,36 @@ root.render(
   </React.StrictMode>
 );
 
-/**
- * Registro Profissional do Service Worker (PWA)
- * Corrigido para usar caminhos relativos (./) evitando erros de Origin Mismatch em sandboxes.
- */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Usamos './sw.js' para garantir que o script seja buscado na mesma origem do app
     navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(registration => {
-        console.log('[Cathedra PWA] Ativado com sucesso no escopo:', registration.scope);
+        console.log('[Cathedra PWA] Ativado:', registration.scope);
         
-        // Lógica de verificação de atualizações
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[Cathedra PWA] Nova versão detectada. O app será atualizado no próximo acesso.');
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Nova versão instalada, podemos notificar ou recarregar
+                console.log('[Cathedra] Nova versão pronta. Recarregando...');
+                window.location.reload();
               }
-            });
+            };
           }
-        });
+        };
       })
       .catch(err => {
-        // Log silencioso em produção para não afetar UX
-        console.debug('[Cathedra PWA] Otimização offline indisponível no momento:', err.message);
+        console.debug('[Cathedra PWA] Erro:', err.message);
       });
   });
 
-  // Listener para troca de controle (quando o novo SW assume)
+  // Listener crítico para detectar quando o novo SW assume o controle
+  let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    console.log('[Cathedra PWA] App atualizado com sucesso.');
+    if (!refreshing) {
+      window.location.reload();
+      refreshing = true;
+    }
   });
 }
