@@ -5,7 +5,7 @@ import { getDailySaint, getDailyGospel, getDailyQuote, generateSpeech, getLiturg
 import { Saint, Gospel, AppRoute, User, LiturgyReading } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
 
-const CACHE_KEY = 'cathedra_daily_cache_v2.5';
+const CACHE_KEY = 'cathedra_daily_cache_v3.0';
 const INSIGHT_CACHE_PREFIX = 'cath_ins_';
 
 const CardSkeleton = ({ className }: { className: string }) => (
@@ -16,6 +16,9 @@ const SacredImage = memo(({ src, alt, className }: { src: string, alt: string, c
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Otimização de URL Unsplash para mobile
+  const optimizedSrc = src.includes('unsplash.com') ? `${src}&w=600&q=80` : src;
+
   return (
     <div className={`relative bg-stone-100 dark:bg-stone-800 ${className} flex items-center justify-center overflow-hidden`}>
       {loading && !error && (
@@ -24,7 +27,7 @@ const SacredImage = memo(({ src, alt, className }: { src: string, alt: string, c
         </div>
       )}
       <img 
-        src={error || !src ? "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800" : src} 
+        src={error || !src ? "https://images.unsplash.com/photo-1548610762-656391d1ad4d?w=600&q=80" : optimizedSrc} 
         alt={alt}
         loading="lazy"
         className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${loading ? 'opacity-0 scale-105' : 'opacity-100 scale-100'}`}
@@ -59,13 +62,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
+  // Pre-warming agressivo: Busca o insight teológico ANTES do usuário clicar
   const warmUpInsight = useCallback(async (g: Gospel) => {
     const key = `${INSIGHT_CACHE_PREFIX}${g.reference}`;
-    if (localStorage.getItem(key)) return;
+    const cached = localStorage.getItem(key);
+    if (cached) return;
+    
     try {
+      // Fazemos o fetch de forma silenciosa e guardamos no cache
       const insight = await getLiturgyInsight(g.title, g.reference, g.text);
       localStorage.setItem(key, insight);
-    } catch (e) {}
+    } catch (e) {
+      console.debug("Silent warmup failed:", e);
+    }
   }, []);
 
   useEffect(() => {
@@ -84,6 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
     }
 
     const fetchFreshData = async () => {
+      // Prioridade 1: Gospel
       getDailyGospel().then(res => {
         setGospel(res);
         setLoading(p => ({ ...p, gospel: false }));
@@ -91,12 +101,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         updateCache('gospel', res);
       });
 
+      // Prioridade 2: Saint
       getDailySaint().then(res => {
         setSaint(res);
         setLoading(p => ({ ...p, saint: false }));
         updateCache('saint', res);
       });
 
+      // Prioridade 3: Quote
       getDailyQuote().then(res => {
         setDailyQuote(res);
         setLoading(p => ({ ...p, quote: false }));
@@ -170,8 +182,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
   return (
     <div className="space-y-8 md:space-y-20 page-enter pb-32 overflow-x-hidden">
       
-      {/* 1. HERO LITÚRGICO: Tipografia Fluida */}
-      <section className="relative overflow-hidden rounded-[2rem] md:rounded-[4rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl transition-all duration-700 min-h-[220px] md:min-h-[300px] flex items-center">
+      {/* 1. HERO LITÚRGICO */}
+      <section className="relative overflow-hidden rounded-[2rem] md:rounded-[4rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl min-h-[220px] md:min-h-[300px] flex items-center">
         {loading.gospel && !gospel ? (
           <div className="w-full h-full p-6 md:p-16 flex flex-col md:flex-row items-center gap-6 md:gap-10">
              <div className="w-24 h-24 md:w-40 md:h-40 rounded-full bg-stone-100 dark:bg-stone-800 animate-pulse" />
@@ -207,7 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         )}
       </section>
 
-      {/* 2. BUSCA: Otimizada Mobile */}
+      {/* 2. BUSCA */}
       <section className="max-w-4xl mx-auto -mt-12 md:-mt-20 relative z-20 px-4">
         <form onSubmit={(e) => { e.preventDefault(); if(query.trim()) onSearch(query); }} className="bg-white dark:bg-stone-900 p-2 md:p-4 rounded-[1.8rem] md:rounded-[2.5rem] shadow-3xl border border-stone-100 dark:border-stone-800 flex items-center gap-2 md:gap-4">
           <input 
@@ -224,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         </form>
       </section>
 
-      {/* 3. GRID PRINCIPAL: Colunas Flexíveis */}
+      {/* 3. GRID PRINCIPAL */}
       <div className="grid lg:grid-cols-12 gap-8 md:gap-12 px-4 md:px-0">
         
         <main className="lg:col-span-8 space-y-8 md:space-y-10 order-2 lg:order-1">
@@ -242,13 +254,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
                  <div className="flex gap-2 md:gap-3">
                    <button 
                       onClick={() => handleOpenInsight({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')}
-                      className="p-3 md:p-4 bg-stone-50 dark:bg-stone-800 rounded-full text-[#d4af37] active:scale-90 transition-all"
+                      className="p-3 md:p-4 bg-stone-50 dark:bg-stone-800 rounded-full text-[#d4af37] active:scale-90 transition-all hover:bg-[#d4af37]/10"
                    >
                       {insightLoading === 'gospel' ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Feather className="w-5 h-5" />}
                    </button>
                    <button 
                       onClick={() => toggleSpeech({ title: 'Evangelho', reference: gospel!.reference, text: gospel!.text }, 'gospel')} 
-                      className={`p-3 md:p-4 rounded-full transition-all active:scale-90 ${playingId === 'gospel' ? 'bg-[#8b0000] text-white' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37]'}`}
+                      className={`p-3 md:p-4 rounded-full transition-all active:scale-90 ${playingId === 'gospel' ? 'bg-[#8b0000] text-white shadow-inner' : 'bg-stone-50 dark:bg-stone-800 text-[#d4af37]'}`}
                    >
                       {audioLoading === 'gospel' ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-5 h-5" />}
                    </button>
@@ -299,11 +311,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
         </aside>
       </div>
 
-      {/* Insight Modal Otimizado Mobile */}
+      {/* Insight Modal Otimizado */}
       {activeInsight && (
         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300" onClick={() => setActiveInsight(null)}>
            <div className="bg-[#fdfcf8] dark:bg-stone-950 w-full max-w-4xl rounded-[2.5rem] md:rounded-[4rem] p-6 md:p-16 shadow-3xl border-t-[8px] md:border-t-[16px] border-[#d4af37] relative overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setActiveInsight(null)} className="absolute top-4 md:top-8 right-4 md:right-8 p-2 md:p-3 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all">
+              <button onClick={() => setActiveInsight(null)} className="absolute top-4 md:top-8 right-4 md:right-8 p-2 md:p-3 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all z-10">
                 <Icons.Cross className="w-5 h-5 md:w-6 md:h-6 rotate-45" />
               </button>
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 md:pr-4 space-y-6 md:space-y-8 mt-6 md:mt-0">
