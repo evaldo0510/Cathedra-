@@ -15,31 +15,28 @@ root.render(
   </React.StrictMode>
 );
 
+// Lógica de Registro de Service Worker com Hard Refresh
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js', { scope: './' })
-      .then(registration => {
-        console.log('[Cathedra PWA] Ativado:', registration.scope);
-        
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
+      .then(reg => {
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
           if (installingWorker) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Nova versão instalada, podemos notificar ou recarregar
-                console.log('[Cathedra] Nova versão pronta. Recarregando...');
+                // Notifica o usuário ou recarrega para aplicar a nova versão (correções de layout)
+                console.log('[Cathedra] Nova versão detectada. Atualizando layout...');
                 window.location.reload();
               }
             };
           }
         };
       })
-      .catch(err => {
-        console.debug('[Cathedra PWA] Erro:', err.message);
-      });
+      .catch(err => console.debug('SW Error:', err));
   });
 
-  // Listener crítico para detectar quando o novo SW assume o controle
+  // Força o recarregamento se o Service Worker mudar em outra aba
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!refreshing) {

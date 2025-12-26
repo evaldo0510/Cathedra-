@@ -1,53 +1,53 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 3.1.0-force-update
+ * Versão: 3.2.0-typography-fix
  */
 
-const CACHE_NAME = 'cathedra-v3.1';
+const CACHE_NAME = 'cathedra-v3.2';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
   './index.tsx',
   './metadata.json',
-  './constants.tsx',
-  './types.ts',
-  './App.tsx',
-  'https://cdn.tailwindcss.com',
-  'https://www.transparenttextures.com/patterns/natural-paper.png',
-  'https://img.icons8.com/ios-filled/512/d4af37/cross.png'
+  'https://cdn.tailwindcss.com'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  // Força o Service Worker a se tornar ativo imediatamente
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[Cathedra SW] Removendo cache antigo:', key);
+            return caches.delete(key);
+          }
+        })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  // Garante que o SW controle a página imediatamente
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
-  if (url.includes('generativelanguage.googleapis.com') || url.includes('stripe.com')) return;
+  // Ignorar chamadas de API da IA para não cachear respostas erradas
+  if (url.includes('generativelanguage.googleapis.com')) return;
 
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request).then(netRes => {
-        if (netRes && netRes.status === 200 && (url.includes('unsplash.com') || url.includes('wikimedia.org'))) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, netRes.clone()));
+        // Cachear imagens dinâmicas (Santos, etc)
+        if (netRes.ok && (url.includes('unsplash.com') || url.includes('wikimedia.org'))) {
+          const resClone = netRes.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
         }
         return netRes;
       });
