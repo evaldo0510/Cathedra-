@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://img.icons8.com/ios-filled/512/d4af37/cross.png">
     
-    <link rel="manifest" href="/metadata.json">
+    <link rel="manifest" href="./metadata.json">
     
     <script src="https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio"></script>
     <script>
@@ -37,7 +37,6 @@
             --sab: env(safe-area-inset-bottom);
         }
         
-        /* Previne quebras de letras (Typography Shield) */
         * {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -55,7 +54,6 @@
 
         .font-serif { 
             font-family: 'Playfair Display', serif; 
-            /* Desativando hifenização que causava letras quebradas */
             hyphens: none !important;
             word-break: normal;
             overflow-wrap: break-word;
@@ -101,6 +99,6 @@
 </head>
 <body class="parchment">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="./index.tsx"></script>
 </body>
 </html>

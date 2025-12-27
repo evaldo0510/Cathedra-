@@ -34,18 +34,27 @@ if (document.readyState === 'loading') {
   startApp();
 }
 
-// Registro de SW com recarregamento automático em nova versão
+// Registro de SW com tratamento de erro de origem e recarregamento automático
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').then(reg => {
-    reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      if (newWorker) {
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.location.reload();
+  window.addEventListener('load', () => {
+    // Usando caminho relativo explícito ./sw.js para evitar problemas de origin mismatch
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[Cathedra] Nova versão disponível. Reiniciando...');
+                window.location.reload();
+              }
+            });
           }
         });
-      }
-    });
+      })
+      .catch(err => {
+        // Log discreto do erro de SW, pois não deve impedir o funcionamento do app online
+        console.debug('Service Worker falhou ao registrar (comum em sandboxes de desenvolvimento):', err.message);
+      });
   });
 }
