@@ -5,9 +5,11 @@ export type BibleVersion = {
   id: string;
   name: string;
   description: string;
+  isPilgrim?: boolean;
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
+  { id: 'pilgrim', name: 'Bíblia do Peregrino', description: 'Tradução de Luís Alonso Schökel. Foco na beleza literária e profundidade poética.', isPilgrim: true },
   { id: 'ave_maria', name: 'Ave Maria', description: 'Tradução católica clássica com linguagem devocional.' },
   { id: 'jerusalem', name: 'Bíblia de Jerusalém', description: 'Referência mundial em exegese e rigor acadêmico.' },
   { id: 'almeida', name: 'Almeida Revista', description: 'Tradução tradicional de grande valor literário.' }
@@ -47,10 +49,13 @@ const SAMPLE_TEXTS = [
 export const fetchLocalChapter = async (versionId: string, book: string, chapter: number): Promise<Verse[]> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  // Gerador de conteúdo dinâmico baseado no livro e versão para evitar conteúdo repetitivo
   return [...Array(12)].map((_, i) => {
     const seed = (book.length + chapter + i + versionId.length) % SAMPLE_TEXTS.length;
-    const prefix = versionId === 'jerusalem' ? "[Jerusalém] " : versionId === 'ave_maria' ? "[AM] " : "";
+    let prefix = "";
+    if (versionId === 'pilgrim') prefix = "[Peregrino] ";
+    else if (versionId === 'jerusalem') prefix = "[Jerusalém] ";
+    else if (versionId === 'ave_maria') prefix = "[AM] ";
+
     return {
       book,
       chapter,

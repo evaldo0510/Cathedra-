@@ -12,6 +12,20 @@ const PILLARS = [
   { id: 'pillar4', title: "A Oração Cristã", range: "2558 - 2865", desc: "O Pai Nosso e a Oração", icon: Icons.History, color: "#4a4a4a" }
 ];
 
+const COUNCILS = [
+  "Todos",
+  "Vaticano II",
+  "Trento",
+  "Constantinopla",
+  "Niceia",
+  "Calcedônia",
+  "Tradição Apostólica"
+];
+
+const QUICK_THEMES = [
+  "Graça", "Pecado", "Eucaristia", "Balança", "Justificação", "Maria", "Anjos", "Morte"
+];
+
 interface CatechismProps {
   onDeepDive?: (topic: string) => void;
 }
@@ -25,6 +39,9 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
   const [selectedDogma, setSelectedDogma] = useState<Dogma | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activePillarId, setActivePillarId] = useState<string | null>(null);
+  
+  const [selectedCouncil, setSelectedCouncil] = useState('Todos');
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
 
   useEffect(() => {
     const handleH = () => setHighlights(JSON.parse(localStorage.getItem('cathedra_highlights') || '[]'));
@@ -33,9 +50,11 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
     return () => window.removeEventListener('highlight-change', handleH);
   }, []);
 
-  const handleSearch = async (q?: string, pillarId?: string) => {
+  const handleSearch = async (q?: string, pillarId?: string, forceTheme?: string) => {
     const term = q || query;
-    if (!term.trim() && !pillarId) return;
+    const theme = forceTheme || selectedTheme;
+    
+    if (!term.trim() && !pillarId && !theme) return;
     
     setLoading(true);
     setParagraphs([]);
@@ -43,7 +62,10 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
     if (pillarId) setActivePillarId(pillarId);
 
     try {
-      const data = await getCatechismSearch(term);
+      const data = await getCatechismSearch(term, { 
+        source: selectedCouncil === 'Todos' ? undefined : selectedCouncil,
+        theme: theme || undefined
+      });
       setParagraphs(data);
       getDogmaticLinksForCatechism(data).then(links => setDogmaticLinks(links));
     } catch (e) {
@@ -53,30 +75,36 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
     }
   };
 
+  const clearFilters = () => {
+    setSelectedCouncil('Todos');
+    setSelectedTheme(null);
+    setQuery('');
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto animate-in fade-in duration-300 pb-32">
       
-      {/* Modal de Dogma */}
+      {/* Modal de Dogma - Snappy Acceleration */}
       {selectedDogma && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-           <div className="bg-[#fdfcf8] dark:bg-stone-950 max-w-2xl w-full rounded-[4rem] p-12 md:p-16 shadow-3xl border-t-[12px] border-[#8b0000] space-y-10 relative overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-fast-in">
+           <div className="bg-[#fdfcf8] dark:bg-stone-950 max-w-2xl w-full rounded-[3rem] p-8 md:p-14 shadow-3xl border-t-[12px] border-[#8b0000] space-y-10 relative overflow-hidden animate-modal-zoom" onClick={e => e.stopPropagation()}>
               <button 
                 onClick={() => setSelectedDogma(null)}
-                className="absolute top-8 right-8 p-4 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all shadow-md group active:scale-90"
+                className="absolute top-6 right-6 p-3 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all shadow-md group active:scale-90"
               >
-                <Icons.Cross className="w-6 h-6 rotate-45 group-hover:rotate-0 transition-transform" />
+                <Icons.Cross className="w-5 h-5 rotate-45 group-hover:rotate-0 transition-transform" />
               </button>
               <div className="flex items-center gap-6 mb-8">
                 <div className="p-4 bg-[#fcf8e8] dark:bg-stone-900 rounded-2xl shadow-inner">
                    <Icons.Cross className="w-10 h-10 text-[#8b0000]" />
                 </div>
                 <div>
-                   <h3 className="text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">{selectedDogma.title}</h3>
+                   <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">{selectedDogma.title}</h3>
                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#d4af37] mt-1">Verdade Infalível de Fé</p>
                 </div>
               </div>
               <div className="space-y-6">
-                 <p className="text-2xl md:text-3xl font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed border-l-4 border-[#d4af37]/20 pl-8">
+                 <p className="text-xl md:text-2xl font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed border-l-4 border-[#d4af37]/20 pl-8">
                     "{selectedDogma.definition}"
                  </p>
                  <div className="flex flex-wrap items-center gap-4 pt-8">
@@ -133,11 +161,54 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
         </aside>
 
         {/* Conteúdo Principal */}
-        <div className="flex-1 space-y-12">
-          <header className="text-center lg:text-left space-y-4">
+        <div className="flex-1 space-y-8">
+          <header className="text-center lg:text-left space-y-2">
             <h2 className="text-5xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Catecismo da Igreja</h2>
             <p className="text-stone-400 italic text-xl md:text-2xl">"A norma segura para o ensino da fé."</p>
           </header>
+
+          <section className="bg-white dark:bg-stone-900 p-8 rounded-[3rem] shadow-xl border border-stone-100 dark:border-stone-800 space-y-6">
+            <div className="flex flex-col md:flex-row gap-6 items-end">
+               <div className="flex-1 space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-4">Concílio / Fonte de Autoridade</label>
+                  <div className="flex flex-wrap gap-2">
+                     {COUNCILS.map(council => (
+                       <button 
+                        key={council} 
+                        onClick={() => setSelectedCouncil(council)}
+                        className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${selectedCouncil === council ? 'bg-[#1a1a1a] text-[#d4af37] border-[#1a1a1a] shadow-md' : 'bg-stone-50 dark:bg-stone-800 text-stone-400 border-stone-100 dark:border-stone-700 hover:border-[#d4af37]'}`}
+                       >
+                         {council}
+                       </button>
+                     ))}
+                  </div>
+               </div>
+               
+               <div className="flex flex-wrap gap-2 justify-end">
+                  <button 
+                    onClick={clearFilters}
+                    className="px-6 py-2 text-[9px] font-black uppercase tracking-widest text-stone-300 hover:text-[#8b0000] transition-colors"
+                  >
+                    Limpar Filtros
+                  </button>
+               </div>
+            </div>
+
+            <div className="h-px bg-stone-50 dark:bg-stone-800" />
+
+            <div className="flex flex-wrap items-center gap-3">
+               <span className="text-[9px] font-black uppercase tracking-widest text-stone-300 mr-2">Temas Comuns:</span>
+               {QUICK_THEMES.map(theme => (
+                 <button 
+                  key={theme} 
+                  onClick={() => { setSelectedTheme(theme); handleSearch(query, undefined, theme); }}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-serif italic transition-all ${selectedTheme === theme ? 'bg-[#fcf8e8] text-[#8b0000] border border-[#d4af37]/40 shadow-sm' : 'bg-white dark:bg-stone-900 text-stone-400 border border-stone-50 dark:border-stone-800'}`}
+                 >
+                   {theme}
+                 </button>
+               ))}
+            </div>
+          </section>
 
           <section className="bg-white dark:bg-stone-900 p-8 md:p-14 rounded-[3.5rem] md:rounded-[4rem] shadow-2xl border border-stone-100 dark:border-stone-800 relative group overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#d4af37]/10 via-[#d4af37] to-[#d4af37]/10 opacity-30" />
@@ -148,7 +219,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
                   type="text" 
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Pesquisar por tema ou parágrafo..." 
+                  placeholder="Pesquise por conceito (ex: O que a Igreja diz sobre a tristeza?)..." 
                   className="w-full pl-20 pr-10 py-7 bg-stone-50 dark:bg-stone-800 dark:text-white border border-stone-200 dark:border-stone-700 rounded-[2rem] focus:ring-16 focus:ring-[#d4af37]/5 outline-none text-2xl md:text-3xl font-serif italic shadow-inner transition-all placeholder:text-stone-300"
                 />
               </div>
@@ -215,13 +286,21 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
                         CIC {p.number}
                       </button>
                       <div className="h-px flex-1 bg-stone-100 dark:bg-stone-800 opacity-30" />
+                      {p.source && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#d4af37]">{p.source}</span>
+                      )}
                     </div>
 
                     <p className="text-stone-900 dark:text-stone-100 font-serif italic text-2xl md:text-4xl leading-snug tracking-tight">
                       "{p.content}"
                     </p>
 
-                    <footer className="mt-12 pt-8 border-t border-stone-50/50 dark:border-stone-800">
+                    <footer className="mt-12 pt-8 border-t border-stone-50/50 dark:border-stone-800 flex flex-wrap items-center justify-between gap-6">
+                      <div className="flex gap-2">
+                        {p.tags?.map(tag => (
+                          <span key={tag} className="px-3 py-1 bg-stone-50 dark:bg-stone-800 text-[9px] font-black uppercase tracking-tighter text-stone-400 rounded-lg">#{tag}</span>
+                        ))}
+                      </div>
                       <button 
                         onClick={() => onDeepDive?.(`Explicação teológica do CIC ${p.number}`)} 
                         className="flex items-center gap-4 px-8 py-4 bg-stone-50 dark:bg-stone-800 text-stone-500 dark:text-stone-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-[#d4af37] hover:text-white transition-all shadow-sm group/btn"

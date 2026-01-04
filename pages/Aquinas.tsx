@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Icons } from '../constants';
-import { getThomisticSynthesis } from '../services/gemini';
+import { getThomisticSynthesis, getCatenaAureaCommentary } from '../services/gemini';
+import { Verse } from '../types';
 
 interface ThomisticSynthesis {
   title: string;
@@ -11,10 +12,19 @@ interface ThomisticSynthesis {
   replies: string[];
 }
 
+const GOSPELS = ["Mateus", "Marcos", "Lucas", "João"];
+
 const Aquinas: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'disputatio' | 'catena'>('disputatio');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [synthesis, setSynthesis] = useState<ThomisticSynthesis | null>(null);
+
+  // Catena Aurea State
+  const [selectedGospel, setSelectedGospel] = useState("Mateus");
+  const [catenaChapter, setCatenaChapter] = useState("1");
+  const [catenaVerse, setCatenaVerse] = useState("1");
+  const [catenaResult, setCatenaResult] = useState<{ content: string; fathers: string[]; sources: any[] } | null>(null);
 
   const handleDisputatio = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -31,111 +41,176 @@ const Aquinas: React.FC = () => {
     }
   };
 
+  const handleCatenaSearch = async () => {
+    setLoading(true);
+    setCatenaResult(null);
+    try {
+      const verse: Verse = { book: selectedGospel, chapter: parseInt(catenaChapter), verse: parseInt(catenaVerse), text: "" };
+      const result = await getCatenaAureaCommentary(verse);
+      setCatenaResult(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-32">
+    <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-1000 pb-32 px-4 md:px-0">
       <header className="text-center space-y-6">
         <div className="flex justify-center">
-           <div className="p-6 bg-[#fcf8e8] rounded-full border border-[#d4af37]/30 shadow-sacred">
-              <Icons.Feather className="w-16 h-16 text-[#8b0000]" />
+           <div className="p-6 bg-[#fcf8e8] dark:bg-stone-900 rounded-full border border-[#d4af37]/30 shadow-sacred">
+              <Icons.Feather className="w-16 h-16 text-[#8b0000] dark:text-[#d4af37]" />
            </div>
         </div>
-        <h2 className="text-7xl font-serif font-bold text-stone-900 tracking-tight">Biblioteca do Aquinate</h2>
-        <p className="text-stone-400 italic text-2xl">Mergulhe no método escolástico do Doutor Angélico.</p>
+        <h2 className="text-5xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Biblioteca do Aquinate</h2>
+        <div className="flex justify-center gap-4 mt-8">
+           <button 
+             onClick={() => setActiveTab('disputatio')}
+             className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'disputatio' ? 'bg-[#8b0000] text-white shadow-lg' : 'bg-white dark:bg-stone-800 text-stone-400'}`}
+           >
+             Summa Disputatio
+           </button>
+           <button 
+             onClick={() => setActiveTab('catena')}
+             className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'catena' ? 'bg-gold text-stone-900 shadow-lg' : 'bg-white dark:bg-stone-800 text-stone-400'}`}
+           >
+             Catena Aurea
+           </button>
+        </div>
       </header>
 
-      <section className="bg-white p-10 md:p-14 rounded-[3.5rem] shadow-2xl border border-stone-100">
-        <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#d4af37] mb-8">Investigação Escolástica (Disputatio)</h3>
-        <form onSubmit={handleDisputatio} className="flex flex-col md:flex-row gap-6">
-          <input 
-            type="text" 
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Ex: A existência de Deus, A natureza da Alma..." 
-            className="flex-1 px-10 py-8 bg-stone-50 border border-stone-200 rounded-[2.5rem] focus:ring-16 focus:ring-[#d4af37]/5 outline-none text-2xl font-serif italic shadow-inner"
-          />
-          <button type="submit" disabled={loading} className="px-12 py-8 bg-[#1a1a1a] text-[#d4af37] font-black rounded-[2.5rem] hover:bg-[#8b0000] hover:text-white transition-all shadow-xl uppercase tracking-widest text-xs flex items-center justify-center gap-4">
-             {loading ? <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <> <Icons.Feather className="w-5 h-5" /> <span>Disputar</span></>}
-          </button>
-        </form>
-      </section>
+      {activeTab === 'disputatio' ? (
+        <div className="space-y-16">
+          <section className="bg-white dark:bg-stone-900 p-10 md:p-14 rounded-[3.5rem] shadow-2xl border border-stone-100 dark:border-stone-800">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-[#d4af37] mb-8">Investigação Escolástica</h3>
+            <form onSubmit={handleDisputatio} className="flex flex-col md:flex-row gap-6">
+              <input 
+                type="text" 
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Ex: A existência de Deus, A natureza da Alma..." 
+                className="flex-1 px-10 py-8 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-[2.5rem] outline-none text-2xl font-serif italic shadow-inner dark:text-white"
+              />
+              <button type="submit" disabled={loading} className="px-12 py-8 bg-[#1a1a1a] dark:bg-gold text-gold dark:text-stone-900 font-black rounded-[2.5rem] hover:bg-[#8b0000] hover:text-white transition-all shadow-xl uppercase tracking-widest text-xs flex items-center justify-center gap-4">
+                 {loading ? <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <> <Icons.Feather className="w-5 h-5" /> <span>Disputar</span></>}
+              </button>
+            </form>
+          </section>
 
-      {synthesis && (
-        <article className="sacred-background parchment p-12 md:p-24 rounded-[5rem] border border-[#d4af37]/20 shadow-2xl space-y-16 animate-in slide-in-from-bottom-10 duration-700">
-           <header className="text-center border-b border-[#d4af37]/10 pb-12">
-              <span className="text-[12px] font-black uppercase tracking-[1em] text-[#8b0000]">Quaestio Disputata</span>
-              <h3 className="text-5xl md:text-6xl font-serif font-bold text-stone-900 mt-6 leading-tight">Artigo: {synthesis.title}</h3>
-           </header>
+          {synthesis && (
+            <article className="sacred-background parchment p-12 md:p-24 rounded-[5rem] border border-[#d4af37]/20 shadow-2xl space-y-16 animate-in slide-in-from-bottom-10 duration-700">
+               <header className="text-center border-b border-[#d4af37]/10 pb-12">
+                  <span className="text-[12px] font-black uppercase tracking-[1em] text-[#8b0000]">Quaestio Disputata</span>
+                  <h3 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 mt-6 leading-tight">Artigo: {synthesis.title}</h3>
+               </header>
+               <div className="space-y-12">
+                  <section className="space-y-6">
+                     <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#8b0000]">I. Videtur Quod</h4>
+                     {synthesis.objections.map((obj, i) => (
+                       <div key={i} className="flex gap-6 items-start">
+                          <span className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-400 flex items-center justify-center font-bold flex-shrink-0 text-sm">{i+1}</span>
+                          <p className="text-xl md:text-2xl font-serif italic text-stone-600 dark:text-stone-400 leading-relaxed">"{obj}"</p>
+                       </div>
+                     ))}
+                  </section>
+                  <section className="bg-[#fcf8e8] dark:bg-stone-800 p-8 md:p-12 rounded-[3rem] border-l-[12px] border-gold shadow-sm">
+                     <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#8b0000] dark:text-gold mb-6">II. Sed Contra</h4>
+                     <p className="text-2xl md:text-3xl font-serif font-bold text-stone-800 dark:text-stone-100 leading-relaxed italic">"{synthesis.sedContra}"</p>
+                  </section>
+                  <section className="space-y-6">
+                     <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-gold">III. Respondeo</h4>
+                     <p className="text-2xl md:text-4xl font-serif text-stone-900 dark:text-stone-100 leading-snug tracking-tight">{synthesis.respondeo}</p>
+                  </section>
+               </div>
+            </article>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-12">
+          {/* CATENA AUREA UI */}
+          <section className="bg-[#fcf8e8] dark:bg-stone-900 p-10 md:p-14 rounded-[3.5rem] shadow-2xl border border-gold/30">
+            <header className="mb-8 flex items-center gap-4">
+               <div className="p-3 bg-gold rounded-xl"><Icons.Book className="w-6 h-6 text-stone-900" /></div>
+               <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-gold">Cadeia de Ouro (Catena Aurea)</h3>
+            </header>
+            
+            <div className="grid md:grid-cols-4 gap-6">
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-4">Evangelho</label>
+                  <select 
+                    value={selectedGospel}
+                    onChange={(e) => setSelectedGospel(e.target.value)}
+                    className="w-full px-6 py-4 bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif text-lg"
+                  >
+                    {GOSPELS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+               </div>
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-4">Capítulo</label>
+                  <input 
+                    type="number" 
+                    value={catenaChapter}
+                    onChange={(e) => setCatenaChapter(e.target.value)}
+                    className="w-full px-6 py-4 bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif text-lg" 
+                  />
+               </div>
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-4">Versículo</label>
+                  <input 
+                    type="number" 
+                    value={catenaVerse}
+                    onChange={(e) => setCatenaVerse(e.target.value)}
+                    className="w-full px-6 py-4 bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif text-lg" 
+                  />
+               </div>
+               <div className="flex items-end">
+                  <button 
+                    onClick={handleCatenaSearch}
+                    disabled={loading}
+                    className="w-full py-4 bg-gold text-stone-900 font-black rounded-2xl hover:bg-[#8b0000] hover:text-white transition-all shadow-xl uppercase tracking-widest text-[10px] flex items-center justify-center gap-3"
+                  >
+                    {loading ? <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Search className="w-4 h-4" />}
+                    <span>Consultar</span>
+                  </button>
+               </div>
+            </div>
+          </section>
 
-           <div className="grid lg:grid-cols-12 gap-16">
-              {/* Margem Escolástica */}
-              <aside className="lg:col-span-3 hidden lg:block space-y-8 border-r border-stone-100 pr-8">
-                 <div className="sticky top-12 space-y-8">
-                    <div className="space-y-2">
-                       <span className="text-[9px] font-black uppercase tracking-widest text-[#d4af37]">Referência Cruzada</span>
-                       <p className="text-[11px] text-stone-400 font-serif italic italic leading-relaxed">Suma Teológica, Iª Pars, Q. 2, Art. 3</p>
-                    </div>
-                    <div className="p-6 bg-[#fcf8e8] rounded-3xl border border-[#d4af37]/10">
-                       <p className="text-[10px] text-stone-500 font-serif italic">"A graça não destrói a natureza, mas a aperfeiçoa."</p>
-                    </div>
-                 </div>
-              </aside>
+          {catenaResult && (
+            <article className="bg-white dark:bg-stone-900 p-12 md:p-20 rounded-[4rem] border border-gold/20 shadow-3xl animate-in slide-in-from-bottom-10">
+               <header className="mb-10 text-center space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gold">Compilação Patrística</span>
+                  <h3 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">
+                    {selectedGospel} {catenaChapter}:{catenaVerse}
+                  </h3>
+                  <div className="flex flex-wrap justify-center gap-2">
+                     {catenaResult.fathers.map(father => (
+                       <span key={father} className="px-4 py-1.5 bg-[#fcf8e8] dark:bg-stone-800 text-[#8b0000] dark:text-gold rounded-full text-[8px] font-black uppercase tracking-widest border border-gold/10">
+                         {father}
+                       </span>
+                     ))}
+                  </div>
+               </header>
+               
+               <div className="prose dark:prose-invert max-w-none">
+                  <p className="text-xl md:text-3xl font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed whitespace-pre-wrap">
+                    {catenaResult.content}
+                  </p>
+               </div>
 
-              <div className="lg:col-span-9 space-y-16">
-                 {/* Objeções */}
-                 <section className="space-y-6">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#8b0000]">I. Videtur Quod (Objeções)</h4>
-                    <div className="space-y-8">
-                       {synthesis.objections.map((obj, i) => (
-                         <div key={i} className="flex gap-6 items-start">
-                            <span className="w-10 h-10 rounded-full bg-stone-100 text-stone-400 flex items-center justify-center font-bold flex-shrink-0 text-sm">{i+1}</span>
-                            <p className="text-2xl font-serif italic text-stone-600 leading-relaxed">"{obj}"</p>
-                         </div>
+               {catenaResult.sources && catenaResult.sources.length > 0 && (
+                 <footer className="mt-12 pt-8 border-t border-stone-100 dark:border-stone-800">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-stone-400 mb-4">Verificação de Fonte Digital:</p>
+                    <div className="flex flex-wrap gap-4">
+                       {catenaResult.sources.map((s, idx) => (
+                         <a key={idx} href={s.uri} target="_blank" rel="noopener noreferrer" className="text-[9px] text-gold underline truncate max-w-xs">{s.title}</a>
                        ))}
                     </div>
-                 </section>
-
-                 {/* Sed Contra */}
-                 <section className="bg-[#fcf8e8] p-12 rounded-[3.5rem] border-l-[12px] border-[#d4af37] shadow-sm">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#8b0000] mb-6">II. Sed Contra (Em contrário)</h4>
-                    <p className="text-3xl font-serif font-bold text-stone-800 leading-relaxed italic">
-                       "{synthesis.sedContra}"
-                    </p>
-                 </section>
-
-                 {/* Respondeo */}
-                 <section className="space-y-6">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#d4af37]">III. Respondeo (O Doutor Responde)</h4>
-                    <p className="text-3xl md:text-4xl font-serif text-stone-900 leading-snug tracking-tight">
-                       {synthesis.respondeo}
-                    </p>
-                 </section>
-
-                 {/* Ad Rationes */}
-                 <section className="space-y-6 pt-12 border-t border-stone-100">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-stone-400">IV. Ad Rationes (Solução das Objeções)</h4>
-                    <div className="space-y-8">
-                       {synthesis.replies.map((reply, i) => (
-                         <div key={i} className="flex gap-6 items-start">
-                            <span className="w-10 h-10 rounded-full bg-[#8b0000] text-white flex items-center justify-center font-bold flex-shrink-0 text-sm shadow-md">R{i+1}</span>
-                            <p className="text-xl font-serif text-stone-600 leading-relaxed italic">{reply}</p>
-                         </div>
-                       ))}
-                    </div>
-                 </section>
-              </div>
-           </div>
-
-           <footer className="text-center pt-12 border-t border-[#d4af37]/10">
-              <p className="text-[10px] font-black uppercase tracking-[0.8em] text-stone-300">Doutor Comum • Ordem dos Pregadores</p>
-           </footer>
-        </article>
-      )}
-
-      {!synthesis && !loading && (
-        <div className="h-96 flex flex-col items-center justify-center text-center p-20 bg-white/40 rounded-[5rem] border-2 border-dashed border-stone-200 shadow-inner group">
-           <Icons.Feather className="w-24 h-24 text-stone-200 mb-8 opacity-20 group-hover:rotate-12 transition-transform duration-700" />
-           <h3 className="text-3xl font-serif italic text-stone-300">Apresente um tema para ser submetido à Disputatio.</h3>
-           <p className="text-stone-300 font-serif mt-4 italic">"Estudar é orar com o intelecto."</p>
+                 </footer>
+               )}
+            </article>
+          )}
         </div>
       )}
     </div>

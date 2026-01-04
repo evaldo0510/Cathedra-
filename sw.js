@@ -1,15 +1,16 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 3.6.0 - High Performance
+ * Versão: 4.0.0 - High Performance & Offline Core
  */
 
-const CACHE_NAME = 'cathedra-v3.6';
+const CACHE_NAME = 'cathedra-v4.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './index.tsx',
-  './metadata.json'
+  './metadata.json',
+  './sw.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -32,13 +33,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = event.request.url;
+  const url = new URL(event.request.url);
 
-  // Ignorar chamadas de API (sempre rede)
-  if (url.includes('generativelanguage.googleapis.com')) return;
+  // Ignorar chamadas de API (sempre rede primeiro para dados litúrgicos)
+  if (url.origin.includes('generativelanguage.googleapis.com')) return;
 
-  // ESTRATÉGIA CACHE-FIRST PARA IMAGENS E ASSETS EXTERNOS
-  if (url.includes('unsplash.com') || url.includes('icons8.com') || url.includes('fonts.gstatic.com')) {
+  // ESTRATÉGIA CACHE-FIRST PARA IMAGENS E FONTES (Ativos Pesados)
+  if (
+    url.origin.includes('unsplash.com') || 
+    url.origin.includes('icons8.com') || 
+    url.origin.includes('fonts.gstatic.com') ||
+    url.origin.includes('fonts.googleapis.com')
+  ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) return cachedResponse;
@@ -52,9 +58,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ESTRATÉGIA NETWORK-FIRST PARA O RESTO (HTML/JS)
+  // ESTRATÉGIA NETWORK-FIRST PARA O CORE (HTML/JS/JSON)
   event.respondWith(
     fetch(event.request)
+      .then((response) => {
+        // Opcional: atualizar cache do core silenciosamente
+        if (response.status === 200 && (url.pathname.endsWith('.html') || url.pathname.endsWith('.json'))) {
+           const clone = response.clone();
+           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      })
       .catch(() => caches.match(event.request))
   );
 });

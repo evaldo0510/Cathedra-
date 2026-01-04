@@ -5,10 +5,11 @@ import { Icons } from '../constants';
 interface ActionButtonsProps {
   itemId: string;
   textToCopy?: string;
+  fullData?: any; // New prop to store the full object (verse, paragraph, etc.)
   className?: string;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, className = "" }) => {
+const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, fullData, className = "" }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -20,29 +21,49 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, class
     setIsHighlighted(highlights.includes(itemId));
   }, [itemId]);
 
+  const updateSavedData = (id: string, data: any, remove: boolean) => {
+    const savedData = JSON.parse(localStorage.getItem('cathedra_saved_content') || '{}');
+    if (remove) {
+      delete savedData[id];
+    } else if (data) {
+      savedData[id] = data;
+    }
+    localStorage.setItem('cathedra_saved_content', JSON.stringify(savedData));
+    // Trigger global event for components listening to storage changes
+    window.dispatchEvent(new CustomEvent('cathedra-content-sync'));
+  };
+
   const toggleBookmark = () => {
     const bookmarks = JSON.parse(localStorage.getItem('cathedra_bookmarks') || '[]');
     let newBookmarks;
-    if (bookmarks.includes(itemId)) {
+    const removing = bookmarks.includes(itemId);
+    
+    if (removing) {
       newBookmarks = bookmarks.filter((id: string) => id !== itemId);
     } else {
       newBookmarks = [...bookmarks, itemId];
     }
+    
     localStorage.setItem('cathedra_bookmarks', JSON.stringify(newBookmarks));
-    setIsBookmarked(!isBookmarked);
+    setIsBookmarked(!removing);
+    updateSavedData(itemId, fullData, removing && !isHighlighted);
   };
 
   const toggleHighlight = () => {
     const highlights = JSON.parse(localStorage.getItem('cathedra_highlights') || '[]');
     let newHighlights;
-    if (highlights.includes(itemId)) {
+    const removing = highlights.includes(itemId);
+
+    if (removing) {
       newHighlights = highlights.filter((id: string) => id !== itemId);
     } else {
       newHighlights = [...highlights, itemId];
     }
+    
     localStorage.setItem('cathedra_highlights', JSON.stringify(newHighlights));
-    setIsHighlighted(!isHighlighted);
-    window.dispatchEvent(new CustomEvent('highlight-change', { detail: { itemId, status: !isHighlighted } }));
+    setIsHighlighted(!removing);
+    updateSavedData(itemId, fullData, removing && !isBookmarked);
+    window.dispatchEvent(new CustomEvent('highlight-change', { detail: { itemId, status: !removing } }));
   };
 
   const handleShare = async () => {

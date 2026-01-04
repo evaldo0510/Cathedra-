@@ -10,6 +10,8 @@ export interface CatechismParagraph {
   number: number;
   title?: string;
   content: string;
+  source?: string; // ex: "Vaticano II", "Trento", "Tradição Apostólica"
+  tags?: string[];
 }
 
 export interface Saint {

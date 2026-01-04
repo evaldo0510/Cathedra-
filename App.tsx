@@ -129,6 +129,13 @@ const App: React.FC = () => {
   };
 
   const handleSearch = async (topic: string) => {
+    // Permite limpar os dados enviando string vazia
+    if (!topic) {
+      setStudyData(null);
+      setRoute(AppRoute.STUDY_MODE);
+      return;
+    }
+
     setLoading(true);
     setSearchError(null);
     try {
