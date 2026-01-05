@@ -8,6 +8,17 @@ export const COLORS = {
   background: '#fdfcf8', 
 };
 
+export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    <div className="absolute inset-0 bg-gold/20 blur-xl rounded-full animate-pulse" />
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full">
+      <circle cx="50" cy="50" r="48" stroke="#d4af37" strokeWidth="2" strokeDasharray="4 4" />
+      <path d="M50 15V85M25 40H75M35 25L65 25M40 75H60" stroke="#d4af37" strokeWidth="4" strokeLinecap="round" />
+      <path d="M30 50C30 38.9543 38.9543 30 50 30C61.0457 30 70 38.9543 70 50V70H30V50Z" fill="#d4af37" fillOpacity="0.1" stroke="#d4af37" strokeWidth="2" />
+    </svg>
+  </div>
+);
+
 export const Icons = {
   Home: (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>

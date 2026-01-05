@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { Icons } from '../constants';
 import { StudyResult } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
-import { generateSpeech } from '../services/gemini';
+import { generateSpeech, getAIStudySuggestions } from '../services/gemini';
 import ActionButtons from '../components/ActionButtons';
+import { LangContext } from '../App';
 
-const SUGGESTED_TOPICS = [
+const DEFAULT_TOPICS = [
   "A Natureza Divina de Jesus Cristo",
   "O Sacramento da Eucaristia no CIC",
   "A Doutrina da Justificação em Trento",
@@ -16,8 +17,11 @@ const SUGGESTED_TOPICS = [
 ];
 
 const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string) => void }> = ({ data, onSearch }) => {
+  const { lang, t } = useContext(LangContext);
   const [query, setQuery] = useState('');
   const [isReading, setIsReading] = useState(false);
+  const [suggestedTopics, setSuggestedTopics] = useState<string[]>(DEFAULT_TOPICS);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -26,6 +30,24 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
     const finalTerm = term || query;
     if (!finalTerm.trim()) return;
     onSearch(finalTerm);
+  };
+
+  const handleMagicSuggestion = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const suggestions = await getAIStudySuggestions(lang);
+      if (suggestions && suggestions.length > 0) {
+        setSuggestedTopics(suggestions);
+        // Escolhe uma sugestão aleatória e já inicia a busca
+        const randomTopic = suggestions[Math.floor(Math.random() * suggestions.length)];
+        setQuery(randomTopic);
+        onSearch(randomTopic);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar sugestões:", err);
+    } finally {
+      setLoadingSuggestions(false);
+    }
   };
 
   const startNewInvestigation = () => {
@@ -83,14 +105,30 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
           <div className="relative group">
             <div className="absolute inset-0 bg-gold/10 blur-3xl rounded-full scale-110 opacity-0 group-focus-within:opacity-100 transition-opacity" />
             <div className="relative flex flex-col md:flex-row gap-4">
-              <input 
-                type="text" 
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
-                placeholder="Ex: Primado de Pedro, Natureza da Graça..."
-                className="flex-1 px-10 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2.5rem] outline-none font-serif italic text-2xl shadow-xl focus:border-[#d4af37] transition-all dark:text-white"
-              />
+              <div className="flex-1 relative">
+                <input 
+                  type="text" 
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
+                  placeholder="Ex: Primado de Pedro, Natureza da Graça..."
+                  className="w-full px-10 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2.5rem] outline-none font-serif italic text-2xl shadow-xl focus:border-[#d4af37] transition-all dark:text-white"
+                />
+                <button 
+                  onClick={handleMagicSuggestion}
+                  disabled={loadingSuggestions}
+                  title="Inspiratio AI: Sugerir um tema agora"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 text-gold hover:bg-gold/10 rounded-full transition-all disabled:opacity-50"
+                >
+                  {loadingSuggestions ? (
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <button 
                 onClick={() => handleTriggerSearch()}
                 className="px-12 py-6 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-[2.5rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:bg-[#8b0000] hover:text-white transition-all active:scale-95 flex items-center justify-center gap-3"
@@ -103,13 +141,13 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
 
           {!data && (
             <div className="mt-12 text-center animate-in fade-in slide-in-from-top-4 duration-1000">
-               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-stone-300 mb-6">Sugestões de Aprofundamento</p>
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-stone-300 mb-8">Sugestões de Aprofundamento</p>
                <div className="flex flex-wrap justify-center gap-3">
-                 {SUGGESTED_TOPICS.map(topic => (
+                 {suggestedTopics.map(topic => (
                    <button 
                     key={topic}
                     onClick={() => handleTriggerSearch(topic)}
-                    className="px-6 py-3 bg-white dark:bg-stone-800 text-stone-500 hover:text-gold hover:border-gold border border-stone-100 dark:border-stone-700 rounded-full text-xs font-serif italic transition-all shadow-sm"
+                    className="px-6 py-3 bg-white dark:bg-stone-800 text-stone-500 hover:text-gold hover:border-gold border border-stone-100 dark:border-stone-700 rounded-full text-xs font-serif italic transition-all shadow-sm animate-in zoom-in-95"
                    >
                      {topic}
                    </button>

@@ -21,10 +21,8 @@ import Community from './pages/Community';
 import LectioDivina from './pages/LectioDivina';
 import Checkout from './pages/Checkout';
 import { AppRoute, StudyResult, User, Language } from './types';
-import { getIntelligentStudy } from './services/gemini';
-import { trackAccess } from './services/adminService';
-import { fetchUserData } from './services/supabase';
-import { Icons } from './constants';
+import { getIntelligentStudy, getDailyBundle } from './services/gemini';
+import { Icons, Logo } from './constants';
 import { notificationService } from './services/notifications';
 import { UI_TRANSLATIONS } from './services/translations';
 
@@ -47,17 +45,36 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [dogmaSearch, setDogmaSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [user, setUser] = useState<User | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
-  const [isCompact, setIsCompact] = useState(() => localStorage.getItem('cathedra_compact') === 'true');
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  // Lógica de Atualização 100% ao Abrir
+  useEffect(() => {
+    const initializeApp = async () => {
+      setLoading(true);
+      // Simula um carregamento elegante da logo
+      const start = Date.now();
+      
+      try {
+        // Força a atualização do bundle diário se estiver desatualizado
+        await getDailyBundle(lang);
+      } catch (e) {
+        console.error("Erro na sincronização inicial:", e);
+      }
+
+      const elapsed = Date.now() - start;
+      const minSplash = 1500;
+      if (elapsed < minSplash) {
+        await new Promise(r => setTimeout(r, minSplash - elapsed));
+      }
+      setLoading(false);
+    };
+
+    initializeApp();
+  }, [lang]);
 
   useEffect(() => {
     localStorage.setItem('cathedra_lang', lang);
@@ -140,16 +157,21 @@ const App: React.FC = () => {
       <div className={`flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 transition-colors duration-500`}>
         
         {loading && (
-          <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-[#fdfcf8]/90 dark:bg-[#0c0a09]/90 backdrop-blur-md">
-            <div className="relative mb-12">
-              <div className="w-48 h-48 border-[8px] border-[#d4af37]/10 border-t-[#d4af37] rounded-full animate-spin shadow-3xl" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Icons.Cross className="w-12 h-12 text-[#8b0000] animate-pulse" />
+          <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-[#fdfcf8] dark:bg-[#0c0a09] animate-in fade-in duration-500">
+            <div className="relative mb-12 flex flex-col items-center">
+              <Logo className="w-48 h-48 md:w-64 md:h-64" />
+              <div className="mt-8 space-y-4 text-center">
+                <h2 className="font-serif font-bold text-3xl md:text-5xl text-stone-900 dark:text-[#d4af37] tracking-widest animate-pulse">
+                  CATHEDRA
+                </h2>
+                <div className="flex items-center gap-2 justify-center">
+                  <div className="w-2 h-2 bg-gold rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-2 h-2 bg-gold rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-2 h-2 bg-gold rounded-full animate-bounce" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-400">Invocando a Tradição...</p>
               </div>
             </div>
-            <h2 className="font-serif italic text-3xl md:text-5xl text-stone-800 dark:text-stone-200 tracking-tighter text-center px-6">
-              {t('loading')}
-            </h2>
           </div>
         )}
 
@@ -165,8 +187,11 @@ const App: React.FC = () => {
              <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-xl">
                 <Icons.Menu className="w-6 h-6 text-stone-800 dark:text-stone-200" />
              </button>
-             <h1 className="font-serif font-bold text-xl tracking-tighter text-stone-900 dark:text-[#d4af37]">Cathedra</h1>
-             <button onClick={() => user ? setRoute(AppRoute.PROFILE) : setRoute(AppRoute.LOGIN)} className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[#d4af37]">
+             <div className="flex items-center gap-2">
+               <Logo className="w-8 h-8" />
+               <h1 className="font-serif font-bold text-xl tracking-tighter text-stone-900 dark:text-[#d4af37]">Cathedra</h1>
+             </div>
+             <button onClick={() => user ? setRoute(AppRoute.PROFILE) : setRoute(AppRoute.LOGIN)} className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[#d4af37] border border-gold/30">
                 {user ? user.name.charAt(0) : <Icons.Users className="w-5 h-5" />}
              </button>
           </div>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
-import { Icons } from '../constants';
+import { Icons, Logo } from '../constants';
 import { getDailyBundle, generateSpeech, DEFAULT_BUNDLE } from '../services/gemini';
 import { Saint, Gospel, AppRoute, User, LiturgyReading } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
@@ -19,7 +19,30 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [timeLeft, setTimeLeft] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Lógica do Temporizador de Contagem Regressiva para Meia-noite
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchBundle = useCallback(async () => {
     setIsSyncing(true);
@@ -28,13 +51,16 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
       if (bundle && bundle.gospel) {
         const newData = { date: new Date().toLocaleDateString('pt-BR'), ...bundle, isPlaceholder: false };
         setBundleData(newData);
+        setLastUpdated(new Date().toLocaleTimeString());
         localStorage.setItem(`cathedra_daily_${lang}`, JSON.stringify(newData));
       }
     } catch (err) { console.error(err); }
     finally { setIsSyncing(false); }
   }, [lang]);
 
-  useEffect(() => { fetchBundle(); }, [fetchBundle]);
+  useEffect(() => { 
+    fetchBundle();
+  }, [fetchBundle]);
 
   const renderSafeText = (text: any) => {
     if (typeof text === 'string') return text;
@@ -48,6 +74,21 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
 
   return (
     <div className="space-y-12 pb-32 page-enter">
+      {/* HEADER DE STATUS E LOGO */}
+      <div className="flex items-center justify-between px-2">
+        <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+            {isSyncing ? 'Sincronizando...' : 'Status: 100% Atualizado'}
+            {lastUpdated && <span className="ml-2 opacity-50">({lastUpdated})</span>}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Icons.History className="w-3 h-3 text-gold" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-gold">Renovação em: {timeLeft}</span>
+        </div>
+      </div>
+
       <section className="relative overflow-hidden rounded-[5rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl min-h-[420px] flex items-center p-12 md:p-20 transition-all duration-700">
         <div className="absolute inset-0 z-0">
            <SacredImage 
@@ -61,8 +102,8 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 w-full">
-          <div className="w-48 h-48 rounded-full bg-white dark:bg-stone-800 flex items-center justify-center border-[12px] border-gold/10 shadow-3xl overflow-hidden">
-             <Icons.Cross className={`w-24 h-24 text-gold ${isSyncing ? 'animate-pulse' : ''}`} />
+          <div className="flex flex-col items-center">
+            <Logo className="w-48 h-48 md:w-64 md:h-64" />
           </div>
 
           <div className="flex-1 text-center md:text-left space-y-4">
@@ -70,9 +111,12 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
             <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tighter">
               {bundleData.isPlaceholder ? t('wait') : renderSafeText(gospel?.calendar?.dayName)}
             </h2>
-            <div className="flex justify-center md:justify-start pt-4">
+            <div className="flex justify-center md:justify-start pt-4 gap-4">
                <button onClick={() => onNavigate(AppRoute.LECTIO_DIVINA)} className="px-8 py-3 bg-sacred text-white rounded-full font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all">
                   Iniciar Lectio Divina
+               </button>
+               <button onClick={fetchBundle} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-400 hover:text-gold transition-all">
+                  <Icons.History className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
                </button>
             </div>
           </div>

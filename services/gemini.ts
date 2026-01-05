@@ -121,6 +121,28 @@ export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'):
   return safeJsonParse(response.text || "", { topic, summary: "Error.", bibleVerses: [], catechismParagraphs: [], magisteriumDocs: [], saintsQuotes: [] });
 };
 
+export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<string[]> => {
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Gere 6 temas de estudo teológico católico profundos e interessantes para um fiel em busca de conhecimento. Retorne apenas um array de strings no idioma ${lang}.`,
+      config: { 
+        systemInstruction: getSystemInstruction(lang),
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        }
+      }
+    });
+    const parsed = JSON.parse(response.text || "[]");
+    return Array.isArray(parsed) ? parsed : ["A Natureza Divina de Jesus", "O Mistério da Eucaristia", "A Doutrina Social da Igreja"];
+  } catch (err) {
+    return ["A Natureza Divina de Jesus", "O Mistério da Eucaristia", "A Doutrina Social da Igreja"];
+  }
+};
+
 export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]) => {
   try {
     const ai = getAIInstance();
