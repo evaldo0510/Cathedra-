@@ -1,4 +1,6 @@
 
+export type Language = 'pt' | 'en' | 'es' | 'la' | 'it' | 'fr' | 'de';
+
 export interface Verse {
   book: string;
   chapter: number;
@@ -10,7 +12,7 @@ export interface CatechismParagraph {
   number: number;
   title?: string;
   content: string;
-  source?: string; // ex: "Vaticano II", "Trento", "Tradição Apostólica"
+  source?: string;
   tags?: string[];
 }
 

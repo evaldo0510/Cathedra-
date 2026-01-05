@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
@@ -20,15 +20,31 @@ import Admin from './pages/Admin';
 import Community from './pages/Community';
 import LectioDivina from './pages/LectioDivina';
 import Checkout from './pages/Checkout';
-import { AppRoute, StudyResult, User } from './types';
+import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy } from './services/gemini';
 import { trackAccess } from './services/adminService';
-import { fetchUserData, syncUserData } from './services/supabase';
+import { fetchUserData } from './services/supabase';
 import { Icons } from './constants';
 import { notificationService } from './services/notifications';
+import { UI_TRANSLATIONS } from './services/translations';
+
+interface LanguageContextType {
+  lang: Language;
+  setLang: (l: Language) => void;
+  t: (key: string) => string;
+}
+
+export const LangContext = createContext<LanguageContextType>({
+  lang: 'pt',
+  setLang: () => {},
+  t: (k) => k
+});
+
+export const useTranslation = () => useContext(LangContext);
 
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
+  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [dogmaSearch, setDogmaSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,66 +56,23 @@ const App: React.FC = () => {
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   
-  // PWA & Notifications State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('cathedra_lang', lang);
+  }, [lang]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('cathedra_user');
     if (savedUser) {
       const u = JSON.parse(savedUser);
       setUser(u);
-      syncWithSupabase(u.id);
     }
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    const handleQuotaError = () => setQuotaExceeded(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('cathedra-api-quota-exceeded', handleQuotaError);
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallBanner(true);
-    });
-
     notificationService.scheduleDailyReminder();
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('cathedra-api-quota-exceeded', handleQuotaError);
-    };
   }, []);
 
-  const handleOpenKeyDialog = async () => {
-    if (window.aistudio && window.aistudio.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      setQuotaExceeded(false);
-      window.location.reload();
-    }
-  };
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setShowInstallBanner(false);
-    await notificationService.requestPermission();
-  };
-
-  const syncWithSupabase = async (userId: string) => {
-    if (!navigator.onLine) return;
-    const remoteData = await fetchUserData(userId);
-    if (remoteData) {
-      if (remoteData.highlights) localStorage.setItem('cathedra_highlights', JSON.stringify(remoteData.highlights));
-      if (remoteData.history) localStorage.setItem('cathedra_history', JSON.stringify(remoteData.history));
-    }
-  };
+  const t = (key: string) => UI_TRANSLATIONS[lang][key] || key;
 
   useEffect(() => {
     if (isDark) {
@@ -111,19 +84,6 @@ const App: React.FC = () => {
     }
     localStorage.setItem('cathedra_dark', String(isDark));
   }, [isDark]);
-
-  useEffect(() => {
-    localStorage.setItem('cathedra_compact', String(isCompact));
-  }, [isCompact]);
-
-  useEffect(() => {
-    const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
-    trackAccess(!!user, isPremiumRoute);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Limpa a busca de dogmas se sair da página de dogmas
-    if (route !== AppRoute.DOGMAS) setDogmaSearch('');
-  }, [route, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('cathedra_user');
@@ -137,16 +97,14 @@ const App: React.FC = () => {
       setRoute(AppRoute.STUDY_MODE);
       return;
     }
-
     setLoading(true);
     setSearchError(null);
     try {
-      const result = await getIntelligentStudy(topic);
+      const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
       setRoute(AppRoute.STUDY_MODE);
     } catch (e: any) {
-      console.error("Erro na busca:", e);
-      setSearchError("O santuário digital está sobrecarregado. Tente uma busca mais curta.");
+      setSearchError(t('search_error'));
       setTimeout(() => setSearchError(null), 5000);
     } finally {
       setLoading(false);
@@ -154,11 +112,6 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (route === AppRoute.ADMIN && user?.role !== 'admin') {
-      setRoute(AppRoute.DASHBOARD);
-      return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
-    }
-
     switch (route) {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
@@ -183,110 +136,50 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500`}>
-      
-      {searchError && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[600] bg-[#8b0000] text-white px-8 py-4 rounded-full shadow-2xl animate-in fade-in slide-in-from-bottom-10">
-          <p className="text-[11px] font-black uppercase tracking-widest">{searchError}</p>
-        </div>
-      )}
-
-      {quotaExceeded && (
-        <div className="fixed top-0 left-0 right-0 z-[400] bg-[#8b0000] text-white px-6 py-4 flex items-center justify-between shadow-2xl border-b border-[#d4af37]/40 animate-in slide-in-from-top duration-500">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-white/10 rounded-lg">
-              <Icons.History className="w-5 h-5 text-[#d4af37]" />
+    <LangContext.Provider value={{ lang, setLang, t }}>
+      <div className={`flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 transition-colors duration-500`}>
+        
+        {loading && (
+          <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-[#fdfcf8]/90 dark:bg-[#0c0a09]/90 backdrop-blur-md">
+            <div className="relative mb-12">
+              <div className="w-48 h-48 border-[8px] border-[#d4af37]/10 border-t-[#d4af37] rounded-full animate-spin shadow-3xl" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Icons.Cross className="w-12 h-12 text-[#8b0000] animate-pulse" />
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Cota de Pesquisa Atingida</p>
-              <p className="text-[9px] opacity-80 font-serif italic mt-0.5">Para alta performance sem limites, use sua própria chave.</p>
-            </div>
+            <h2 className="font-serif italic text-3xl md:text-5xl text-stone-800 dark:text-stone-200 tracking-tighter text-center px-6">
+              {t('loading')}
+            </h2>
           </div>
-          <button 
-            onClick={handleOpenKeyDialog}
-            className="px-6 py-2.5 bg-[#d4af37] text-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl active:scale-95"
-          >
-            Minha Chave
-          </button>
-        </div>
-      )}
-
-      {showInstallBanner && !quotaExceeded && (
-        <div className="fixed top-0 left-0 right-0 z-[300] bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 px-6 py-4 flex items-center justify-between animate-in slide-in-from-top duration-700 shadow-2xl border-b border-[#d4af37]/20">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-white/10 dark:bg-black/10 rounded-lg">
-              <Icons.Layout className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest leading-none">Instalar Cathedra</p>
-              <p className="text-[9px] opacity-60 font-serif italic mt-0.5">Acesse o santuário da sua tela inicial.</p>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={() => setShowInstallBanner(false)} className="text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100">Agora não</button>
-            <button 
-              onClick={handleInstallClick}
-              className="px-6 py-2 bg-[#d4af37] dark:bg-stone-900 text-stone-900 dark:text-[#d4af37] rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl"
-            >
-              Baixar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-[#fdfcf8]/90 dark:bg-[#0c0a09]/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative mb-12">
-            <div className="w-48 h-48 border-[8px] border-[#d4af37]/10 border-t-[#d4af37] rounded-full animate-spin shadow-3xl" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Icons.Cross className="w-12 h-12 text-[#8b0000] animate-pulse" />
-            </div>
-          </div>
-          <h2 className="font-serif italic text-3xl md:text-5xl text-stone-800 dark:text-stone-200 tracking-tighter text-center px-6">Sintetizando a Tradição...</h2>
-        </div>
-      )}
-
-      <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'} ${(isCompact && !isSidebarOpen) ? 'lg:hidden' : ''}`}>
-        <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsSidebarOpen(false)} />
-        <div className={`relative h-full w-80 max-w-[85vw] transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-          <Sidebar currentPath={route} onNavigate={setRoute} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={handleLogout} />
-        </div>
-      </div>
-      
-      <main className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col transition-all duration-500`}>
-        <div className={`lg:hidden p-5 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140] shadow-sm`}>
-           <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-xl active:scale-95">
-              <Icons.Menu className="w-6 h-6 text-stone-800 dark:text-stone-200" />
-           </button>
-           <h1 className="font-serif font-bold text-xl tracking-tighter text-stone-900 dark:text-[#d4af37] leading-none">Cathedra</h1>
-           <div className="flex gap-2">
-             <button onClick={() => user ? setRoute(AppRoute.PROFILE) : setRoute(AppRoute.LOGIN)} className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[#d4af37] shadow-lg">
-                {user ? user.name.charAt(0) : <Icons.Users className="w-5 h-5" />}
-             </button>
-           </div>
-        </div>
-
-        {isCompact && (
-          <button 
-            onClick={() => setIsCompact(false)}
-            className="fixed bottom-6 right-6 z-[200] p-4 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-full shadow-2xl hover:scale-110 active:scale-90 transition-all group flex items-center gap-3 px-6"
-          >
-            <Icons.Layout className="w-5 h-5" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Sair do Foco</span>
-          </button>
         )}
 
-        <div className={`flex-1 flex flex-col transition-all duration-500`}>
-          <div className={`mx-auto w-full max-w-[1500px] flex-1 no-print transition-all duration-500 ${isCompact ? 'p-4 md:p-8' : 'p-6 md:p-12 lg:p-16'}`}>
-            {renderContent()}
+        <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'}`}>
+          <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsSidebarOpen(false)} />
+          <div className={`relative h-full w-80 max-w-[85vw] transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            <Sidebar currentPath={route} onNavigate={setRoute} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={handleLogout} />
           </div>
-          
-          {![AppRoute.CHECKOUT, AppRoute.LOGIN].includes(route) && (
-            <Footer onNavigate={setRoute} />
-          )}
         </div>
-      </main>
-    </div>
+        
+        <main className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col transition-all duration-500`}>
+          <div className={`lg:hidden p-5 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140] shadow-sm`}>
+             <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-xl">
+                <Icons.Menu className="w-6 h-6 text-stone-800 dark:text-stone-200" />
+             </button>
+             <h1 className="font-serif font-bold text-xl tracking-tighter text-stone-900 dark:text-[#d4af37]">Cathedra</h1>
+             <button onClick={() => user ? setRoute(AppRoute.PROFILE) : setRoute(AppRoute.LOGIN)} className="w-10 h-10 bg-[#1a1a1a] rounded-xl flex items-center justify-center text-[#d4af37]">
+                {user ? user.name.charAt(0) : <Icons.Users className="w-5 h-5" />}
+             </button>
+          </div>
+
+          <div className={`flex-1 flex flex-col transition-all duration-500`}>
+            <div className={`mx-auto w-full max-w-[1500px] flex-1 no-print p-6 md:p-12 lg:p-16`}>
+              {renderContent()}
+            </div>
+            <Footer onNavigate={setRoute} />
+          </div>
+        </main>
+      </div>
+    </LangContext.Provider>
   );
 };
 
