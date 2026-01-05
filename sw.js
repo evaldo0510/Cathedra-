@@ -1,16 +1,17 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 4.0.0 - High Performance & Offline Core
+ * Versão: 5.0.0 - Market Ready Edition
  */
 
-const CACHE_NAME = 'cathedra-v4.0';
+const CACHE_NAME = 'cathedra-v5.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './index.tsx',
   './metadata.json',
-  './sw.js'
+  './sw.js',
+  'https://img.icons8.com/ios-filled/512/d4af37/cross.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -32,43 +33,32 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Estratégia Stale-While-Revalidate para ativos e Network-First para a API
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Ignorar chamadas de API (sempre rede primeiro para dados litúrgicos)
+  // Ignorar chamadas de API do Gemini para garantir dados em tempo real
   if (url.origin.includes('generativelanguage.googleapis.com')) return;
 
-  // ESTRATÉGIA CACHE-FIRST PARA IMAGENS E FONTES (Ativos Pesados)
-  if (
-    url.origin.includes('unsplash.com') || 
-    url.origin.includes('icons8.com') || 
-    url.origin.includes('fonts.gstatic.com') ||
-    url.origin.includes('fonts.googleapis.com')
-  ) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        return fetch(event.request).then((networkResponse) => {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse.status === 200) {
           const clone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return networkResponse;
-        });
-      })
-    );
-    return;
-  }
-
-  // ESTRATÉGIA NETWORK-FIRST PARA O CORE (HTML/JS/JSON)
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Opcional: atualizar cache do core silenciosamente
-        if (response.status === 200 && (url.pathname.endsWith('.html') || url.pathname.endsWith('.json'))) {
-           const clone = response.clone();
-           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+        return networkResponse;
+      }).catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
+    })
+  );
+});
+
+// Listener para notificações agendadas via background sync ou push futuro
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('/')
   );
 });

@@ -143,6 +143,47 @@ export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<stri
   }
 };
 
+export const searchVerse = async (q: string, book?: string, chapter?: number, verse?: number, lang: Language = 'pt'): Promise<Verse[]> => {
+  try {
+    const ai = getAIInstance();
+    const filters = [];
+    if (book) filters.push(`Livro: ${book}`);
+    if (chapter) filters.push(`Capítulo: ${chapter}`);
+    if (verse) filters.push(`Versículo: ${verse}`);
+    
+    const prompt = `Busque versículos bíblicos que correspondam a: "${q}". 
+    Filtros aplicados: ${filters.join(', ')}. 
+    Retorne um array JSON de objetos Verse (book, chapter, verse, text) no idioma ${lang}.
+    Se encontrar uma referência exata, inclua-a primeiro.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: { 
+        systemInstruction: getSystemInstruction(lang),
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              book: { type: Type.STRING },
+              chapter: { type: Type.INTEGER },
+              verse: { type: Type.INTEGER },
+              text: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+    
+    return JSON.parse(response.text || "[]");
+  } catch (err) {
+    console.error("Erro na busca de versículos:", err);
+    return [];
+  }
+};
+
 export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]) => {
   try {
     const ai = getAIInstance();
@@ -231,7 +272,6 @@ export const getCatenaAureaCommentary = async (v: Verse, lang: Language = 'pt') 
 };
 
 export const getWeeklyCalendar = async (lang: Language = 'pt') => [];
-export const searchVerse = async (q: string, lang: Language = 'pt') => ({ book: "N/A", chapter: 0, verse: 0, text: "" });
 export const getVerseCommentary = async (v: any, lang: Language = 'pt') => "";
 export const getMagisteriumDocs = async (c: string, lang: Language = 'pt') => [];
 export async function* getTheologicalDialogueStream(m: string, lang: Language = 'pt') { yield "..."; }
