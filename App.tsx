@@ -30,6 +30,7 @@ import { notificationService } from './services/notifications';
 const App: React.FC = () => {
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
+  const [dogmaSearch, setDogmaSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -65,7 +66,6 @@ const App: React.FC = () => {
       setShowInstallBanner(true);
     });
 
-    // Lembrete Diário ao abrir o app
     notificationService.scheduleDailyReminder();
 
     return () => {
@@ -120,6 +120,9 @@ const App: React.FC = () => {
     const isPremiumRoute = [AppRoute.STUDY_MODE, AppRoute.COLLOQUIUM, AppRoute.AQUINAS].includes(route);
     trackAccess(!!user, isPremiumRoute);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Limpa a busca de dogmas se sair da página de dogmas
+    if (route !== AppRoute.DOGMAS) setDogmaSearch('');
   }, [route, user]);
 
   const handleLogout = () => {
@@ -129,7 +132,6 @@ const App: React.FC = () => {
   };
 
   const handleSearch = async (topic: string) => {
-    // Permite limpar os dados enviando string vazia
     if (!topic) {
       setStudyData(null);
       setRoute(AppRoute.STUDY_MODE);
@@ -154,17 +156,17 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (route === AppRoute.ADMIN && user?.role !== 'admin') {
       setRoute(AppRoute.DASHBOARD);
-      return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
+      return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
     }
 
     switch (route) {
-      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
+      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
       case AppRoute.BIBLE: return <Bible onDeepDive={handleSearch} />;
-      case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
+      case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} onNavigateDogmas={(q) => { setDogmaSearch(q); setRoute(AppRoute.DOGMAS); }} />;
       case AppRoute.SAINTS: return <Saints />;
       case AppRoute.MAGISTERIUM: return <Magisterium onDeepDive={handleSearch} />;
-      case AppRoute.DOGMAS: return <Dogmas />;
+      case AppRoute.DOGMAS: return <Dogmas initialQuery={dogmaSearch} />;
       case AppRoute.SOCIAL_DOCTRINE: return <SocialDoctrine />;
       case AppRoute.COLLOQUIUM: return <Colloquium />;
       case AppRoute.ABOUT: return <About />;
@@ -176,21 +178,19 @@ const App: React.FC = () => {
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={handleLogout} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
-      default: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} isCompact={isCompact} onToggleCompact={() => setIsCompact(!isCompact)} />;
+      default: return <Dashboard onSearch={handleSearch} onNavigate={setRoute} user={user} />;
     }
   };
 
   return (
     <div className={`flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] selection:bg-[#d4af37]/30 selection:text-stone-900 transition-colors duration-500`}>
       
-      {/* Toast de Erro de Busca */}
       {searchError && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[600] bg-[#8b0000] text-white px-8 py-4 rounded-full shadow-2xl animate-in fade-in slide-in-from-bottom-10">
           <p className="text-[11px] font-black uppercase tracking-widest">{searchError}</p>
         </div>
       )}
 
-      {/* Quota Exceeded Banner */}
       {quotaExceeded && (
         <div className="fixed top-0 left-0 right-0 z-[400] bg-[#8b0000] text-white px-6 py-4 flex items-center justify-between shadow-2xl border-b border-[#d4af37]/40 animate-in slide-in-from-top duration-500">
           <div className="flex items-center gap-4">
@@ -246,7 +246,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar Container */}
       <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none lg:pointer-events-auto'} ${(isCompact && !isSidebarOpen) ? 'lg:hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-500 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setIsSidebarOpen(false)} />
         <div className={`relative h-full w-80 max-w-[85vw] transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
@@ -255,7 +254,6 @@ const App: React.FC = () => {
       </div>
       
       <main className={`flex-1 overflow-y-auto custom-scrollbar relative flex flex-col transition-all duration-500`}>
-        {/* Mobile Header - Garante acesso ao menu mesmo se compact mode bugar no mobile */}
         <div className={`lg:hidden p-5 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140] shadow-sm`}>
            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-xl active:scale-95">
               <Icons.Menu className="w-6 h-6 text-stone-800 dark:text-stone-200" />
@@ -268,7 +266,6 @@ const App: React.FC = () => {
            </div>
         </div>
 
-        {/* Floating Toggle para sair do Compact Mode em qualquer tela */}
         {isCompact && (
           <button 
             onClick={() => setIsCompact(false)}

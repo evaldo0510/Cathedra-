@@ -13,10 +13,11 @@
     
     <link rel="manifest" href="./metadata.json">
     
-    <!-- Resource Hints para Performance Profissional -->
+    <!-- OTIMIZAÇÃO DE CARREGAMENTO (Resource Hints) -->
     <link rel="preconnect" href="https://generativelanguage.googleapis.com">
     <link rel="preconnect" href="https://images.unsplash.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://img.icons8.com">
 
     <script src="https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio"></script>
@@ -26,26 +27,17 @@
         theme: {
           extend: {
             colors: { gold: '#d4af37', sacred: '#8b0000' },
-            boxShadow: {
-              'sacred': '0 20px 50px -12px rgba(139, 0, 0, 0.15)',
-              '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
-            },
             animation: {
-              'shimmer': 'shimmer 2s infinite linear',
-              'fast-in': 'fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              'modal-zoom': 'modalZoom 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+              'fast-in': 'fadeIn 0.2s ease-out forwards',
+              'modal-zoom': 'modalZoom 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
             },
             keyframes: {
-              shimmer: {
-                '0%': { backgroundPosition: '-200% 0' },
-                '100%': { backgroundPosition: '200% 0' },
-              },
               fadeIn: {
                 'from': { opacity: '0', transform: 'translateY(8px)' },
                 'to': { opacity: '1', transform: 'translateY(0)' },
               },
               modalZoom: {
-                'from': { opacity: '0', transform: 'scale(0.96) translateY(12px)' },
+                'from': { opacity: '0', transform: 'scale(0.95) translateY(10px)' },
                 'to': { opacity: '1', transform: 'scale(1) translateY(0)' },
               }
             }
@@ -53,8 +45,6 @@
         }
       }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -64,7 +54,6 @@
         
         * {
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
             outline: none !important;
         }
@@ -79,12 +68,7 @@
 
         body.dark { background-color: #0c0a09; }
 
-        .font-serif { 
-            font-family: 'Playfair Display', serif; 
-            hyphens: none !important;
-            word-break: normal;
-            overflow-wrap: break-word;
-        }
+        .font-serif { font-family: 'Playfair Display', serif; }
 
         #root {
             min-height: 100dvh;
@@ -92,6 +76,12 @@
             flex-direction: column;
             padding-top: var(--sat);
             padding-bottom: var(--sab);
+        }
+
+        /* ANIMAÇÕES ACELERADAS */
+        .page-enter { 
+          animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+          will-change: opacity, transform;
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -102,25 +92,6 @@
             background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
         }
         .dark .parchment { background-color: #0c0a09; background-image: none; }
-
-        .page-enter { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-        .animate-shimmer {
-          background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
-          background-size: 200% 100%;
-        }
-
-        /* Otimização de Performance de Modal */
-        .modal-backdrop {
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            will-change: opacity;
-        }
-        
-        .modal-content {
-            will-change: transform, opacity;
-            backface-visibility: hidden;
-        }
     </style>
 <script type="importmap">
 {

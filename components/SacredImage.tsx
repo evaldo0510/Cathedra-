@@ -7,24 +7,44 @@ interface SacredImageProps {
   alt: string;
   className: string;
   priority?: boolean;
+  liturgicalColor?: string; // 'green', 'red', 'purple', 'white', 'rose', 'black'
 }
 
 /**
- * SacredImage: Optimized for performance and aesthetics.
- * Features: Lazy loading, themed placeholders, CLS protection, and blur-up transitions.
+ * SacredImage: Otimizado para performance e estética sacra.
+ * Placeholder agora utiliza gradientes dinâmicos baseados no tempo litúrgico.
  */
-const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority = false }) => {
+const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority = false, liturgicalColor }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Dynamic Unsplash optimization
+  // Mapeamento de cores litúrgicas para gradientes suaves
+  const placeholderGradient = useMemo(() => {
+    switch (liturgicalColor?.toLowerCase()) {
+      case 'green':
+        return 'linear-gradient(135deg, #e6f4ea 0%, #c8e6c9 100%)';
+      case 'red':
+        return 'linear-gradient(135deg, #fdeaea 0%, #ffcdd2 100%)';
+      case 'purple':
+        return 'linear-gradient(135deg, #f3e8ff 0%, #e1bee7 100%)';
+      case 'rose':
+        return 'linear-gradient(135deg, #fff0f3 0%, #f8bbd0 100%)';
+      case 'black':
+        return 'linear-gradient(135deg, #f1f1f1 0%, #cfd8dc 100%)';
+      case 'white':
+      case 'gold':
+      default:
+        return 'linear-gradient(135deg, #fffdf0 0%, #fff9c4 100%)';
+    }
+  }, [liturgicalColor]);
+
+  // Otimização Unsplash
   const optimizedSrc = useMemo(() => {
     if (!src) return "https://images.unsplash.com/photo-1548610762-656391d1ad4d?w=800&q=80";
     if (src.includes('unsplash.com')) {
       const url = new URL(src);
       url.searchParams.set('auto', 'format');
       url.searchParams.set('fit', 'crop');
-      // Priority images get higher quality and size
       url.searchParams.set('q', priority ? '85' : '60');
       url.searchParams.set('w', priority ? '1400' : '700');
       return url.toString();
@@ -48,10 +68,19 @@ const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority
 
   return (
     <div className={`relative bg-stone-100 dark:bg-stone-900 overflow-hidden ${className}`}>
-      {/* Sacred Placeholder: Cross icon with subtle liturgical pulse */}
+      {/* Placeholder com Gradiente Litúrgico e Shimmer */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-stone-50 dark:bg-stone-900 z-10 transition-opacity duration-500">
-           <Icons.Cross className="w-8 h-8 text-gold/15 animate-pulse" />
+        <div 
+          className="absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-500 overflow-hidden"
+          style={{ background: placeholderGradient }}
+        >
+          {/* Efeito Shimmer */}
+          <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          
+          <div className="relative z-20 flex flex-col items-center gap-3">
+            <Icons.Cross className="w-8 h-8 text-stone-900/10 dark:text-white/10 animate-pulse" />
+            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-stone-900/20 dark:text-white/20">Aguardando Luz...</span>
+          </div>
         </div>
       )}
       

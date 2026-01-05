@@ -1,17 +1,12 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Icons } from '../constants';
-import { getDailyBundle, generateSpeech } from '../services/gemini';
+import { getDailyBundle, generateSpeech, DEFAULT_BUNDLE } from '../services/gemini';
 import { Saint, Gospel, AppRoute, User, LiturgyReading } from '../types';
 import { decodeBase64, decodeAudioData } from '../utils/audio';
 import SacredImage from '../components/SacredImage';
 
-const CACHE_KEY = 'cathedra_daily_v4.1';
-const INSIGHT_CACHE_PREFIX = 'cath_ins_v4.1_';
-
-const CardSkeleton = ({ className }: { className: string }) => (
-  <div className={`bg-stone-100 dark:bg-stone-800 animate-pulse rounded-[2rem] ${className}`} />
-);
+const CACHE_KEY = 'cathedra_daily_v5.0';
 
 interface DashboardProps {
   onSearch: (topic: string) => void;
@@ -20,76 +15,46 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => {
-  const [bundleData, setBundleData] = useState<{ gospel: Gospel | null, saint: Saint | null, quote: any | null, insight: string | null }>({
-    gospel: null,
-    saint: null,
-    quote: null,
-    insight: null
+  const [bundleData, setBundleData] = useState(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      const today = new Date().toLocaleDateString('pt-BR');
+      if (parsed.date === today) return parsed;
+    }
+    return { ...DEFAULT_BUNDLE, isPlaceholder: true };
   });
-  const [loading, setLoading] = useState(true);
+
   const [isSaintExpanded, setIsSaintExpanded] = useState(false);
   const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [activeInsight, setActiveInsight] = useState<{ reading: LiturgyReading, text: string | null } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  const fetchBundle = useCallback(async (force = false) => {
-    if (force) setIsSyncing(true);
-    
+  const fetchBundle = useCallback(async () => {
+    setIsSyncing(true);
     try {
       const bundle = await getDailyBundle();
       if (bundle && bundle.gospel) {
-        setBundleData({
-          gospel: bundle.gospel,
-          saint: bundle.saint,
-          quote: bundle.quote,
-          insight: bundle.insight || null
-        });
-        
         const today = new Date().toLocaleDateString('pt-BR');
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ date: today, ...bundle }));
-        if (bundle.gospel.reference) {
-          localStorage.setItem(`${INSIGHT_CACHE_PREFIX}${bundle.gospel.reference}`, bundle.insight || "");
-        }
+        const newData = { date: today, ...bundle, isPlaceholder: false };
+        setBundleData(newData);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(newData));
       }
     } catch (err) {
-      console.error("Dashboard Bundle error:", err);
+      console.error(err);
     } finally {
-      setLoading(false);
       setIsSyncing(false);
     }
   }, []);
 
   useEffect(() => {
-    const today = new Date().toLocaleDateString('pt-BR');
-    const cached = localStorage.getItem(CACHE_KEY);
-    
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed.date === today && parsed.gospel) {
-          setBundleData({
-            gospel: parsed.gospel,
-            saint: parsed.saint,
-            quote: parsed.quote,
-            insight: parsed.insight || null
-          });
-          setLoading(false);
-          if (navigator.onLine) fetchBundle();
-          return;
-        }
-      } catch (e) {
-        localStorage.removeItem(CACHE_KEY);
-      }
-    }
     fetchBundle();
   }, [fetchBundle]);
 
   const toggleSpeech = async (reading: LiturgyReading, id: string) => {
-    if (!reading || !reading.text) return;
     if (playingId === id) {
       if (audioSourceRef.current) audioSourceRef.current.stop();
       setPlayingId(null);
@@ -99,13 +64,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
     setAudioLoading(id);
     try {
       if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const base64Audio = await generateSpeech(`${reading.title || 'Leitura'}. ${reading.text}`);
+      const base64Audio = await generateSpeech(`${reading.title}. ${reading.text}`);
       const buffer = await decodeAudioData(decodeBase64(base64Audio), audioContextRef.current);
       const source = audioContextRef.current.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContextRef.current.destination);
       source.onended = () => setPlayingId(null);
-      
       setAudioLoading(null);
       setPlayingId(id);
       source.start();
@@ -116,199 +80,217 @@ const Dashboard: React.FC<DashboardProps> = ({ onSearch, onNavigate, user }) => 
     }
   };
 
-  const handleOpenInsight = useCallback((reading: LiturgyReading) => {
-    if (!reading) return;
-    const key = `${INSIGHT_CACHE_PREFIX}${reading.reference || 'global'}`;
-    const cached = localStorage.getItem(key) || bundleData.insight;
-    setActiveInsight({ reading, text: cached || "A meditação está sendo preparada pela Tradição..." });
-  }, [bundleData.insight]);
-
-  const { gospel, saint, quote } = bundleData;
+  const { gospel, saint, quote, insight } = bundleData;
 
   const heroBackgroundImage = useMemo(() => {
     const season = gospel?.calendar?.season;
     if (season === 'Quaresma') return "https://images.unsplash.com/photo-1543158021-00212008304f?q=80";
     if (season === 'Páscoa') return "https://images.unsplash.com/photo-1516733729877-db5583a67bc8?q=80";
-    if (season === 'Natal') return "https://images.unsplash.com/photo-1544253323-f11993358055?q=80";
     return "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80"; 
   }, [gospel?.calendar?.season]);
 
   return (
-    <div className="space-y-6 md:space-y-12 page-enter pb-32 w-full max-w-full overflow-x-hidden">
-      
-      {/* 1. HERO LITÚRGICO COM SEQUÊNCIA DE REVELAÇÃO */}
-      <section className="relative overflow-hidden rounded-[2.5rem] md:rounded-[4.5rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl min-h-[220px] md:min-h-[350px] flex items-center p-8 md:p-16">
-        
-        {/* Background Layer: Surge primeiro */}
-        <div className="absolute inset-0 z-0 select-none pointer-events-none animate-in fade-in duration-1000">
+    <div className="space-y-8 md:space-y-12 page-enter pb-32">
+      {/* Banner Principal com Cor Litúrgica Ativa */}
+      <section className="relative overflow-hidden rounded-[3.5rem] md:rounded-[5rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl min-h-[300px] md:min-h-[420px] flex items-center p-10 md:p-20 transition-all duration-700">
+        <div className="absolute inset-0 z-0 select-none pointer-events-none">
            <SacredImage 
             src={heroBackgroundImage} 
-            alt="Atmosfera Litúrgica" 
-            className="w-full h-full opacity-[0.12] dark:opacity-30 grayscale mix-blend-multiply dark:mix-blend-overlay"
+            alt="Fundo Litúrgico" 
+            className="w-full h-full opacity-[0.2] dark:opacity-40 grayscale mix-blend-multiply dark:mix-blend-overlay"
             priority={true}
+            liturgicalColor={gospel?.calendar?.color}
            />
            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-stone-950 dark:via-stone-950/90 dark:to-transparent" />
         </div>
 
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gold/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px]" />
-        
-        {loading && !gospel ? (
-          <div className="w-full flex flex-col md:flex-row items-center gap-8 animate-pulse relative z-10">
-             <div className="w-24 h-24 md:w-40 md:h-40 rounded-full bg-stone-100 dark:bg-stone-800" />
-             <div className="flex-1 space-y-4 text-center md:text-left">
-               <div className="h-8 md:h-12 bg-stone-100 dark:bg-stone-800 rounded-2xl w-3/4 mx-auto md:mx-0" />
-               <div className="h-5 bg-stone-100 dark:bg-stone-800 rounded-xl w-1/2 mx-auto md:mx-0" />
+        <div className="relative z-10 flex flex-col md:flex-row items-center gap-10 md:gap-16 w-full">
+          <div className="flex-shrink-0 relative">
+             <div className="w-28 h-28 md:w-48 md:h-48 rounded-full bg-white dark:bg-stone-800 flex items-center justify-center border-[10px] border-gold/10 shadow-3xl relative overflow-hidden group">
+                <Icons.Cross className={`w-12 h-12 md:w-24 md:h-24 text-gold relative z-10 ${isSyncing ? 'animate-pulse' : ''}`} />
              </div>
+             {isSyncing && (
+               <div className="absolute inset-0 rounded-full border-4 border-gold border-t-transparent animate-spin" />
+             )}
           </div>
-        ) : (
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-14 w-full">
-            
-            {/* Elemento 1: Ícone Sagrado (Entrada Lateral) */}
-            <div className="flex-shrink-0 relative animate-in fade-in slide-in-from-left-12 duration-1000 fill-mode-both">
-               <div className="w-24 h-24 md:w-44 md:h-44 rounded-full bg-white dark:bg-stone-800 flex items-center justify-center border-8 border-gold/5 shadow-2xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gold/5 animate-pulse" />
-                  <Icons.Cross className="w-10 h-10 md:w-20 md:h-20 text-gold relative z-10" />
-               </div>
-               <button 
-                  onClick={() => fetchBundle(true)}
-                  disabled={isSyncing}
-                  className={`absolute -bottom-2 -right-2 p-4 bg-stone-900 dark:bg-stone-100 rounded-full shadow-2xl text-gold dark:text-stone-900 hover:scale-110 active:scale-95 transition-all z-20 ${isSyncing ? 'animate-spin' : ''}`}
-               >
-                  <Icons.History className="w-5 h-5" />
-               </button>
-            </div>
 
-            <div className="flex-1 text-center md:text-left space-y-3">
-              {/* Elemento 2: Tag de Temporada (Slide Up curto) */}
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both">
-                <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.5em] text-gold/80">
-                  {gospel?.calendar?.season}
-                </span>
-              </div>
-
-              {/* Elemento 3: Título Principal (Slide Up longo) */}
-              <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 fill-mode-both">
-                <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
-                  {gospel?.calendar?.dayName || 'Liturgia do Dia'}
-                </h2>
-              </div>
-
-              {/* Elemento 4: Botões de Ação (Aparecem por último) */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-3 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-700 fill-mode-both">
-                <span className="px-5 py-1.5 bg-stone-900 dark:bg-stone-100 text-gold dark:text-stone-900 rounded-full text-[8px] md:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg">
-                  {gospel?.calendar?.rank || 'Feria'}
-                </span>
-                <button 
-                  onClick={() => onNavigate(AppRoute.STUDY_MODE)}
-                  className="px-5 py-1.5 bg-[#8b0000] text-white rounded-full text-[8px] md:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg hover:scale-105 transition-all active:scale-95"
-                >
-                  Modo de Estudo IA
-                </button>
-              </div>
+          <div className="flex-1 text-center md:text-left space-y-4">
+            <span className="text-[10px] md:text-[14px] font-black uppercase tracking-[0.6em] text-gold/80">
+              {gospel?.calendar?.season || 'Liturgia'}
+            </span>
+            <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tighter">
+              {bundleData.isPlaceholder ? 'Buscando Luz...' : gospel?.calendar?.dayName}
+            </h2>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-5 pt-4">
+              <span className="px-6 py-2 bg-stone-900 dark:bg-stone-100 text-gold dark:text-stone-900 rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] shadow-xl">
+                {gospel?.calendar?.rank || 'Feria'}
+              </span>
+              <button 
+                onClick={() => onNavigate(AppRoute.LECTIO_DIVINA)}
+                className="px-6 py-2 bg-sacred text-white rounded-full text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] shadow-xl hover:scale-105 hover:bg-[#a61c1c] transition-all"
+              >
+                Iniciar Lectio Divina
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </section>
 
-      {/* 2. GRID PRINCIPAL */}
-      <div className="grid lg:grid-cols-12 gap-6 md:gap-12 px-4 md:px-0">
+      <div className="grid lg:grid-cols-12 gap-10 md:gap-14 items-start">
         
-        <main className="lg:col-span-8 space-y-6 md:space-y-12 order-2 lg:order-1">
-          {loading && !gospel ? ( <CardSkeleton className="h-64" /> ) : gospel ? (
-            <article className="bg-white dark:bg-stone-900 p-8 md:p-14 rounded-[3rem] md:rounded-[4rem] shadow-xl border border-stone-100 dark:border-stone-800 relative transition-all duration-500 hover:shadow-2xl">
-               <div className="flex items-center justify-between mb-8">
-                 <div className="flex items-center gap-4">
-                   <div className="p-3 bg-sacred/5 rounded-2xl">
-                      <Icons.Book className="w-6 h-6 text-sacred" />
+        <main className="lg:col-span-8 space-y-12">
+          
+          {/* CARD DEDICADO À CITAÇÃO DO DIA (Sententia Sanctorum) */}
+          {quote && (
+            <article className="bg-[#1a1a1a] dark:bg-stone-800 p-10 md:p-16 rounded-[4rem] md:rounded-[4.5rem] shadow-3xl text-gold relative overflow-hidden group transition-all duration-700">
+              <div className="absolute top-0 right-0 p-14 opacity-[0.05] pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                <Icons.Feather className="w-80 h-80 text-gold" />
+              </div>
+              <div className="relative z-10 space-y-10">
+                <header className="flex items-center gap-5">
+                  <div className="h-px w-12 bg-gold/30" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.7em] text-gold/60">Sententia Sanctorum</span>
+                  <div className="h-px w-12 bg-gold/30" />
+                </header>
+                <div className="relative">
+                  <span className="absolute -top-12 -left-8 text-[12rem] font-serif opacity-10 select-none text-gold">"</span>
+                  <p className="text-3xl md:text-5xl font-serif italic leading-tight tracking-tight text-white dark:text-gold relative z-10 pr-4">
+                    {quote.quote}
+                  </p>
+                </div>
+                <footer className="flex items-center gap-6 pt-6 border-t border-white/5">
+                   <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 shadow-inner">
+                     <Icons.Users className="w-6 h-6 text-gold" />
                    </div>
-                   <p className="text-lg md:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">{gospel?.reference}</p>
+                   <div>
+                     <cite className="block text-2xl font-serif font-bold text-gold not-italic">— {quote.author}</cite>
+                     <p className="text-[10px] font-black uppercase tracking-widest text-gold/40">Mestre da Tradição</p>
+                   </div>
+                </footer>
+              </div>
+            </article>
+          )}
+
+          {/* Card do Evangelho do Dia com Placeholder de Cor Litúrgica */}
+          <article className="bg-white dark:bg-stone-900 p-10 md:p-20 rounded-[4rem] md:rounded-[5rem] shadow-2xl border border-stone-100 dark:border-stone-800 relative group transition-all duration-500">
+             <div className="flex items-center justify-between mb-12">
+               <div className="flex items-center gap-6">
+                 <div className="p-5 bg-sacred/5 rounded-[2rem] shadow-inner">
+                    <Icons.Book className="w-8 h-8 text-sacred" />
                  </div>
-                 <div className="flex gap-3">
-                   <button onClick={() => handleOpenInsight(gospel)} className="p-4 bg-stone-50 dark:bg-stone-800 rounded-2xl text-gold hover:bg-gold hover:text-white transition-all shadow-sm">
-                      <Icons.Feather className="w-5 h-5" />
-                   </button>
-                   <button onClick={() => toggleSpeech(gospel, 'gospel')} className={`p-4 rounded-2xl transition-all shadow-sm ${playingId === 'gospel' ? 'bg-sacred text-white' : 'bg-stone-50 dark:bg-stone-800 text-gold'}`}>
-                      {audioLoading === 'gospel' ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-5 h-5" />}
-                   </button>
+                 <div className="space-y-1">
+                   <p className="text-2xl md:text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-none">{gospel?.reference}</p>
+                   <p className="text-[11px] font-black uppercase tracking-[0.4em] text-stone-300">Evangelium Hodie</p>
                  </div>
                </div>
-               <p className="text-2xl md:text-5xl font-serif italic text-stone-800 dark:text-stone-200 leading-snug break-words">"{gospel?.text}"</p>
-               {gospel?.reflection && (
-                 <div className="mt-10 p-8 md:p-12 bg-stone-50/50 dark:bg-stone-800/40 rounded-[2.5rem] border-l-[12px] border-gold shadow-inner group transition-all hover:bg-white dark:hover:bg-stone-800">
-                    <p className="text-base md:text-2xl font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-wrap">{gospel?.reflection}</p>
-                 </div>
-               )}
+               <button onClick={() => toggleSpeech(gospel!, 'gospel')} className={`p-6 rounded-full transition-all shadow-2xl hover:scale-110 active:scale-95 ${playingId === 'gospel' ? 'bg-sacred text-white animate-pulse' : 'bg-stone-50 dark:bg-stone-800 text-gold hover:bg-[#fcf8e8]'}`}>
+                  {audioLoading === 'gospel' ? <div className="w-7 h-7 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-7 h-7" />}
+               </button>
+             </div>
+             
+             <p className="text-3xl md:text-6xl font-serif italic text-stone-800 dark:text-stone-200 leading-snug tracking-tight mb-16 whitespace-pre-line">
+               "{gospel?.text}"
+             </p>
+
+             {gospel?.reflection && (
+               <div className="p-12 md:p-16 bg-stone-50/50 dark:bg-stone-800/40 rounded-[4rem] border-l-[20px] border-gold shadow-inner relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-gold pointer-events-none">
+                     <Icons.Feather className="w-40 h-40" />
+                  </div>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-gold mb-8">Puncta Meditationis (Reflexão)</h4>
+                  <p className="text-xl md:text-3xl font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed whitespace-pre-wrap relative z-10">
+                    {gospel?.reflection}
+                  </p>
+               </div>
+             )}
+          </article>
+
+          {/* Insight Teológico Robusto */}
+          {insight && (
+            <article className="bg-[#fcf8e8] dark:bg-stone-900/50 p-12 md:p-16 rounded-[4rem] md:rounded-[4.5rem] border border-[#d4af37]/30 shadow-xl relative group">
+               <div className="flex flex-col md:flex-row items-start gap-10">
+                  <div className="p-5 bg-[#1a1a1a] rounded-[2rem] text-gold shadow-2xl flex-shrink-0 group-hover:rotate-12 transition-transform duration-500">
+                    <Icons.Globe className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-6">
+                    <h3 className="text-[12px] font-black uppercase tracking-[0.6em] text-[#8b0000]">Lumen Intellectus (Insight AI)</h3>
+                    <p className="text-2xl md:text-4xl font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed tracking-tight">
+                      {insight}
+                    </p>
+                    <div className="pt-6 border-t border-[#d4af37]/20 flex items-center justify-between">
+                       <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 italic">"Investigação sintética sobre a verdade do dia."</p>
+                       <Icons.Cross className="w-4 h-4 text-[#d4af37] opacity-40" />
+                    </div>
+                  </div>
+               </div>
             </article>
-          ) : null}
+          )}
         </main>
 
-        <aside className="lg:col-span-4 space-y-6 md:space-y-12 order-1 lg:order-2">
-          {loading && !saint ? ( <CardSkeleton className="h-[400px]" /> ) : saint ? (
-            <section className="bg-white dark:bg-stone-900 p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl text-center flex flex-col items-center animate-in fade-in slide-in-from-right-8 duration-1000">
-                <div className="w-32 h-32 md:w-56 md:h-56 rounded-full border-[12px] border-white dark:border-stone-800 shadow-2xl overflow-hidden mb-8 relative group ring-[16px] ring-gold/5">
-                   <SacredImage src={saint?.image || ''} alt={saint?.name || ''} className="w-full h-full" priority={false} />
-                   <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <aside className="lg:col-span-4 space-y-12">
+          
+          {/* Card do Santo do Dia com Placeholder de Cor Litúrgica */}
+          {saint && (
+            <section className="bg-white dark:bg-stone-900 p-10 md:p-14 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-3xl text-center flex flex-col items-center relative group transition-all duration-500 hover:border-gold/40">
+                <div className="w-36 h-36 md:w-60 md:h-60 rounded-full border-[12px] border-white dark:border-stone-800 shadow-2xl overflow-hidden mb-12 relative ring-[15px] ring-gold/5 group-hover:scale-105 transition-transform duration-700">
+                   <SacredImage 
+                     src={saint.image || ''} 
+                     alt={saint.name} 
+                     className="w-full h-full" 
+                     priority={true} 
+                     liturgicalColor={gospel?.calendar?.color} 
+                   />
                 </div>
-                <h3 className="text-2xl md:text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">{saint?.name}</h3>
-                <p className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.4em] text-gold mt-2">{saint?.patronage}</p>
-                <div className={`mt-8 space-y-4 transition-all duration-700 overflow-hidden ${isSaintExpanded ? 'max-h-[800px] opacity-100' : 'max-h-24 opacity-60'}`}>
-                   <p className="text-base md:text-xl font-serif italic text-stone-500 dark:text-stone-400 break-words leading-relaxed whitespace-pre-line">{saint?.biography}</p>
+                <div className="space-y-3">
+                  <span className="text-[11px] font-black uppercase tracking-[0.7em] text-gold">{saint.feastDay}</span>
+                  <h3 className="text-3xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tighter">{saint.name}</h3>
+                  <p className="text-[11px] font-black uppercase tracking-[0.5em] text-sacred mt-2">{saint.patronage}</p>
                 </div>
+                
                 <button 
                   onClick={() => setIsSaintExpanded(!isSaintExpanded)} 
-                  className="mt-8 text-[10px] md:text-[12px] font-black uppercase tracking-[0.5em] text-gold hover:text-sacred transition-all group flex items-center gap-3"
+                  className="mt-10 px-12 py-5 bg-stone-50 dark:bg-stone-800 text-stone-400 dark:text-stone-500 rounded-full text-[11px] font-black uppercase tracking-[0.6em] hover:bg-[#d4af37] hover:text-stone-900 transition-all flex items-center gap-4 shadow-sm border border-stone-100 dark:border-stone-700"
                 >
-                  {isSaintExpanded ? 'Ocultar' : 'Biografia Plena'}
-                  <Icons.ArrowDown className={`w-4 h-4 transition-transform duration-700 ${isSaintExpanded ? 'rotate-180' : ''}`} />
+                  {isSaintExpanded ? 'Ocultar Memorial' : 'Ver Biografia'}
+                  <Icons.ArrowDown className={`w-4 h-4 transition-transform duration-500 ${isSaintExpanded ? 'rotate-180' : ''}`} />
                 </button>
+                
+                {isSaintExpanded && (
+                  <div className="mt-12 pt-12 border-t border-stone-50 dark:border-stone-800 space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <p className="text-xl md:text-2xl font-serif italic text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-line text-left border-l-4 border-gold/20 pl-8">
+                      {saint.biography}
+                    </p>
+                    {saint.quote && (
+                      <blockquote className="p-10 bg-[#fcf8e8] dark:bg-stone-800/50 rounded-[3rem] border-l-[12px] border-gold text-stone-800 dark:text-stone-100 font-serif italic text-xl md:text-2xl leading-snug text-left shadow-inner">
+                        "{saint.quote}"
+                      </blockquote>
+                    )}
+                  </div>
+                )}
             </section>
-          ) : null}
+          )}
 
-          {loading && !quote ? ( <CardSkeleton className="h-48" /> ) : quote ? (
-            <section className="bg-stone-950 dark:bg-stone-50 p-10 md:p-14 rounded-[3rem] md:rounded-[4rem] text-white dark:text-stone-900 shadow-2xl text-center relative overflow-hidden group hover:shadow-gold/20 transition-all border border-white/5">
-               <div className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent pointer-events-none" />
-               <div className="relative z-10 space-y-4">
-                  <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.6em] text-gold/60 dark:text-sacred">Sententia Sancti</span>
-                  <p className="text-xl md:text-3xl font-serif italic leading-snug break-words">"{quote?.quote}"</p>
-                  <cite className="block text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-4">— {quote?.author}</cite>
-               </div>
-            </section>
-          ) : null}
+          {/* Banner de Acesso à Biblioteca do Aquinate */}
+          <section className="bg-sacred p-12 md:p-14 rounded-[4rem] text-white shadow-3xl space-y-8 group cursor-pointer hover:bg-[#1a1a1a] transition-all duration-700 overflow-hidden relative border-t-8 border-gold/20">
+            <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 space-y-5">
+              <div className="p-4 bg-white/10 rounded-[1.5rem] w-fit">
+                <Icons.Feather className="w-8 h-8 text-gold" />
+              </div>
+              <h4 className="text-[12px] font-black uppercase tracking-[0.6em] text-gold/70">Summa Theologiae</h4>
+              <h3 className="text-4xl font-serif font-bold leading-tight tracking-tight">Investigue a Summa com Aquinate AI</h3>
+              <p className="text-white/60 font-serif italic text-xl leading-relaxed">Respostas escolásticas fundamentadas na Tradição e no Magistério.</p>
+              <button 
+                onClick={() => onNavigate(AppRoute.AQUINAS)}
+                className="mt-6 px-10 py-5 bg-gold text-stone-900 rounded-full font-black uppercase tracking-[0.4em] text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all w-full md:w-auto"
+              >
+                Acessar Disputatio
+              </button>
+            </div>
+          </section>
+
         </aside>
       </div>
-
-      {/* MODAL COM TRANSIÇÃO ACELERADA */}
-      {activeInsight && (
-        <div 
-          className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 modal-backdrop animate-fast-in" 
-          onClick={() => setActiveInsight(null)}
-        >
-           <div 
-            className="bg-[#fdfcf8] dark:bg-stone-950 w-full max-w-2xl rounded-[3.5rem] md:rounded-[5rem] p-10 md:p-16 shadow-3xl border-t-[12px] border-gold relative overflow-hidden flex flex-col max-h-[88vh] animate-modal-zoom" 
-            onClick={e => e.stopPropagation()}
-           >
-              <button 
-                onClick={() => setActiveInsight(null)} 
-                className="absolute top-8 right-8 p-4 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-sacred hover:text-white transition-all z-10 active:scale-90 shadow-lg"
-              >
-                <Icons.Cross className="w-6 h-6 rotate-45" />
-              </button>
-              
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-6 space-y-8">
-                <header className="space-y-3">
-                  <span className="text-[11px] font-black uppercase tracking-[0.6em] text-gold">Lumen Gentium</span>
-                  <h3 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">
-                    {activeInsight.reading.title}
-                  </h3>
-                </header>
-
-                <div className="text-lg md:text-3xl font-serif leading-relaxed text-stone-800 dark:text-stone-200 whitespace-pre-wrap break-words animate-in fade-in duration-700">
-                  {activeInsight.text}
-                </div>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };

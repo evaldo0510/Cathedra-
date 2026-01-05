@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icons } from '../constants';
 import { getCatechismSearch, getDogmaticLinksForCatechism } from '../services/gemini';
-import { CatechismParagraph, Dogma } from '../types';
+import { CatechismParagraph, Dogma, AppRoute } from '../types';
 import ActionButtons from '../components/ActionButtons';
 
 const PILLARS = [
@@ -28,15 +28,15 @@ const QUICK_THEMES = [
 
 interface CatechismProps {
   onDeepDive?: (topic: string) => void;
+  onNavigateDogmas?: (dogmaTitle: string) => void;
 }
 
-const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
+const Catechism: React.FC<CatechismProps> = ({ onDeepDive, onNavigateDogmas }) => {
   const [query, setQuery] = useState('');
   const [paragraphs, setParagraphs] = useState<CatechismParagraph[]>([]);
   const [loading, setLoading] = useState(false);
   const [highlights, setHighlights] = useState<string[]>([]);
   const [dogmaticLinks, setDogmaticLinks] = useState<Record<number, Dogma[]>>({});
-  const [selectedDogma, setSelectedDogma] = useState<Dogma | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activePillarId, setActivePillarId] = useState<string | null>(null);
   
@@ -67,6 +67,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
         theme: theme || undefined
       });
       setParagraphs(data);
+      // Busca links dogmáticos em paralelo após carregar os parágrafos
       getDogmaticLinksForCatechism(data).then(links => setDogmaticLinks(links));
     } catch (e) {
       console.error(e);
@@ -83,40 +84,6 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
 
   return (
     <div className="max-w-[1600px] mx-auto animate-in fade-in duration-300 pb-32">
-      
-      {/* Modal de Dogma - Snappy Acceleration */}
-      {selectedDogma && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-fast-in">
-           <div className="bg-[#fdfcf8] dark:bg-stone-950 max-w-2xl w-full rounded-[3rem] p-8 md:p-14 shadow-3xl border-t-[12px] border-[#8b0000] space-y-10 relative overflow-hidden animate-modal-zoom" onClick={e => e.stopPropagation()}>
-              <button 
-                onClick={() => setSelectedDogma(null)}
-                className="absolute top-6 right-6 p-3 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-[#8b0000] hover:text-white transition-all shadow-md group active:scale-90"
-              >
-                <Icons.Cross className="w-5 h-5 rotate-45 group-hover:rotate-0 transition-transform" />
-              </button>
-              <div className="flex items-center gap-6 mb-8">
-                <div className="p-4 bg-[#fcf8e8] dark:bg-stone-900 rounded-2xl shadow-inner">
-                   <Icons.Cross className="w-10 h-10 text-[#8b0000]" />
-                </div>
-                <div>
-                   <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight tracking-tight">{selectedDogma.title}</h3>
-                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[#d4af37] mt-1">Verdade Infalível de Fé</p>
-                </div>
-              </div>
-              <div className="space-y-6">
-                 <p className="text-xl md:text-2xl font-serif italic text-stone-800 dark:text-stone-200 leading-relaxed border-l-4 border-[#d4af37]/20 pl-8">
-                    "{selectedDogma.definition}"
-                 </p>
-                 <div className="flex flex-wrap items-center gap-4 pt-8">
-                    <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest bg-stone-100 dark:bg-stone-800 px-5 py-2 rounded-full">
-                       {selectedDogma.council} ({selectedDogma.year})
-                    </span>
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
-
       <div className="flex flex-col lg:flex-row gap-8 items-start relative">
         
         {/* Sidebar colapsável de Navegação Canônica */}
@@ -239,7 +206,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
           <div className="space-y-10">
             {loading ? (
               [...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-stone-900 p-16 rounded-[4rem] animate-pulse border border-stone-50 dark:border-stone-800 shadow-sm space-y-8">
+                <div key={i} className="bg-white dark:bg-stone-900 p-16 rounded-[4rem] animate-pulse border border-stone-100 dark:border-stone-800 shadow-sm space-y-8">
                   <div className="h-6 w-32 bg-stone-100 dark:bg-stone-800 rounded-full" />
                   <div className="space-y-4">
                     <div className="h-10 bg-stone-50 dark:bg-stone-800/50 rounded-2xl w-full" />
@@ -265,9 +232,9 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive }) => {
                            {relatedDogmas.map((dogma, dIdx) => (
                              <button 
                                key={dIdx}
-                               onClick={() => setSelectedDogma(dogma)}
+                               onClick={() => onNavigateDogmas?.(dogma.title)}
                                className="flex items-center gap-2 px-4 py-2 bg-[#fcf8e8] dark:bg-stone-800 border border-[#d4af37]/30 rounded-full hover:bg-[#d4af37] hover:text-white transition-all shadow-md group/dogma active:scale-95"
-                               title={dogma.title}
+                               title={`Ver Dogma: ${dogma.title}`}
                              >
                                 <Icons.Cross className="w-4 h-4 text-[#8b0000] group-hover/dogma:text-white transition-colors" />
                                 <span className="text-[9px] font-black uppercase tracking-widest hidden md:inline truncate max-w-[80px]">{dogma.title}</span>

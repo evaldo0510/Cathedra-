@@ -34,6 +34,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
   const [showBookSelector, setShowBookSelector] = useState(true);
   const [viewMode, setViewMode] = useState<'canon' | 'favorites'>('canon');
   const [favoriteVerses, setFavoriteVerses] = useState<Verse[]>([]);
+  const [showChapterPicker, setShowChapterPicker] = useState(false);
   
   const [selectedVerseForCommentary, setSelectedVerseForCommentary] = useState<Verse | null>(null);
   const [commentaryType, setCommentaryType] = useState<'pilgrim' | 'catena'>('pilgrim');
@@ -62,7 +63,6 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     if (saved) {
       const parsed = JSON.parse(saved);
       setLastRead(parsed);
-      // Opcional: Auto-carregar último lido se desejar
     }
     loadFavorites();
 
@@ -70,6 +70,17 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     window.addEventListener('cathedra-content-sync', handleSync);
     return () => window.removeEventListener('cathedra-content-sync', handleSync);
   }, [loadFavorites]);
+
+  // Atalhos de Teclado
+  useEffect(() => {
+    const handleKeys = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowRight') handleNextChapter();
+      if (e.key === 'ArrowLeft') handlePrevChapter();
+    };
+    window.addEventListener('keydown', handleKeys);
+    return () => window.removeEventListener('keydown', handleKeys);
+  }, [selectedBook, selectedChapter]);
 
   const stopAudio = () => {
     if (audioSourceRef.current) {
@@ -110,6 +121,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     setSelectedBook(book);
     setSelectedChapter(chapter);
     setShowBookSelector(false);
+    setShowChapterPicker(false);
     setViewMode('canon');
     setLoading(true);
     setVerses([]);
@@ -196,18 +208,26 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
   }, []);
 
   const filteredCanon = useMemo(() => {
-    if (!bookSearch.trim()) return CANON[activeTestament];
+    const testamentData = CANON[activeTestament];
+    if (!bookSearch.trim()) return testamentData;
     
     const term = bookSearch.toLowerCase();
     const result: Record<string, string[]> = {};
     
-    Object.entries(CANON[activeTestament]).forEach(([category, books]) => {
+    Object.entries(testamentData).forEach(([category, books]) => {
       const filtered = (books as string[]).filter(b => b.toLowerCase().includes(term));
       if (filtered.length > 0) result[category] = filtered;
     });
     
     return result;
   }, [activeTestament, bookSearch]);
+
+  const maxChapters = useMemo(() => {
+    if (!selectedBook) return 50;
+    if (selectedBook === 'Salmos') return 150;
+    if (["Gênesis", "Isaías"].includes(selectedBook)) return 66;
+    return 50;
+  }, [selectedBook]);
 
   return (
     <div className="max-w-7xl mx-auto pb-32 px-4 md:px-0 page-enter overflow-x-hidden">
@@ -328,18 +348,18 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
         <div className="grid lg:grid-cols-12 gap-8 md:gap-12">
           {/* Aside: Book Selection */}
           <aside className={`lg:col-span-4 space-y-6 md:space-y-8 ${!showBookSelector && 'hidden lg:block'}`}>
-             <div className="bg-white dark:bg-stone-900 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col h-fit lg:max-h-[85vh]">
+             <div className="bg-white dark:bg-stone-900 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col h-fit lg:max-h-[85vh] sticky top-8">
                 
-                {/* Book Filter Search */}
+                {/* Book Search Bar */}
                 <div className="relative mb-6">
-                    <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300" />
-                    <input 
-                        type="text"
-                        placeholder="Buscar livro..."
-                        value={bookSearch}
-                        onChange={e => setBookSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif italic text-sm transition-all focus:border-gold/50 dark:text-white"
-                    />
+                  <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d4af37]/60" />
+                  <input 
+                    type="text" 
+                    value={bookSearch}
+                    onChange={(e) => setBookSearch(e.target.value)}
+                    placeholder="Buscar livro..."
+                    className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif italic text-sm transition-all focus:border-[#d4af37]/40 dark:text-white"
+                  />
                 </div>
 
                 {showBookSelector && lastRead && !bookSearch && (
@@ -385,7 +405,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                         {(books as string[]).map(book => (
                           <button 
                             key={book} 
-                            onClick={() => { setSelectedBook(book); setSelectedChapter(null); }}
+                            onClick={() => { setSelectedBook(book); setSelectedChapter(null); setShowChapterPicker(true); }}
                             className={`text-left px-4 py-3 rounded-xl transition-all font-serif italic text-lg md:text-xl ${selectedBook === book ? 'bg-[#fcf8e8] dark:bg-stone-800 text-stone-900 dark:text-[#d4af37] font-bold' : 'text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                           >
                             {book}
@@ -395,10 +415,10 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                     </div>
                   ))}
                   {Object.keys(filteredCanon).length === 0 && (
-                      <div className="text-center py-10 opacity-30">
-                          <Icons.Search className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-xs font-serif italic">Nenhum livro encontrado</p>
-                      </div>
+                    <div className="py-12 text-center">
+                      <Icons.Search className="w-8 h-8 text-stone-200 mx-auto mb-3" />
+                      <p className="text-stone-400 font-serif italic">Nenhum livro encontrado.</p>
+                    </div>
                   )}
                 </div>
              </div>
@@ -406,25 +426,59 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
 
           {/* Main Content: Chapter Selection & Verses */}
           <main className={`lg:col-span-8 space-y-6 md:space-y-10 ${showBookSelector && 'hidden lg:block'}`}>
+            
+            {/* Navegação Tipo Breadcrumb & Seletor Compacto */}
             {selectedBook && (
-              <div className="bg-white dark:bg-stone-900 p-6 md:p-16 rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-stone-100 dark:border-stone-800 animate-in fade-in duration-500">
-                 <div className="flex items-center justify-between mb-8">
-                    <button onClick={() => setShowBookSelector(true)} className="lg:hidden p-3 bg-stone-50 dark:bg-stone-800 rounded-xl">
-                      <Icons.History className="w-5 h-5 text-[#d4af37] rotate-90" />
-                    </button>
-                    <div className="text-center md:text-left">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[#d4af37]/50">{activeTestament}</span>
-                        <h3 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">{selectedBook}</h3>
-                    </div>
-                    <div className="w-10 h-10 lg:hidden" />
+              <div className="sticky top-0 z-[100] bg-white/80 dark:bg-stone-950/80 backdrop-blur-md border-b border-stone-100 dark:border-stone-800 p-4 md:p-6 -mx-4 md:mx-0 md:rounded-b-[2rem] shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <button onClick={() => setShowBookSelector(true)} className="p-2.5 bg-stone-50 dark:bg-stone-800 rounded-xl hover:bg-[#8b0000] hover:text-white transition-all shadow-sm">
+                      <Icons.Menu className="w-4 h-4" />
+                   </button>
+                   <div className="flex items-center gap-1.5 md:gap-3 text-stone-900 dark:text-[#d4af37]">
+                      <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest opacity-40">Bíblia</span>
+                      <Icons.ArrowDown className="hidden md:inline w-3 h-3 rotate-90 opacity-20" />
+                      <button onClick={() => setShowBookSelector(true)} className="font-serif font-bold text-lg md:text-2xl hover:underline">{selectedBook}</button>
+                      {selectedChapter && (
+                        <>
+                          <Icons.ArrowDown className="w-3 h-3 rotate-90 opacity-20" />
+                          <button 
+                            onClick={() => setShowChapterPicker(!showChapterPicker)}
+                            className="flex items-center gap-2 font-serif font-bold text-lg md:text-2xl bg-[#fcf8e8] dark:bg-stone-800 px-4 py-1.5 rounded-xl border border-[#d4af37]/30 hover:border-[#d4af37] transition-all"
+                          >
+                             Capítulo {selectedChapter}
+                             <Icons.ArrowDown className={`w-4 h-4 transition-transform duration-500 ${showChapterPicker ? 'rotate-180' : ''}`} />
+                          </button>
+                        </>
+                      )}
+                   </div>
+                </div>
+
+                <div className="flex gap-2">
+                   <button onClick={handlePrevChapter} disabled={!selectedChapter || selectedChapter <= 1} className="p-3 bg-stone-50 dark:bg-stone-800 rounded-xl text-stone-400 hover:text-gold disabled:opacity-20 transition-all">
+                      <Icons.ArrowDown className="w-4 h-4 rotate-90" />
+                   </button>
+                   <button onClick={handleNextChapter} disabled={!selectedChapter} className="p-3 bg-stone-900 dark:bg-stone-100 text-gold dark:text-stone-900 rounded-xl hover:bg-[#8b0000] hover:text-white transition-all shadow-md">
+                      <Icons.ArrowDown className="w-4 h-4 -rotate-90" />
+                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Chapter Picker Overlay/Grid */}
+            {selectedBook && (showChapterPicker || !selectedChapter) && (
+              <div className="bg-white dark:bg-stone-900 p-6 md:p-14 rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-stone-100 dark:border-stone-800 animate-in zoom-in-95 duration-300">
+                 <div className="flex items-center justify-between mb-10">
+                    <h3 className="text-2xl md:text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Escolha o Capítulo</h3>
+                    <div className="h-px flex-1 mx-8 bg-stone-50 dark:bg-stone-800 hidden md:block" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gold">{maxChapters} Capítulos</span>
                  </div>
                  
-                 <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
-                    {[...Array(selectedBook === 'Salmos' ? 150 : 50)].map((_, i) => (
+                 <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2 md:gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
+                    {[...Array(maxChapters)].map((_, i) => (
                       <button 
                         key={i} 
                         onClick={() => loadChapter(selectedBook, i + 1)}
-                        className={`h-10 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-sm md:text-xl transition-all active:scale-90 ${selectedChapter === i + 1 ? 'bg-[#d4af37] text-stone-900 shadow-md scale-105' : 'bg-stone-50 dark:bg-stone-800 text-stone-300 hover:text-gold hover:bg-gold/5'}`}
+                        className={`h-10 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-xs md:text-lg transition-all active:scale-90 ${selectedChapter === i + 1 ? 'bg-[#d4af37] text-stone-900 shadow-lg scale-110 z-10 border-2 border-stone-900' : 'bg-stone-50 dark:bg-stone-800 text-stone-300 hover:text-gold hover:bg-gold/5'}`}
                       >
                         {i + 1}
                       </button>
@@ -433,7 +487,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
               </div>
             )}
 
-            <div className="space-y-6">
+            <div className="space-y-6 pt-4">
               {loading ? (
                  <div className="space-y-6 animate-pulse">
                    {[1, 2, 3].map(n => <div key={n} className="h-32 md:h-48 bg-white dark:bg-stone-900 rounded-[2rem]" />)}
@@ -466,28 +520,31 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                 );
               })}
 
-              {/* Navigation Between Chapters */}
+              {/* Chapter Navigation Buttons */}
               {selectedChapter && verses.length > 0 && !loading && (
-                  <nav className="flex items-center justify-between pt-12 pb-20">
-                      <button 
-                        onClick={handlePrevChapter}
-                        disabled={selectedChapter === 1}
-                        className={`flex items-center gap-4 px-8 py-4 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-lg ${selectedChapter === 1 ? 'opacity-20 cursor-not-allowed' : 'bg-white dark:bg-stone-900 text-[#d4af37] hover:bg-[#8b0000] hover:text-white'}`}
-                      >
-                          <Icons.ArrowDown className="w-4 h-4 rotate-90" />
-                          Anterior
-                      </button>
-                      <div className="text-center hidden md:block">
-                          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-stone-300">Capítulo {selectedChapter}</p>
-                      </div>
-                      <button 
-                        onClick={handleNextChapter}
-                        className="flex items-center gap-4 px-8 py-4 bg-[#1a1a1a] dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-xl hover:bg-[#8b0000] hover:text-white"
-                      >
-                          Próximo
-                          <Icons.ArrowDown className="w-4 h-4 -rotate-90" />
-                      </button>
-                  </nav>
+                <nav className="flex items-center justify-between pt-12 pb-24 border-t border-stone-100 dark:border-stone-800">
+                  <button 
+                    onClick={handlePrevChapter}
+                    disabled={selectedChapter <= 1}
+                    className={`flex items-center gap-3 px-6 py-4 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-md ${selectedChapter <= 1 ? 'opacity-20 cursor-not-allowed' : 'bg-white dark:bg-stone-900 text-[#d4af37] hover:bg-[#8b0000] hover:text-white'}`}
+                  >
+                    <Icons.ArrowDown className="w-4 h-4 rotate-90" />
+                    Anterior
+                  </button>
+                  
+                  <div className="text-center hidden md:block">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-300">Fim do Capítulo {selectedChapter}</p>
+                    <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="text-[8px] font-black uppercase tracking-widest text-gold hover:underline mt-2">Voltar ao Topo</button>
+                  </div>
+
+                  <button 
+                    onClick={handleNextChapter}
+                    className="flex items-center gap-3 px-6 py-4 bg-stone-900 dark:bg-[#d4af37] text-[#d4af37] dark:text-stone-900 rounded-full font-black uppercase tracking-widest text-[10px] transition-all shadow-xl hover:bg-[#8b0000] hover:text-white"
+                  >
+                    Próximo
+                    <Icons.ArrowDown className="w-4 h-4 -rotate-90" />
+                  </button>
+                </nav>
               )}
             </div>
           </main>
