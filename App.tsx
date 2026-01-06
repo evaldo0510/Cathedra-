@@ -50,14 +50,20 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [showNotifOnboarding, setShowNotifOnboarding] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
       setLoading(true);
       try {
         await getDailyBundle(lang);
-        // Ativa notificações diárias
-        await notificationService.scheduleDailyReminder(lang);
+        
+        // Verifica se precisa de onboarding de notificação
+        if ('Notification' in window && Notification.permission === 'default') {
+          setTimeout(() => setShowNotifOnboarding(true), 5000);
+        } else {
+          notificationService.initNotifications(lang);
+        }
       } catch (e) {
         console.error("Erro na sincronização inicial:", e);
       }
@@ -65,10 +71,18 @@ const App: React.FC = () => {
     };
     initializeApp();
 
-    // Listener para atualização do PWA
-    window.addEventListener('pwa-update-available', () => setUpdateAvailable(true));
-    return () => window.removeEventListener('pwa-update-available', () => {});
+    const handleUpdate = () => setUpdateAvailable(true);
+    window.addEventListener('pwa-update-available', handleUpdate);
+    return () => window.removeEventListener('pwa-update-available', handleUpdate);
   }, [lang]);
+
+  const handleGrantNotif = async () => {
+    const granted = await notificationService.requestPermission();
+    setShowNotifOnboarding(false);
+    if (granted) {
+      notificationService.initNotifications(lang);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('cathedra_lang', lang);
@@ -151,6 +165,33 @@ const App: React.FC = () => {
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className={`flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09] transition-colors duration-500`}>
         
+        {/* NOTIF ONBOARDING */}
+        {showNotifOnboarding && (
+          <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-500">
+             <div className="bg-[#fdfcf8] dark:bg-stone-900 p-8 md:p-12 rounded-[3rem] shadow-3xl border-2 border-gold max-w-lg w-full text-center space-y-8 animate-in zoom-in-95">
+                <div className="flex justify-center">
+                   <div className="p-6 bg-gold/10 rounded-full animate-pulse">
+                      <Icons.History className="w-16 h-16 text-gold" />
+                   </div>
+                </div>
+                <div className="space-y-4">
+                   <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100">Sinal de Aliança</h3>
+                   <p className="text-stone-500 dark:text-stone-400 font-serif italic text-lg leading-relaxed">
+                      "Vigiai e Orai." Ative as notificações para receber a luz da liturgia e o santo do dia em seu dispositivo.
+                   </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                   <button onClick={handleGrantNotif} className="w-full py-5 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl active:scale-95 transition-all">
+                      Receber Luz Diária
+                   </button>
+                   <button onClick={() => setShowNotifOnboarding(false)} className="w-full py-4 text-stone-400 font-black uppercase tracking-widest text-[9px]">
+                      Agora não
+                   </button>
+                </div>
+             </div>
+          </div>
+        )}
+
         {updateAvailable && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] bg-gold text-stone-900 px-6 py-3 rounded-full shadow-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-4 animate-bounce">
             Nova luz disponível
@@ -184,7 +225,9 @@ const App: React.FC = () => {
                <Logo className="w-8 h-8" />
                <h1 className="font-serif font-bold text-lg tracking-tighter dark:text-[#d4af37]">Cathedra</h1>
              </div>
-             <div className="w-10 h-10" />
+             <button onClick={() => setIsDark(!isDark)} className="p-2">
+               {isDark ? <Icons.Globe className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5 text-stone-800" />}
+             </button>
           </div>
 
           <div className={`flex-1 flex flex-col`}>
@@ -215,7 +258,7 @@ const App: React.FC = () => {
               <Icons.Cross className="w-6 h-6" />
               <span className="text-[10px] font-bold uppercase tracking-tighter">CIC</span>
             </button>
-            <button onClick={() => navigateTo(AppRoute.PROFILE)} className={`flex flex-col items-center gap-1 transition-all ${route === AppRoute.PROFILE || route === AppRoute.LOGIN ? 'text-gold' : 'text-stone-500'}`}>
+            <button onClick={() => navigateTo(AppRoute.PROFILE)} className={`flex flex-col items-center gap-1 transition-all ${route === AppRoute.PROFILE ? 'text-gold' : 'text-stone-500'}`}>
               <Icons.Users className="w-6 h-6" />
               <span className="text-[10px] font-bold uppercase tracking-tighter">Perfil</span>
             </button>
