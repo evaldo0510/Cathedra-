@@ -1,10 +1,10 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Versão: 5.0.0 - Market Ready Edition
+ * Versão: 5.1.0 - Market Ready Edition (Notificações Ativas)
  */
 
-const CACHE_NAME = 'cathedra-v5.0';
+const CACHE_NAME = 'cathedra-v5.1';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -55,10 +55,45 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Listener para notificações agendadas via background sync ou push futuro
+// Listener para cliques em notificações
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  
+  const targetUrl = event.notification.data?.url || '/';
+  
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === targetUrl && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// Suporte a Push real (futuro)
+self.addEventListener('push', (event) => {
+  let data = { title: 'Lumen Diei', body: 'Nova meditação disponível.' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'Lumen Diei', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: 'https://img.icons8.com/ios-filled/512/d4af37/cross.png',
+    badge: 'https://img.icons8.com/ios-filled/96/d4af37/cross.png',
+    data: { url: data.url || '/' }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
   );
 });

@@ -40,30 +40,31 @@ export class NotificationService {
   private async sendWelcomeNotification() {
     await this.sendLocalNotification(
       "Santuário Ativado 🏛️",
-      "Que a luz de Cristo ilumine sua jornada. Você receberá a liturgia e o santo do dia aqui."
+      "Que a luz de Cristo ilumine sua jornada. Você receberá a liturgia e o santo do dia aqui diariamente."
     );
   }
 
   public async scheduleDailyReminder(lang: any = 'pt') {
     if (Notification.permission !== 'granted') return;
 
-    const lastReminder = localStorage.getItem('cathedra_last_reminder');
+    // Usar data local para o lembrete para ser consistente com o usuário
     const today = new Date().toLocaleDateString('pt-BR');
+    const lastReminder = localStorage.getItem('cathedra_last_reminder_date');
 
     if (lastReminder !== today) {
       try {
         const bundle = await getDailyBundle(lang);
         const title = `Lumen Diei: ${bundle.saint.name} 🏛️`;
-        const body = `Hoje celebramos ${bundle.saint.name}. Liturgia: ${bundle.gospel.reference}. Clique para meditar.`;
+        const body = `Hoje celebramos ${bundle.saint.name}. Liturgia: ${bundle.gospel.reference}. Clique para meditar agora.`;
         
         await this.sendLocalNotification(title, body);
-        localStorage.setItem('cathedra_last_reminder', today);
+        localStorage.setItem('cathedra_last_reminder_date', today);
       } catch (e) {
         await this.sendLocalNotification(
           "Cathedra: Alimento Espiritual",
           "A liturgia e o santo do dia já estão disponíveis para sua meditação."
         );
-        localStorage.setItem('cathedra_last_reminder', today);
+        localStorage.setItem('cathedra_last_reminder_date', today);
       }
     }
 
@@ -75,7 +76,8 @@ export class NotificationService {
     const midnight = new Date();
     midnight.setHours(24, 0, 0, 0);
     const msUntilMidnight = midnight.getTime() - now.getTime();
-    setTimeout(() => this.scheduleDailyReminder(lang), msUntilMidnight + 5000); 
+    // Re-agenda para 1 minuto após a meia-noite para garantir a virada do dia
+    setTimeout(() => this.scheduleDailyReminder(lang), msUntilMidnight + 60000); 
   }
 
   public async sendLocalNotification(title: string, body: string) {
@@ -89,8 +91,9 @@ export class NotificationService {
           icon: 'https://img.icons8.com/ios-filled/512/d4af37/cross.png',
           badge: 'https://img.icons8.com/ios-filled/96/d4af37/cross.png',
           vibrate: [200, 100, 200],
-          tag: 'daily-bread',
+          tag: 'daily-liturgy',
           renotify: true,
+          requireInteraction: true,
           data: { url: '/' }
         } as any);
       } catch (e) {

@@ -8,11 +8,16 @@ import { LangContext } from '../App';
 
 const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (route: AppRoute) => void; user: User | null }> = ({ onSearch, onNavigate, user }) => {
   const { lang, t } = useContext(LangContext);
+  
+  // Chave de data estável para cache (YYYY-MM-DD)
+  const getTodayKey = () => new Date().toISOString().split('T')[0];
+
   const [bundleData, setBundleData] = useState(() => {
+    const today = getTodayKey();
     const cached = localStorage.getItem(`cathedra_daily_${lang}`);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.date === new Date().toLocaleDateString('pt-BR')) return parsed;
+      if (parsed.isoDate === today) return parsed;
     }
     return { ...DEFAULT_BUNDLE, isPlaceholder: true };
   });
@@ -36,18 +41,21 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
     return () => clearInterval(timer);
   }, []);
 
-  const fetchBundle = useCallback(async () => {
+  const fetchBundle = useCallback(async (forced = false) => {
+    const today = getTodayKey();
+    if (!forced && bundleData.isoDate === today && !bundleData.isPlaceholder) return;
+
     setIsSyncing(true);
     try {
       const bundle = await getDailyBundle(lang);
       if (bundle && bundle.gospel) {
-        const newData = { date: new Date().toLocaleDateString('pt-BR'), ...bundle, isPlaceholder: false };
+        const newData = { isoDate: today, ...bundle, isPlaceholder: false };
         setBundleData(newData);
         localStorage.setItem(`cathedra_daily_${lang}`, JSON.stringify(newData));
       }
     } catch (err) { console.error(err); }
     finally { setIsSyncing(false); }
-  }, [lang]);
+  }, [lang, bundleData.isoDate, bundleData.isPlaceholder]);
 
   useEffect(() => { fetchBundle(); }, [fetchBundle]);
 
@@ -70,11 +78,10 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
 
   return (
     <div className="space-y-8 md:space-y-12 pb-16 page-enter">
-      {/* HEADER MOBILE INFO */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-          <span className="text-[9px] font-black uppercase tracking-widest text-stone-400">Status: Sincronizado</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-stone-400">Status: {isSyncing ? 'Sincronizando' : 'Sincronizado'}</span>
         </div>
         <div className="flex items-center gap-2">
           <Icons.History className="w-3 h-3 text-gold" />
@@ -82,7 +89,6 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         </div>
       </div>
 
-      {/* HERO SECTION MOBILE OPTIMIZED */}
       <section className="relative overflow-hidden rounded-[3rem] md:rounded-[5rem] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl min-h-[300px] md:min-h-[420px] flex items-center p-8 md:p-20">
         <div className="absolute inset-0 z-0">
            <SacredImage 
@@ -101,21 +107,20 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
           <div className="flex-1 text-center md:text-left space-y-2 md:space-y-4">
             <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] text-gold/80">{gospel?.calendar?.season || 'Liturgia'}</span>
             <h2 className="text-3xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">
-              {bundleData.isPlaceholder ? 'Buscando Luz...' : gospel?.calendar?.dayName}
+              {bundleData.isPlaceholder ? 'Buscando Luz...' : (gospel?.calendar?.dayName || 'Liturgia do Dia')}
             </h2>
             <div className="flex flex-col sm:flex-row justify-center md:justify-start pt-4 gap-3">
                <button onClick={() => onNavigate(AppRoute.LECTIO_DIVINA)} className="px-6 py-3 bg-sacred text-white rounded-full font-black uppercase tracking-widest text-[9px] shadow-lg active:scale-95 transition-all">
                   Lectio Divina
                </button>
-               <button onClick={fetchBundle} className="px-6 py-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-full font-black uppercase tracking-widest text-[9px] active:scale-95">
-                  Atualizar
+               <button onClick={() => fetchBundle(true)} className="px-6 py-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-full font-black uppercase tracking-widest text-[9px] active:scale-95">
+                  Forçar Sincronia
                </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* LITURGIA DA PALAVRA PROMINENTE */}
       <section className="bg-white dark:bg-stone-900 rounded-[3rem] md:rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-700">
          <header className="bg-stone-50 dark:bg-stone-800/50 p-6 md:p-10 border-b border-stone-100 dark:border-stone-700">
             <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -164,7 +169,6 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
          </div>
       </section>
 
-      {/* CONTENT GRID */}
       <div className="grid lg:grid-cols-12 gap-6 md:gap-12">
         <main className="lg:col-span-8 space-y-6 md:space-y-12">
           {quote && (

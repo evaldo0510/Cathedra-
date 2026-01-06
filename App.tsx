@@ -52,29 +52,47 @@ const App: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showNotifOnboarding, setShowNotifOnboarding] = useState(false);
 
+  // Função centralizada para inicializar dados diários
+  const syncDailyContent = useCallback(async (forcedLang?: Language) => {
+    const targetLang = forcedLang || lang;
+    try {
+      await getDailyBundle(targetLang);
+      notificationService.initNotifications(targetLang);
+    } catch (e) {
+      console.error("Erro na sincronização de conteúdo diário:", e);
+    }
+  }, [lang]);
+
   useEffect(() => {
     const initializeApp = async () => {
       setLoading(true);
-      try {
-        await getDailyBundle(lang);
-        
-        // Verifica se precisa de onboarding de notificação
-        if ('Notification' in window && Notification.permission === 'default') {
-          setTimeout(() => setShowNotifOnboarding(true), 5000);
-        } else {
-          notificationService.initNotifications(lang);
-        }
-      } catch (e) {
-        console.error("Erro na sincronização inicial:", e);
+      await syncDailyContent();
+      
+      // Verifica se precisa de onboarding de notificação após um tempo curto
+      if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => setShowNotifOnboarding(true), 4000);
       }
+      
       setTimeout(() => setLoading(false), 1500);
     };
     initializeApp();
 
+    // Listener para quando o usuário volta para a aba (atualiza se o dia mudou)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncDailyContent();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const handleUpdate = () => setUpdateAvailable(true);
     window.addEventListener('pwa-update-available', handleUpdate);
-    return () => window.removeEventListener('pwa-update-available', handleUpdate);
-  }, [lang]);
+    
+    return () => {
+      window.removeEventListener('pwa-update-available', handleUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [syncDailyContent]);
 
   const handleGrantNotif = async () => {
     const granted = await notificationService.requestPermission();
