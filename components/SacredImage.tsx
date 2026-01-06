@@ -8,45 +8,62 @@ interface SacredImageProps {
   className: string;
   priority?: boolean;
   liturgicalColor?: string; // 'green', 'red', 'purple', 'white', 'rose', 'black'
+  dominantColor?: string; // Hex color if available for adaptive placeholder
 }
 
 /**
- * SacredImage: Otimizado para performance e estética sacra.
- * Placeholder agora utiliza gradientes dinâmicos baseados no tempo litúrgico.
+ * SacredImage: Otimizado para performance e estética de "Santuário Digital".
+ * O placeholder agora se adapta dinamicamente à cor predominante da imagem esperada,
+ * criando uma transição de carregamento quase imperceptível.
  */
-const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority = false, liturgicalColor }) => {
+const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority = false, liturgicalColor, dominantColor }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Mapeamento de cores litúrgicas para gradientes suaves
-  const placeholderGradient = useMemo(() => {
-    switch (liturgicalColor?.toLowerCase()) {
-      case 'green':
-        return 'linear-gradient(135deg, #e6f4ea 0%, #c8e6c9 100%)';
-      case 'red':
-        return 'linear-gradient(135deg, #fdeaea 0%, #ffcdd2 100%)';
-      case 'purple':
-        return 'linear-gradient(135deg, #f3e8ff 0%, #e1bee7 100%)';
-      case 'rose':
-        return 'linear-gradient(135deg, #fff0f3 0%, #f8bbd0 100%)';
-      case 'black':
-        return 'linear-gradient(135deg, #f1f1f1 0%, #cfd8dc 100%)';
-      case 'white':
-      case 'gold':
-      default:
-        return 'linear-gradient(135deg, #fffdf0 0%, #fff9c4 100%)';
-    }
-  }, [liturgicalColor]);
+  // Mapeamento de cores para gradientes adaptativos e sutis
+  const placeholderStyle = useMemo(() => {
+    // Cores base neutras para o tema parchment/dark
+    let colorA = '#f5f0e1'; 
+    let colorB = '#fdfcf8';
+    let glowColor = 'rgba(212, 175, 55, 0.05)';
 
-  // Otimização Unsplash
+    if (dominantColor) {
+      // Se houver cor dominante, cria um gradiente tonal sutil (low opacity)
+      colorA = `${dominantColor}15`; // 8% opacity
+      colorB = `${dominantColor}08`; // 3% opacity
+      glowColor = `${dominantColor}20`; // 12% opacity para o brilho central
+    } else if (liturgicalColor) {
+      // Cores litúrgicas pré-definidas se não houver dominantColor
+      const colors: Record<string, string> = {
+        green: '#1b4d2e',
+        red: '#a61c1c',
+        purple: '#5e2a84',
+        rose: '#c71585',
+        black: '#1a1a1a',
+        white: '#d4af37',
+        gold: '#d4af37'
+      };
+      const base = colors[liturgicalColor.toLowerCase()] || '#d4af37';
+      colorA = `${base}15`;
+      colorB = `${base}05`;
+      glowColor = `${base}10`;
+    }
+
+    return {
+      background: `linear-gradient(135deg, ${colorA} 0%, ${colorB} 100%)`,
+      '--glow-color': glowColor
+    } as React.CSSProperties;
+  }, [liturgicalColor, dominantColor]);
+
+  // Otimização inteligente via Unsplash
   const optimizedSrc = useMemo(() => {
     if (!src) return "https://images.unsplash.com/photo-1548610762-656391d1ad4d?w=800&q=80";
     if (src.includes('unsplash.com')) {
       const url = new URL(src);
       url.searchParams.set('auto', 'format');
       url.searchParams.set('fit', 'crop');
-      url.searchParams.set('q', priority ? '85' : '60');
-      url.searchParams.set('w', priority ? '1400' : '700');
+      url.searchParams.set('q', priority ? '85' : '65'); // Qualidade maior se for prioridade
+      url.searchParams.set('w', priority ? '1400' : '800');
       return url.toString();
     }
     return src;
@@ -57,7 +74,10 @@ const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority
     setLoading(true);
     const img = new Image();
     img.src = optimizedSrc;
-    img.onload = () => setLoading(false);
+    img.onload = () => {
+      // Pequeno delay intencional para evitar flashes brutos em conexões ultra-rápidas
+      setTimeout(() => setLoading(false), 50);
+    };
     img.onerror = () => {
       setError(true);
       setLoading(false);
@@ -67,30 +87,40 @@ const SacredImage: React.FC<SacredImageProps> = ({ src, alt, className, priority
   const fallbackImage = "https://images.unsplash.com/photo-1548610762-656391d1ad4d?w=800&q=80";
 
   return (
-    <div className={`relative bg-stone-100 dark:bg-stone-900 overflow-hidden ${className}`}>
-      {/* Placeholder com Gradiente Litúrgico e Shimmer */}
-      {loading && (
+    <div className={`relative bg-stone-50 dark:bg-stone-900 overflow-hidden ${className}`}>
+      {/* Camada de Placeholder Adaptativo */}
+      <div 
+        className={`absolute inset-0 z-10 flex items-center justify-center transition-all duration-[1200ms] cubic-bezier(0.4, 0, 0.2, 1) ${loading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={placeholderStyle}
+      >
+        {/* Shimmer de luz ambiente */}
+        <div className="absolute inset-0 animate-shimmer opacity-[0.15] bg-gradient-to-r from-transparent via-white dark:via-stone-400 to-transparent" />
+        
+        {/* Brilho Central (Efeito Stained Glass/Lux) */}
         <div 
-          className="absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-500 overflow-hidden"
-          style={{ background: placeholderGradient }}
-        >
-          {/* Efeito Shimmer */}
-          <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          
-          <div className="relative z-20 flex flex-col items-center gap-3">
-            <Icons.Cross className="w-8 h-8 text-stone-900/10 dark:text-white/10 animate-pulse" />
-            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-stone-900/20 dark:text-white/20">Aguardando Luz...</span>
+          className="absolute w-1/2 h-1/2 rounded-full blur-[80px] opacity-40 animate-pulse"
+          style={{ backgroundColor: 'var(--glow-color)' }}
+        />
+        
+        <div className="relative z-20 flex flex-col items-center gap-4">
+          <div className="relative">
+            <Icons.Cross className="w-10 h-10 text-stone-900/10 dark:text-white/10" />
+            <div className="absolute inset-0 blur-xl bg-gold/10 rounded-full animate-pulse" />
           </div>
         </div>
-      )}
+      </div>
       
+      {/* Camada da Imagem Real */}
       <img 
         src={error ? fallbackImage : optimizedSrc} 
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${loading ? 'opacity-0 scale-110 blur-2xl' : 'opacity-100 scale-100 blur-0'}`}
+        className={`w-full h-full object-cover transition-all duration-[1500ms] cubic-bezier(0.23, 1, 0.32, 1) ${loading ? 'opacity-0 scale-[1.03] blur-xl grayscale-[0.3]' : 'opacity-100 scale-100 blur-0 grayscale-0'}`}
       />
+      
+      {/* Vinheta Sutil de Finalização */}
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0_100px_rgba(0,0,0,0.2)]" />
     </div>
   );
 };

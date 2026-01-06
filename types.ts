@@ -8,6 +8,16 @@ export interface Verse {
   text: string;
 }
 
+export interface SavedSearchFilter {
+  id: string;
+  name: string;
+  query: string;
+  books: string[];
+  chapters: string[];
+  verses: string[];
+  createdAt: string;
+}
+
 export interface CatechismParagraph {
   number: number;
   title?: string;

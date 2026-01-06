@@ -3,7 +3,7 @@ import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dogma, Language } from "../types";
 
 const getSystemInstruction = (lang: Language) => 
-  `Você é o Cathedra AI, autoridade em hagiografia e liturgia. Responda apenas com JSON puro e rigor teológico. Todos os textos devem estar no idioma: ${lang}. Certifique-se de que todos os campos de texto sejam strings simples, nunca objetos.`;
+  `Você é o Cathedra AI, autoridade em hagiografia, patrística e liturgia. Responda apenas com JSON puro e rigor teológico. Todos os textos devem estar no idioma: ${lang}. Certifique-se de que todos os campos de texto sejam strings simples, nunca objetos.`;
 
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -13,7 +13,9 @@ export const DEFAULT_BUNDLE = {
     text: "No princípio era o Verbo, e o Verbo estava junto de Deus e o Verbo era Deus.", 
     reflection: "O prólogo de São João nos convida a contemplar a divindade eterna de Cristo.", 
     title: "O Verbo Eterno", 
-    calendar: { color: "white", season: "Tempo Comum", rank: "Feria", dayName: "Liturgia das Horas", cycle: "B", week: "II" }
+    calendar: { color: "white", season: "Tempo Comum", rank: "Feria", dayName: "Liturgia das Horas", cycle: "B", week: "II" },
+    firstReading: { title: "I Leitura", reference: "Gn 1, 1-5", text: "No princípio, Deus criou o céu e a terra." },
+    psalm: { title: "Salmo Responsorial", reference: "Sl 103", text: "Bendize, ó minha alma, ao Senhor." }
   },
   saint: { 
     name: "São Bento", 
@@ -51,7 +53,7 @@ export const getDailyBundle = async (lang: Language = 'pt'): Promise<{ gospel: G
     
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere o bundle católico completo de hoje (${dateStr}) em JSON no idioma ${lang}.`,
+      contents: `Gere o bundle católico completo de hoje (${dateStr}) em JSON no idioma ${lang}. Inclua a Liturgia da Palavra completa (firstReading, psalm, secondReading se houver, e gospel).`,
       config: { 
         systemInstruction: getSystemInstruction(lang), 
         responseMimeType: "application/json",
@@ -74,6 +76,30 @@ export const getDailyBundle = async (lang: Language = 'pt'): Promise<{ gospel: G
                     dayName: { type: Type.STRING },
                     cycle: { type: Type.STRING },
                     week: { type: Type.STRING }
+                  }
+                },
+                firstReading: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    reference: { type: Type.STRING },
+                    text: { type: Type.STRING }
+                  }
+                },
+                psalm: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    reference: { type: Type.STRING },
+                    text: { type: Type.STRING }
+                  }
+                },
+                secondReading: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    reference: { type: Type.STRING },
+                    text: { type: Type.STRING }
                   }
                 }
               }
@@ -143,18 +169,18 @@ export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<stri
   }
 };
 
-export const searchVerse = async (q: string, book?: string, chapter?: number, verse?: number, lang: Language = 'pt'): Promise<Verse[]> => {
+export const searchVerse = async (q: string, books?: string[], chapters?: string[], verses?: string[], lang: Language = 'pt'): Promise<Verse[]> => {
   try {
     const ai = getAIInstance();
     const filters = [];
-    if (book) filters.push(`Livro: ${book}`);
-    if (chapter) filters.push(`Capítulo: ${chapter}`);
-    if (verse) filters.push(`Versículo: ${verse}`);
+    if (books && books.length > 0) filters.push(`Livros: ${books.join(', ')}`);
+    if (chapters && chapters.length > 0) filters.push(`Capítulos: ${chapters.join(', ')}`);
+    if (verses && verses.length > 0) filters.push(`Versículos: ${verses.join(', ')}`);
     
     const prompt = `Busque versículos bíblicos que correspondam a: "${q}". 
-    Filtros aplicados: ${filters.join(', ')}. 
+    Filtros aplicados: ${filters.join(' | ')}. 
     Retorne um array JSON de objetos Verse (book, chapter, verse, text) no idioma ${lang}.
-    Se encontrar uma referência exata, inclua-a primeiro.`;
+    Se encontrar uma referência exata, inclua-a primeiro. Responda apenas com o JSON.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -261,18 +287,135 @@ export const generateSpeech = async (text: string): Promise<string> => {
 
 export const getDailyGospel = async (lang: Language = 'pt') => (await getDailyBundle(lang)).gospel;
 
+/**
+ * Busca comentário patrístico (Catena Aurea para Evangelhos, Patrística para outros)
+ */
 export const getCatenaAureaCommentary = async (v: Verse, lang: Language = 'pt') => {
+  const ai = getAIInstance();
+  const isGospel = ["Mateus", "Marcos", "Lucas", "João"].includes(v.book);
+  
+  const prompt = isGospel 
+    ? `Gere o comentário da 'Catena Aurea' de São Tomás de Aquino para ${v.book} ${v.chapter}:${v.verse}.`
+    : `Gere um comentário patrístico (estilo Glosa Ordinária ou Catena) para ${v.book} ${v.chapter}:${v.verse}, citando Padres da Igreja como Santo Agostinho, São Jerônimo ou São João Crisóstomo.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `${prompt} Retorne um JSON com 'content' (o comentário compilado) e 'fathers' (array com os nomes dos Padres citados). Idioma: ${lang}.`,
+    config: { 
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          content: { type: Type.STRING },
+          fathers: { type: Type.ARRAY, items: { type: Type.STRING } }
+        }
+      }
+    }
+  });
+  return safeJsonParse(response.text || "", { content: "Comentário indisponível no momento.", fathers: [] });
+};
+
+export const getVerseCommentary = async (v: Verse, lang: Language = 'pt'): Promise<string> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Catena Aurea para ${v.book} ${v.chapter}:${v.verse} em JSON (idioma ${lang}).`,
-    config: { responseMimeType: "application/json" }
+    contents: `Gere uma breve meditação espiritual (estilo 'Meditatio') para o versículo ${v.book} ${v.chapter}:${v.verse} ("${v.text}"). Foco pastoral e místico. Idioma: ${lang}.`,
   });
-  return safeJsonParse(response.text || "", { content: "N/A", fathers: [] });
+  return response.text || "N/A";
 };
 
-export const getWeeklyCalendar = async (lang: Language = 'pt') => [];
-export const getVerseCommentary = async (v: any, lang: Language = 'pt') => "";
-export const getMagisteriumDocs = async (c: string, lang: Language = 'pt') => [];
-export async function* getTheologicalDialogueStream(m: string, lang: Language = 'pt') { yield "..."; }
-export const getThomisticSynthesis = async (t: string, lang: Language = 'pt') => ({});
+// Fix for Magisterium.tsx: Add getMagisteriumDocs
+export const getMagisteriumDocs = async (category: string, lang: Language = 'pt'): Promise<any[]> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Gere uma lista de 5 documentos importantes do Magistério para a categoria: "${category}". Retorne um array JSON de objetos com 'title', 'source', 'content' (resumo curto) e 'year'. Idioma: ${lang}.`,
+    config: { 
+      systemInstruction: getSystemInstruction(lang),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            source: { type: Type.STRING },
+            content: { type: Type.STRING },
+            year: { type: Type.STRING }
+          }
+        }
+      }
+    }
+  });
+  return JSON.parse(response.text || "[]");
+};
+
+// Fix for Colloquium.tsx: Add getTheologicalDialogueStream
+export async function* getTheologicalDialogueStream(message: string, lang: Language = 'pt') {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContentStream({
+    model: 'gemini-3-pro-preview',
+    contents: message,
+    config: {
+      systemInstruction: `Você é um doutor da igreja especializado em teologia católica. Responda de forma erudita, citando fontes como a Suma Teológica, o CIC ou o Magistério. Idioma: ${lang}.`,
+    },
+  });
+
+  for await (const chunk of response) {
+    yield chunk.text || "";
+  }
+}
+
+// Fix for Aquinas.tsx: Add getThomisticSynthesis
+export const getThomisticSynthesis = async (topic: string, lang: Language = 'pt'): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Sintetize a questão "${topic}" seguindo o método da Suma Teológica (Objeções, Sed Contra, Respondeo). Idioma: ${lang}.`,
+    config: {
+      systemInstruction: getSystemInstruction(lang),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          objections: { type: Type.ARRAY, items: { type: Type.STRING } },
+          sedContra: { type: Type.STRING },
+          respondeo: { type: Type.STRING },
+          replies: { type: Type.ARRAY, items: { type: Type.STRING } }
+        }
+      }
+    }
+  });
+  return JSON.parse(response.text || "{}");
+};
+
+// Fix for LiturgicalCalendar.tsx: Add getWeeklyCalendar
+export const getWeeklyCalendar = async (lang: Language = 'pt'): Promise<LiturgyInfo[]> => {
+  const ai = getAIInstance();
+  const today = new Date().toLocaleDateString('pt-BR');
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Gere o calendário litúrgico para os próximos 7 dias a partir de ${today}. Retorne um array JSON de objetos LiturgyInfo (color, season, rank, dayName, cycle, week, date). Idioma: ${lang}.`,
+    config: {
+      systemInstruction: getSystemInstruction(lang),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            color: { type: Type.STRING },
+            season: { type: Type.STRING },
+            rank: { type: Type.STRING },
+            dayName: { type: Type.STRING },
+            cycle: { type: Type.STRING },
+            week: { type: Type.STRING },
+            date: { type: Type.STRING }
+          }
+        }
+      }
+    }
+  });
+  return JSON.parse(response.text || "[]");
+};
