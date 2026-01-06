@@ -33,34 +33,33 @@ export const getCatholicCanon = () => {
   };
 };
 
-const SAMPLE_TEXTS = [
-  "No princípio era o Verbo, e o Verbo estava com Deus.",
-  "O Senhor é meu pastor, nada me faltará.",
-  "Tudo posso naquele que me fortalece.",
-  "Amarás o teu próximo como a ti mesmo.",
-  "Buscai primeiro o Reino de Deus e sua justiça.",
-  "A graça de Nosso Senhor Jesus Cristo esteja convosco.",
-  "Fazei tudo o que Ele vos disser.",
-  "Eis que faço novas todas as coisas.",
-  "O Verbo se fez carne e habitou entre nós.",
-  "Deus é amor, e quem permanece no amor permanece em Deus."
+const BIBLE_TEXTS_POOL = [
+  "No princípio era o Verbo, e o Verbo estava junto de Deus e o Verbo era Deus. Ele estava no princípio junto de Deus. Tudo foi feito por meio dele, e sem ele nada se fez de tudo o que foi feito.",
+  "O Senhor é meu pastor, nada me faltará. Em verdes pastagens me faz repousar, para as águas tranquilas me conduz. Restaura minhas forças e guia-me por caminhos retos por amor do seu nome.",
+  "Ainda que eu falasse as línguas dos homens e dos anjos, se não tivesse caridade, sou como o bronze que soa ou o címbalo que retine. E ainda que tivesse o dom da profecia e conhecesse todos os mistérios.",
+  "Tudo posso naquele que me fortalece. Pois Deus é quem produz em vós tanto o querer como o realizar, segundo a sua boa vontade. Fazei todas as coisas sem murmurações nem contendas.",
+  "Buscai em primeiro lugar o Reino de Deus e a sua justiça, e todas essas coisas vos serão dadas por acréscimo. Portanto, não vos inquieteis com o dia de amanhã, pois o amanhã trará os seus cuidados.",
+  "Porque Deus amou tanto o mundo que deu o seu Filho Unigênito, para que todo o que nele crer não pereça, mas tenha a vida eterna. Pois Deus não enviou o seu Filho ao mundo para condenar o mundo.",
+  "Fazei tudo o que ele vos disser. Ora, havia ali seis talhas de pedra, para a purificação dos judeus, cada uma das quais levava duas ou três metretas. Disse-lhes Jesus: Enchei de água as talhas.",
+  "Eis que faço novas todas as coisas. E disse: Escreve, porque estas palavras são fiéis e verdadeiras. Disse-me ainda: Está feito! Eu sou o Alfa e o Ômega, o Princípio e o Fim.",
+  "E o Verbo se fez carne e habitou entre nós, e vimos a sua glória, glória como de Unigênito do Pai, cheio de graça e de verdade. João dá testemunho dele e exclama: Este era aquele de quem eu disse.",
+  "Deus é amor, e quem permanece no amor permanece em Deus e Deus nele. Nisto a caridade é perfeita em nós: para que tenhamos confiança no dia do julgamento; pois como ele é, assim somos nós neste mundo."
 ];
 
 export const fetchLocalChapter = async (versionId: string, book: string, chapter: number): Promise<Verse[]> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   
-  return [...Array(12)].map((_, i) => {
-    const seed = (book.length + chapter + i + versionId.length) % SAMPLE_TEXTS.length;
+  // Simula versículos completos baseados no pool
+  return [...Array(15)].map((_, i) => {
+    const seed = (book.length + chapter + i + versionId.length) % BIBLE_TEXTS_POOL.length;
     let prefix = "";
-    if (versionId === 'pilgrim') prefix = "[Peregrino] ";
-    else if (versionId === 'jerusalem') prefix = "[Jerusalém] ";
-    else if (versionId === 'ave_maria') prefix = "[AM] ";
-
+    if (versionId === 'pilgrim') prefix = ""; 
+    
     return {
       book,
       chapter,
       verse: i + 1,
-      text: `${prefix}${SAMPLE_TEXTS[seed]} (Versículo de estudo ${i + 1})`
+      text: `${prefix}${BIBLE_TEXTS_POOL[seed]}`
     };
   });
 };

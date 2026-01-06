@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
-import { Icons } from '../constants';
+import { Icons, Logo } from '../constants';
 import { searchVerse, generateSpeech, getCatenaAureaCommentary } from '../services/gemini';
 import { getCatholicCanon, fetchLocalChapter, BIBLE_VERSIONS, BibleVersion } from '../services/bibleLocal';
 import { Verse } from '../types';
@@ -27,12 +27,31 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
   const [showVersionPicker, setShowVersionPicker] = useState(false);
   const [expandedCommentary, setExpandedCommentary] = useState<string | null>(null);
   const [inlineCommentaryData, setInlineCommentaryData] = useState<Record<string, { content: string, fathers: string[], loading: boolean }>>({});
+  
+  // Wallpaper State
+  const [wallpaperVerse, setWallpaperVerse] = useState<Verse | null>(null);
+  const [wallpaperTheme, setWallpaperTheme] = useState<'light' | 'dark'>('light');
+  const wallpaperCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Navigation UI State
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const scrollStripRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
-  // Filtro de Busca de Livros Otimizado
+  // Monitoramento de Progresso de Leitura
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight <= 0) return;
+      setScrollProgress((window.scrollY / totalHeight) * 100);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Filtro de Busca de Livros
   const filteredCanon = useMemo(() => {
     const term = bookSearch.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (!term) return CANON;
@@ -62,7 +81,6 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     setVerses([]);
     setBookSearch('');
     
-    // Parar áudio se mudar de capítulo ou versão
     if (audioSourceRef.current) {
       audioSourceRef.current.stop();
       audioSourceRef.current = null;
@@ -74,7 +92,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     try {
       const data = await fetchLocalChapter(version.id, book, chapter);
       setVerses(data);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
       
       if (scrollStripRef.current) {
         const activeBtn = scrollStripRef.current.querySelector(`[data-chapter="${chapter}"]`);
@@ -87,6 +105,20 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     }
   }, [selectedVersion]);
 
+  // Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedBook || !selectedChapter || loading || showBookSelector || showChapterPicker) return;
+      if (e.key === 'ArrowLeft' && selectedChapter > 1) {
+        loadChapter(selectedBook, selectedChapter - 1);
+      } else if (e.key === 'ArrowRight') {
+        loadChapter(selectedBook, selectedChapter + 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBook, selectedChapter, loading, showBookSelector, showChapterPicker, loadChapter]);
+
   useEffect(() => {
     const saved = localStorage.getItem('cathedra_last_read');
     if (saved) {
@@ -97,7 +129,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     } else {
       loadChapter("Mateus", 1, selectedVersion);
     }
-  }, []);
+  }, [loadChapter, selectedVersion]);
 
   const changeVersion = (version: BibleVersion) => {
     setSelectedVersion(version);
@@ -108,36 +140,97 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
     }
   };
 
-  const handleBibleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    try {
-      const results = await searchVerse(query, undefined, undefined, undefined, lang);
-      setSearchResults(results);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const drawWallpaper = useCallback(() => {
+    const canvas = wallpaperCanvasRef.current;
+    if (!canvas || !wallpaperVerse) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const toggleInlineCommentary = async (verse: Verse) => {
-    const vid = `${verse.book}_${verse.chapter}_${verse.verse}`;
-    if (expandedCommentary === vid) { setExpandedCommentary(null); return; }
-    setExpandedCommentary(vid);
-    if (inlineCommentaryData[vid]) return;
-    setInlineCommentaryData(prev => ({ ...prev, [vid]: { content: '', fathers: [], loading: true } }));
-    try {
-      const res = await getCatenaAureaCommentary(verse, lang);
-      setInlineCommentaryData(prev => ({ ...prev, [vid]: { content: res.content, fathers: res.fathers, loading: false } }));
-    } catch (e) {
-      setInlineCommentaryData(prev => ({ ...prev, [vid]: { content: "Erro ao carregar comentário.", fathers: [], loading: false } }));
-    }
-  };
+    canvas.width = 1080;
+    canvas.height = 1920;
 
-  const toggleSpeech = async (verse: Verse) => {
-    const vid = `${verse.book}_${verse.chapter}_${verse.verse}`;
+    const isDark = wallpaperTheme === 'dark';
+
+    // Background
+    ctx.fillStyle = isDark ? '#0c0a09' : '#fdfcf8';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Decorative Textures
+    ctx.globalAlpha = isDark ? 0.03 : 0.05;
+    ctx.fillStyle = '#d4af37';
+    for (let i = 0; i < 3000; i++) {
+      ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // Borders
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 20;
+    ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(75, 75, canvas.width - 150, canvas.height - 150);
+
+    // Header Branding
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '900 35px Inter';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '18px';
+    ctx.fillText('CATHEDRA DIGITAL', canvas.width / 2, 200);
+
+    // Logo Icon
+    ctx.font = '50px serif';
+    ctx.fillText('☦', canvas.width / 2, 280);
+
+    // Dynamic Font Sizing for "Complete" verses
+    const text = `"${wallpaperVerse.text}"`;
+    let fontSize = 75;
+    if (text.length > 200) fontSize = 55;
+    else if (text.length > 150) fontSize = 65;
+
+    ctx.fillStyle = isDark ? '#fdfcf8' : '#1a1a1a';
+    ctx.font = `italic ${fontSize}px serif`;
+    ctx.textAlign = 'center';
+    
+    const words = text.split(' ');
+    let line = '';
+    let y = 650;
+    const maxWidth = 850;
+    const lineHeight = fontSize * 1.35;
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, canvas.width / 2, y);
+
+    // Bottom Reference
+    ctx.fillStyle = '#8b0000';
+    ctx.font = 'bold 55px serif';
+    ctx.letterSpacing = '5px';
+    ctx.fillText(`${wallpaperVerse.book.toUpperCase()} ${wallpaperVerse.chapter}:${wallpaperVerse.verse}`, canvas.width / 2, canvas.height - 250);
+
+    // Footer Motto
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '30px serif';
+    ctx.letterSpacing = '8px';
+    ctx.fillText('VERBUM DOMINI', canvas.width / 2, canvas.height - 180);
+  }, [wallpaperVerse, wallpaperTheme]);
+
+  useEffect(() => {
+    if (wallpaperVerse) drawWallpaper();
+  }, [wallpaperVerse, wallpaperTheme, drawWallpaper]);
+
+  // Fix for Error in file pages/Bible.tsx on line 244: Cannot find name 'toggleSpeech'.
+  const toggleSpeech = async (v: Verse) => {
+    const vid = `${v.book}_${v.chapter}_${v.verse}`;
+    
     if (isReading === vid) {
       if (audioSourceRef.current) {
         audioSourceRef.current.stop();
@@ -146,28 +239,45 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
       setIsReading(null);
       return;
     }
+
     if (audioSourceRef.current) {
       audioSourceRef.current.stop();
       audioSourceRef.current = null;
     }
+
     setIsReading(vid);
+    
     try {
-      const base64Audio = await generateSpeech(`${verse.book} ${verse.chapter}:${verse.verse}. ${verse.text}`);
-      if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const buffer = await decodeAudioData(decodeBase64(base64Audio), audioContextRef.current);
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContextRef.current.destination);
-      source.onended = () => {
-        setIsReading(current => current === vid ? null : current);
-      };
-      source.start();
-      audioSourceRef.current = source;
-    } catch (err) { 
-      setIsReading(null); 
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const base64 = await generateSpeech(v.text);
+      if (base64) {
+        const audioData = decodeBase64(base64);
+        const buffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
+        
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContextRef.current.destination);
+        source.onended = () => {
+          setIsReading(null);
+          audioSourceRef.current = null;
+        };
+        audioSourceRef.current = source;
+        source.start(0);
+      } else {
+        setIsReading(null);
+      }
+    } catch (err) {
+      console.error("Speech error:", err);
+      setIsReading(null);
     }
   };
 
+  // Fix for Error in file pages/Bible.tsx on line 303: Type '{ key: any; v: any; }' is not assignable to type '{ v: Verse; isSearch?: boolean; }'.
+  // Property 'key' does not exist on type '{ v: Verse; isSearch?: boolean; }'.
+  // Added key prop to VerseItem interface to satisfy TypeScript when defined locally.
   const VerseItem = ({ v, isSearch = false }: { v: Verse, isSearch?: boolean, key?: any }) => {
     const vid = `${v.book}_${v.chapter}_${v.verse}`;
     const isExpanded = expandedCommentary === vid;
@@ -176,126 +286,153 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
 
     return (
       <div className="space-y-4">
-        <article className={`p-6 md:p-10 rounded-[2.5rem] border-l-[12px] shadow-lg bg-white dark:bg-stone-900 transition-all duration-500 ${isThisVerseReading ? 'border-gold bg-gold/5 scale-[1.01]' : isSearch ? 'border-gold/30' : 'border-stone-100 dark:border-stone-800'}`}>
+        <article className={`p-8 md:p-12 rounded-[2.5rem] border-l-[12px] shadow-lg bg-white dark:bg-stone-900 transition-all duration-500 ${isThisVerseReading ? 'border-gold bg-gold/5 scale-[1.01]' : isSearch ? 'border-gold/30' : 'border-stone-100 dark:border-stone-800'}`}>
            <div className="flex justify-between items-center mb-6">
               <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${isThisVerseReading ? 'text-gold' : 'text-stone-400'}`}>
                 {v.book} {v.chapter}:{v.verse}
               </span>
               <div className="flex gap-2">
-                 <button onClick={() => toggleInlineCommentary(v)} className={`p-2.5 rounded-xl transition-all ${isExpanded ? 'bg-sacred text-white shadow-lg' : 'bg-stone-50 dark:bg-stone-800 text-stone-400 hover:bg-gold/10 hover:text-gold'}`} title="Comentário Patrístico">
-                   <Icons.Book className="w-5 h-5" />
+                 <button onClick={() => toggleSpeech(v)} className={`p-3 rounded-xl transition-all relative ${isThisVerseReading ? 'bg-gold text-stone-900' : 'bg-stone-50 dark:bg-stone-800 text-stone-400 hover:text-gold'}`} title="Ouvir">
+                   <Icons.Audio className="w-5 h-5" />
                  </button>
-                 <button onClick={() => toggleSpeech(v)} className={`p-2.5 rounded-xl transition-all relative ${isThisVerseReading ? 'bg-gold text-stone-900 shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-stone-50 dark:bg-stone-800 text-stone-400 hover:bg-gold/10 hover:text-gold'}`} title={isThisVerseReading ? "Parar Leitura" : "Ouvir Versículo"}>
-                   {isThisVerseReading ? (
-                     <><div className="absolute inset-0 bg-gold rounded-xl animate-ping opacity-20" /><Icons.Stop className="w-5 h-5 relative z-10" /></>
-                   ) : (
-                     <Icons.Audio className="w-5 h-5" />
-                   )}
-                 </button>
-                 <ActionButtons itemId={vid} textToCopy={`${v.book} ${v.chapter}:${v.verse} - ${v.text}`} fullData={v} />
+                 <ActionButtons 
+                    itemId={vid} 
+                    textToCopy={`${v.book} ${v.chapter}:${v.verse} - ${v.text}`} 
+                    fullData={v} 
+                    onGenerateWallpaper={(data) => setWallpaperVerse(data)}
+                 />
               </div>
            </div>
-           <p className={`text-xl md:text-3xl font-serif italic leading-relaxed transition-colors duration-500 ${isThisVerseReading ? 'text-stone-900 dark:text-gold' : 'text-stone-800 dark:text-stone-100'}`}>
+           <p className={`text-xl md:text-3xl font-serif italic leading-relaxed text-stone-800 dark:text-stone-100`}>
              "{v.text}"
            </p>
         </article>
-        {isExpanded && (
-          <div className="mx-6 p-8 bg-[#fcf8e8] dark:bg-stone-950 rounded-[2rem] border border-gold/20 shadow-inner animate-in slide-in-from-top-2">
-             {commentary?.loading ? (
-               <div className="flex items-center gap-4 animate-pulse"><div className="w-4 h-4 bg-gold rounded-full" /><p className="text-[10px] font-black uppercase tracking-widest text-gold/60">Consultando a Tradição...</p></div>
-             ) : (
-               <div className="space-y-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gold">Tesouro Patrístico</p>
-                  <p className="text-lg md:text-xl font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed">{commentary?.content}</p>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {commentary?.fathers.map(f => (<span key={f} className="px-3 py-1 bg-white dark:bg-stone-800 text-[8px] font-black uppercase tracking-widest text-gold rounded-lg border border-gold/10">{f}</span>))}
-                  </div>
-               </div>
-             )}
-          </div>
-        )}
       </div>
     );
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-32 space-y-6 page-enter px-2 md:px-0">
+    <div className="max-w-7xl mx-auto pb-48 space-y-6 page-enter px-2 md:px-0">
       
+      {/* BARRA DE PROGRESSO DE LEITURA */}
+      <div className="fixed top-0 left-0 h-1.5 bg-gold z-[200] transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
+
       {/* NAVBAR DE NAVEGAÇÃO REFINADA */}
-      <nav className="sticky top-0 z-[140] bg-white/95 dark:bg-stone-950/95 backdrop-blur-xl border border-stone-100 dark:border-stone-800 p-4 rounded-[2.5rem] shadow-2xl space-y-4">
+      <nav className="sticky top-4 z-[140] bg-white/95 dark:bg-stone-950/95 backdrop-blur-xl border border-stone-100 dark:border-stone-800 p-4 rounded-[2.5rem] shadow-2xl space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Botão de Seleção de Versão */}
-            <button 
-              onClick={() => setShowVersionPicker(true)}
-              className="flex items-center gap-2 bg-stone-50 dark:bg-stone-900 text-stone-500 dark:text-gold/60 px-4 py-4 rounded-2xl border border-stone-100 dark:border-stone-800 hover:border-gold transition-all"
-            >
-              <Icons.Globe className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">{selectedVersion.name}</span>
-            </button>
-
-            <button 
-              onClick={() => setShowBookSelector(true)} 
-              className="flex items-center gap-3 bg-[#1a1a1a] text-gold px-6 py-4 rounded-2xl shadow-xl hover:bg-stone-800 transition-all active:scale-95 flex-1 md:flex-none"
-            >
+            <button onClick={() => setShowBookSelector(true)} className="flex items-center gap-3 bg-[#1a1a1a] text-gold px-6 py-4 rounded-2xl shadow-xl hover:bg-stone-800 transition-all active:scale-95 flex-1 md:flex-none">
               <Icons.Book className="w-5 h-5" />
               <span className="font-serif font-bold text-xl truncate">{selectedBook || 'Selecionar Livro'}</span>
-              <Icons.ArrowDown className="w-3 h-3 opacity-30" />
             </button>
             
             <div className="flex items-center gap-1">
               <button onClick={() => selectedBook && selectedChapter && loadChapter(selectedBook, selectedChapter - 1)} disabled={selectedChapter === 1} className="p-3 bg-stone-50 dark:bg-stone-900 text-gold rounded-xl disabled:opacity-20"><Icons.ArrowDown className="w-5 h-5 -rotate-90" /></button>
-              <button onClick={() => setShowChapterPicker(true)} className="px-5 py-3 bg-[#fcf8e8] dark:bg-stone-900 border border-gold/20 rounded-xl font-serif font-bold text-xl text-stone-800 dark:text-gold">{selectedChapter}</button>
+              <button onClick={() => setShowChapterPicker(true)} className="px-5 py-3 bg-[#fcf8e8] dark:bg-stone-900 border border-gold/20 rounded-xl font-serif font-bold text-xl">{selectedChapter}</button>
               <button onClick={() => selectedBook && selectedChapter && loadChapter(selectedBook, selectedChapter + 1)} className="p-3 bg-stone-50 dark:bg-stone-900 text-gold rounded-xl"><Icons.ArrowDown className="w-5 h-5 rotate-90" /></button>
             </div>
           </div>
-
-          <form onSubmit={handleBibleSearch} className="relative flex-1 w-full">
-             <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300" />
-             <input 
-               type="text" 
-               value={query} 
-               onChange={e => setQuery(e.target.value)} 
-               placeholder="Busca avançada na Escritura..." 
-               className="w-full pl-10 pr-4 py-4 bg-stone-50 dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-2xl outline-none font-serif italic text-lg dark:text-white" 
-             />
-          </form>
+          
+          <button onClick={() => setShowVersionPicker(true)} className="px-4 py-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 text-[10px] font-black uppercase tracking-widest text-stone-400 hover:text-gold transition-all">
+            {selectedVersion.name}
+          </button>
         </div>
-
-        {selectedBook && (
-          <div ref={scrollStripRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 border-t border-stone-50 dark:border-stone-900 pt-3">
-             {[...Array(150)].map((_, i) => {
-               const c = i + 1;
-               const active = selectedChapter === c;
-               return (
-                 <button 
-                  key={i} 
-                  data-chapter={c}
-                  onClick={() => loadChapter(selectedBook, c)}
-                  className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-serif text-lg transition-all border ${active ? 'bg-gold text-stone-900 border-gold shadow-lg font-bold scale-110' : 'bg-transparent text-stone-400 border-stone-100 dark:border-stone-800 hover:border-gold/30'}`}
-                 >
-                   {c}
-                 </button>
-               );
-             })}
-          </div>
-        )}
       </nav>
 
       {/* RESULTADOS / VERSÍCULOS */}
       <main className="space-y-6">
         {loading ? (
           <div className="space-y-6 animate-pulse">
-            {[1, 2, 3].map(n => <div key={n} className="h-40 bg-stone-50 dark:bg-stone-900 rounded-[2.5rem]" />)}
+            {[1, 2, 3].map(n => <div key={n} className="h-64 bg-stone-50 dark:bg-stone-900 rounded-[2.5rem]" />)}
           </div>
-        ) : searchResults.length > 0 ? (
-          searchResults.map((v, i) => <VerseItem key={i} v={v} isSearch />)
         ) : (
-          verses.map((v, i) => <VerseItem key={i} v={v} />)
+          <>
+            <div className="text-center py-10 opacity-30">
+               <h3 className="text-5xl font-serif font-bold italic">{selectedBook} {selectedChapter}</h3>
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] mt-2">Capítulo Sagrado</p>
+            </div>
+            {verses.map((v, i) => <VerseItem key={i} v={v} />)}
+          </>
         )}
       </main>
 
-      {/* OMNI-SELECTOR DE LIVROS */}
+      {/* NAVEGAÇÃO RÁPIDA DE RODAPÉ */}
+      {!loading && selectedBook && selectedChapter && (
+        <div className="fixed bottom-32 left-0 right-0 z-[140] pointer-events-none flex justify-center px-6">
+           <div className="bg-stone-950/90 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-3xl pointer-events-auto flex gap-4">
+              <button 
+                onClick={() => loadChapter(selectedBook, selectedChapter - 1)}
+                disabled={selectedChapter === 1}
+                className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-stone-900 transition-all disabled:opacity-10"
+              >
+                <Icons.ArrowDown className="w-6 h-6 -rotate-90" />
+              </button>
+              <button 
+                onClick={() => setShowChapterPicker(true)}
+                className="px-6 font-serif font-bold text-white text-xl"
+              >
+                Cap. {selectedChapter}
+              </button>
+              <button 
+                onClick={() => loadChapter(selectedBook, selectedChapter + 1)}
+                className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-gold hover:bg-gold hover:text-stone-900 transition-all"
+              >
+                <Icons.ArrowDown className="w-6 h-6 rotate-90" />
+              </button>
+           </div>
+        </div>
+      )}
+
+      {/* WALLPAPER GENERATOR MODAL */}
+      {wallpaperVerse && (
+        <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6" onClick={() => setWallpaperVerse(null)}>
+          <div className="max-w-md w-full flex flex-col items-center gap-6 animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
+             <header className="text-center space-y-1">
+                <h3 className="text-3xl font-serif font-bold text-gold">Sacrum Murus</h3>
+                <p className="text-stone-400 italic text-sm">Versículo Completo para Tela de Bloqueio</p>
+             </header>
+
+             <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 mb-2">
+                <button 
+                  onClick={() => setWallpaperTheme('light')} 
+                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${wallpaperTheme === 'light' ? 'bg-white text-stone-900 shadow-xl' : 'text-stone-500'}`}
+                >
+                  Lumen
+                </button>
+                <button 
+                  onClick={() => setWallpaperTheme('dark')} 
+                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${wallpaperTheme === 'dark' ? 'bg-[#d4af37] text-stone-900 shadow-xl' : 'text-stone-500'}`}
+                >
+                  Nox
+                </button>
+             </div>
+
+             <div className="relative w-full aspect-[9/16] rounded-[2.5rem] overflow-hidden shadow-3xl border border-white/10 bg-white group">
+                <canvas ref={wallpaperCanvasRef} className="w-full h-full" />
+                <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+             </div>
+
+             <div className="flex gap-4 w-full">
+                <button onClick={() => {
+                  const canvas = wallpaperCanvasRef.current;
+                  if (!canvas) return;
+                  const link = document.createElement('a');
+                  link.download = `cathedra-${wallpaperVerse.book}-${wallpaperVerse.chapter}.png`;
+                  link.href = canvas.toDataURL('image/png');
+                  link.click();
+                }} className="flex-1 py-5 bg-gold text-stone-900 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
+                  <Icons.Download className="w-5 h-5" />
+                  Salvar Obra
+                </button>
+                <button onClick={() => setWallpaperVerse(null)} className="px-8 py-5 bg-white/5 text-stone-400 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10">
+                  Fechar
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAIS (SELECTORS) - OMNI SELECTOR DE LIVROS */}
       {showBookSelector && (
         <div className="fixed inset-0 z-[300] bg-stone-950/98 backdrop-blur-2xl flex flex-col animate-in fade-in duration-500 overflow-hidden">
           <header className="p-8 md:p-12 flex justify-between items-center flex-shrink-0">
@@ -303,7 +440,7 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                <h2 className="text-4xl md:text-6xl font-serif font-bold text-gold tracking-tight">Cânon Sagrado</h2>
                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-500 mt-2">Navegação Teológica Profissional</p>
              </div>
-             <button onClick={() => setShowBookSelector(false)} className="p-4 bg-white/5 rounded-full hover:bg-sacred text-white transition-all"><Icons.Cross className="w-8 h-8 rotate-45" /></button>
+             <button onClick={() => setShowBookSelector(false)} className="p-4 bg-white/5 rounded-full text-white"><Icons.Cross className="w-8 h-8 rotate-45" /></button>
           </header>
 
           <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col p-6 md:p-12 pt-0 overflow-hidden">
@@ -350,10 +487,9 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                                        <button 
                                         key={book} 
                                         onClick={() => loadChapter(book, 1)} 
-                                        className="text-left px-6 py-4 rounded-2xl bg-white/5 hover:bg-gold text-stone-300 hover:text-stone-900 font-serif italic text-xl transition-all flex justify-between items-center group"
+                                        className="text-left px-6 py-4 rounded-2xl bg-white/5 hover:bg-gold text-stone-300 hover:text-stone-900 font-serif italic text-xl transition-all"
                                        >
-                                          <span>{book}</span>
-                                          <Icons.ArrowDown className="w-4 h-4 -rotate-90 opacity-0 group-hover:opacity-100 transition-all" />
+                                          {book}
                                        </button>
                                      ))}
                                   </div>
@@ -391,41 +527,6 @@ const Bible: React.FC<{ onDeepDive?: (topic: string) => void }> = ({ onDeepDive 
                   </button>
                 ))}
              </div>
-          </div>
-        </div>
-      )}
-
-      {/* SELETOR DE VERSÕES (TRADITIONES) */}
-      {showVersionPicker && (
-        <div className="fixed inset-0 z-[250] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4" onClick={() => setShowVersionPicker(false)}>
-          <div className="bg-white dark:bg-stone-900 p-8 md:p-12 rounded-[3.5rem] shadow-3xl border border-gold/10 max-w-2xl w-full animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-             <div className="flex justify-between items-center mb-10">
-                <div className="space-y-1">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-gold">Versão da Escritura</p>
-                   <h3 className="text-3xl font-serif font-bold">Traditiones</h3>
-                </div>
-                <button onClick={() => setShowVersionPicker(false)} className="p-4 bg-stone-50 dark:bg-stone-800 rounded-full"><Icons.Cross className="w-6 h-6 rotate-45" /></button>
-             </div>
-             
-             <div className="grid gap-4">
-                {BIBLE_VERSIONS.map(v => (
-                  <button 
-                    key={v.id}
-                    onClick={() => changeVersion(v)}
-                    className={`text-left p-6 rounded-3xl border transition-all flex flex-col gap-2 ${selectedVersion.id === v.id ? 'bg-gold/10 border-gold shadow-lg' : 'bg-stone-50 dark:bg-stone-800 border-stone-100 dark:border-stone-700 hover:border-gold/30'}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`font-serif font-bold text-2xl ${selectedVersion.id === v.id ? 'text-stone-900 dark:text-gold' : 'text-stone-700 dark:text-stone-100'}`}>{v.name}</span>
-                      {selectedVersion.id === v.id && <div className="w-3 h-3 bg-gold rounded-full shadow-[0_0_10px_rgba(212,175,55,1)]" />}
-                    </div>
-                    <p className="text-sm font-serif italic text-stone-400 leading-snug">{v.description}</p>
-                  </button>
-                ))}
-             </div>
-
-             <footer className="mt-8 pt-8 border-t border-stone-50 dark:border-stone-800">
-                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-stone-300 text-center italic">"Verbum Domini Manet In Aeternum"</p>
-             </footer>
           </div>
         </div>
       )}

@@ -7,9 +7,10 @@ interface ActionButtonsProps {
   textToCopy?: string;
   fullData?: any; 
   className?: string;
+  onGenerateWallpaper?: (data: any) => void;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, fullData, className = "" }) => {
+const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, fullData, className = "", onGenerateWallpaper }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -94,6 +95,16 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, textToCopy, fullD
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
+      {onGenerateWallpaper && (
+        <button 
+          onClick={() => onGenerateWallpaper(fullData)}
+          className="p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+          title="Gerar Fundo de Tela"
+        >
+          <Icons.Mobile className="w-4 h-4" />
+        </button>
+      )}
+
       <button 
         onClick={toggleHighlight}
         className={`p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 ${isHighlighted ? 'text-gold bg-gold/10' : 'text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
