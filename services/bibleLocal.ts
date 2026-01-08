@@ -9,10 +9,10 @@ export type BibleVersion = {
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: 'pilgrim', name: 'Bíblia do Peregrino', description: 'Tradução de Luís Alonso Schökel. Foco na beleza literária e profundidade poética.', isPilgrim: true },
-  { id: 'ave_maria', name: 'Ave Maria', description: 'Tradução católica clássica com linguagem devocional.' },
   { id: 'jerusalem', name: 'Bíblia de Jerusalém', description: 'Referência mundial em exegese e rigor acadêmico.' },
-  { id: 'almeida', name: 'Almeida Revista', description: 'Tradução tradicional de grande valor literário.' }
+  { id: 'ave_maria', name: 'Ave Maria', description: 'Tradução católica clássica com linguagem devocional.' },
+  { id: 'pilgrim', name: 'Bíblia do Peregrino', description: 'Tradução de Luís Alonso Schökel. Foco na beleza literária.', isPilgrim: true },
+  { id: 'vulgata', name: 'Vulgata Latina', description: 'Tradução de São Jerônimo, texto oficial da Igreja.' }
 ];
 
 export const getCatholicCanon = () => {
@@ -43,33 +43,27 @@ const CHAPTER_COUNTS: Record<string, number> = {
   "Hebreus": 13, "Tiago": 5, "1 Pedro": 5, "2 Pedro": 3, "1 João": 5, "2 João": 1, "3 João": 1, "Judas": 1, "Apocalipse": 22
 };
 
-export const getChapterCount = (book: string): number => {
-  return CHAPTER_COUNTS[book] || 50;
-};
+export const getChapterCount = (book: string): number => CHAPTER_COUNTS[book] || 50;
 
-const BIBLE_TEXTS_POOL = [
-  "No princípio era o Verbo, e o Verbo estava junto de Deus e o Verbo era Deus. Ele estava no princípio junto de Deus. Tudo foi feito por meio dele, e sem ele nada se fez de tudo o que foi feito.",
-  "O Senhor é meu pastor, nada me faltará. Em verdes pastagens me faz repousar, para as águas tranquilas me conduz. Restaura minhas forças e guia-me por caminhos retos por amor do seu nome.",
-  "Ainda que eu falasse as línguas dos homens e dos anjos, se não tivesse caridade, sou como o bronze que soa ou o címbalo que retine. E ainda que tivesse o dom da profecia e conhecesse todos os mistérios.",
-  "Tudo posso naquele que me fortalece. Pois Deus é quem produz em vós tanto o querer como o realizar, segundo a sua boa vontade. Fazei todas as coisas sem murmurações nem contendas.",
-  "Buscai em primeiro lugar o Reino de Deus e a sua justiça, e todas essas coisas vos serão dadas por acréscimo. Portanto, não vos inquieteis com o dia de amanhã, pois o amanhã trará os seus cuidados.",
-  "Porque Deus amou tanto o mundo que deu o seu Filho Unigênito, para que todo o que nele crer não pereça, mas tenha a vida eterna. Pois Deus não enviou o seu Filho ao mundo para condenar o mundo.",
-  "Fazei tudo o que ele vos disser. Ora, havia ali seis talhas de pedra, para a purificação dos judeus, cada uma das quais levava duas ou três metretas. Disse-lhes Jesus: Enchei de água as talhas.",
-  "Eis que faço novas todas as coisas. E disse: Escreve, porque estas palavras são fiéis e verdadeiras. Disse-me ainda: Está feito! Eu sou o Alfa e o Ômega, o Princípio e o Fim.",
-  "E o Verbo se fez carne e habitou entre nós, e vimos a sua glória, glória como de Unigênito do Pai, cheio de graça e de verdade. João dá testemunho dele e exclama: Este era aquele de quem eu disse.",
-  "Deus é amor, e quem permanece no amor permanece em Deus e Deus nele. Nisto a caridade é perfeita em nós: para que tenhamos confiança no dia do julgamento; pois como ele é, assim somos nós neste mundo."
+// Textos de fallback para o Scriptorium Local em caso de falha da IA
+const FALLBACK_TEXTS = [
+  "No princípio era o Verbo, e o Verbo estava junto de Deus e o Verbo era Deus.",
+  "O Senhor é meu pastor, nada me faltará.",
+  "Porque Deus amou tanto o mundo que deu o seu Filho Unigênito.",
+  "Ainda que eu falasse as línguas dos homens e dos anjos, se não tivesse caridade, nada seria.",
+  "Tudo posso naquele que me fortalece.",
+  "Buscai em primeiro lugar o Reino de Deus e a sua justiça.",
+  "Fazei tudo o que Ele vos disser.",
+  "Eis que faço novas todas as coisas.",
+  "E o Verbo se fez carne e habitou entre nós.",
+  "Deus é amor, e quem permanece no amor permanece em Deus."
 ];
 
-export const fetchLocalChapter = async (versionId: string, book: string, chapter: number): Promise<Verse[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  return [...Array(15)].map((_, i) => {
-    const seed = (book.length + chapter + i + versionId.length) % BIBLE_TEXTS_POOL.length;
-    return {
-      book,
-      chapter,
-      verse: i + 1,
-      text: BIBLE_TEXTS_POOL[seed]
-    };
-  });
+export const fetchLocalFallback = (book: string, chapter: number): Verse[] => {
+  return [...Array(10)].map((_, i) => ({
+    book,
+    chapter,
+    verse: i + 1,
+    text: FALLBACK_TEXTS[(book.length + chapter + i) % FALLBACK_TEXTS.length]
+  }));
 };

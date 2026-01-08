@@ -5,227 +5,270 @@ import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dog
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const getSystemInstruction = (lang: Language) => 
-  `Cathedra: Responda APENAS JSON. Rigor católico. Idioma: ${lang}.`;
+  `Cathedra: Você é uma API de dados teológicos católicos de nível acadêmico. Rigor absoluto. Responda APENAS JSON. Idioma: ${lang}.`;
 
 export const DEFAULT_BUNDLE = {
-  gospel: { 
-    reference: "", text: "", reflection: "", title: "", 
-    calendar: { color: "white", season: "Tempo Comum", rank: "Feria", dayName: "Sincronizando...", cycle: "", week: "" }
-  },
-  saint: { name: "", feastDay: "", patronage: "", biography: "", image: "", quote: "" },
-  quote: { quote: "", author: "" },
-  insight: ""
+  gospel: { reference: "", text: "", reflection: "", calendar: { color: "white", season: "", rank: "", dayName: "", cycle: "", week: "" } },
+  saint: { name: "", feastDay: "", patronage: "", biography: "", image: "" },
+  insight: "",
+  quote: { quote: "", author: "" }
 };
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 500): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    const isTransient = error?.message?.includes('500') || error?.message?.includes('xhr error') || error?.message?.includes('code: 6') || error?.message?.includes('UNAVAILABLE');
+    if (retries > 0 && isTransient) {
+      await new Promise(res => setTimeout(res, delay));
+      return withRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+}
 
 const safeJsonParse = (text: string, fallback: any) => {
   try {
     const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
     const start = clean.indexOf('{');
     const end = clean.lastIndexOf('}');
-    if (start !== -1 && end !== -1) {
-      return JSON.parse(clean.substring(start, end + 1));
-    }
+    if (start !== -1 && end !== -1) return JSON.parse(clean.substring(start, end + 1));
+    const arrayStart = clean.indexOf('[');
+    const arrayEnd = clean.lastIndexOf(']');
+    if (arrayStart !== -1 && arrayEnd !== -1) return JSON.parse(clean.substring(arrayStart, arrayEnd + 1));
     return JSON.parse(clean || (Array.isArray(fallback) ? "[]" : "{}"));
-  } catch (e) {
-    return fallback;
-  }
+  } catch (e) { return fallback; }
 };
 
-export const getDailyBundle = async (lang: Language = 'pt'): Promise<{ gospel: Gospel, saint: Saint, quote: { quote: string, author: string }, insight: string }> => {
-  try {
+export const fetchRealBibleText = async (book: string, chapter: number, version: string = 'catolica', lang: Language = 'pt'): Promise<Verse[]> => {
+  return withRetry(async () => {
     const ai = getAIInstance();
-    const today = new Date().toLocaleDateString('pt-BR');
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `JSON HOJE ${today}: {gospel:{ref,text,reflection,title,calendar:{color,season,rank,dayName,cycle,week}},saint:{name,feastDay,patronage,biography,image,quote},quote:{quote,author},insight}`,
-      config: { 
-        systemInstruction: getSystemInstruction(lang), 
-        responseMimeType: "application/json",
-        temperature: 0
-      }
+      contents: `Texto integral (todos os versículos) de ${book}, capítulo ${chapter}, versão ${version}. Retorne um ARRAY JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": number, "text": "string"}]`,
+      config: { temperature: 0.1, responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", DEFAULT_BUNDLE);
-  } catch (error) {
-    return DEFAULT_BUNDLE;
-  }
+    const parsed = safeJsonParse(response.text || "", []);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Empty Bible response");
+    return parsed;
+  });
 };
 
-export const fetchRealBibleText = async (book: string, chapter: number, lang: Language = 'pt'): Promise<Verse[]> => {
-  try {
+export const searchBible = async (query: string, lang: Language = 'pt'): Promise<Verse[]> => {
+  return withRetry(async () => {
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `JSON ARRAY: ${book} ${chapter}. [{book,chapter,verse,text}]`,
-      config: { 
-        responseMimeType: "application/json",
-        temperature: 0
-      }
+      contents: `Pesquise versículos para: "${query}". JSON ARRAY: [{"book": "string", "chapter": number, "verse": number, "text": "string"}]`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", []);
-  } catch (e) { return []; }
+  });
+};
+
+export const getMagisteriumDocs = async (category: string, lang: Language = 'pt'): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Liste 4 documentos principais da categoria "${category}". JSON ARRAY: [{title, source, year, summary}]`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
+  });
+};
+
+export const getMagisteriumDeepDive = async (docTitle: string, lang: Language = 'pt'): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Análise profunda do documento: "${docTitle}". JSON: {historicalContext, corePoints: [], modernApplication, relatedCatechism: []}`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
+  });
+};
+
+export const getChapterAnalysis = async (book: string, chapter: number, lang: Language = 'pt'): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Analise Teológica de ${book} ${chapter}. JSON: {propheticInsight, catechismLinks: [{number, text}], magisteriumStatements: [{source, quote}], patristicView}`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
+  });
+};
+
+export const getDailyBundle = async (lang: Language = 'pt'): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `JSON Daily Bundle com evangelho, santo, insight e citação para hoje.`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
+  });
 };
 
 export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'): Promise<StudyResult> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Estudo: "${topic}". JSON: {summary, bibleVerses, catechismParagraphs, magisteriumDocs, saintsQuotes}.`,
-    config: { 
-      systemInstruction: getSystemInstruction(lang),
-      responseMimeType: "application/json" 
-    }
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Estudo: "${topic}". JSON completo.`,
+      config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", { topic, summary: "", bibleVerses: [], catechismParagraphs: [], magisteriumDocs: [], saintsQuotes: [] });
   });
-  return safeJsonParse(response.text || "", { topic, summary: "Erro.", bibleVerses: [], catechismParagraphs: [], magisteriumDocs: [], saintsQuotes: [] });
-};
-
-export const searchVerse = async (query: string, book?: string, chapter?: number, verse?: number, lang: Language = 'pt'): Promise<Verse[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Busca: "${query}". JSON ARRAY.`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text || "", []);
 };
 
 export const generateSpeech = async (text: string): Promise<string | undefined> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-      },
-    },
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
+      config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } },
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   });
-  return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
 };
 
-export const getCatenaAureaCommentary = async (verse: Verse, lang: Language = 'pt'): Promise<{ content: string, fathers: string[], sources: { title: string; uri: string }[] }> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Catena Aurea ${verse.book} ${verse.chapter}:${verse.verse}. JSON.`,
-    config: { responseMimeType: "application/json" }
+export const getCatenaAureaCommentary = async (v: Verse, lang: Language = 'pt'): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Catena Aurea ${v.book} ${v.chapter}:${v.verse}. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
   });
-  return safeJsonParse(response.text || "", { content: "Indisponível.", fathers: [], sources: [] });
 };
 
-export const getDailyGospel = async (): Promise<Gospel> => {
-  const bundle = await getDailyBundle();
-  return bundle.gospel;
+export const getDailyGospel = async (): Promise<any> => {
+  const b = await getDailyBundle();
+  return b.gospel;
 };
 
-export const getWeeklyCalendar = async (lang: Language = 'pt'): Promise<LiturgyInfo[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `7 dias. JSON ARRAY.`,
-    config: { responseMimeType: "application/json" }
+export const getWeeklyCalendar = async (): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Calendário Litúrgico de 7 dias. JSON ARRAY.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
 
-export const getSaintsList = async (): Promise<Saint[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: "4 santos. JSON ARRAY.",
-    config: { responseMimeType: "application/json" }
+export const getSaintsList = async (): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Saints list. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
 
-export const searchSaint = async (name: string): Promise<Saint | null> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Santo: "${name}". JSON.`,
-    config: { responseMimeType: "application/json" }
+export const searchSaint = async (name: string): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Saint ${name}. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", null);
   });
-  return safeJsonParse(response.text || "", null);
 };
 
-export const getCatechismSearch = async (query: string, filters: any = {}, lang: Language = 'pt'): Promise<CatechismParagraph[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `CIC: "${query}". JSON ARRAY.`,
-    config: { responseMimeType: "application/json" }
+export const getCatechismSearch = async (q: string, f: any, lang: Language): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Catechism search ${q}. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
 
-export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Dogmas CIC ${paragraphs.map(p => p.number).join(',')}. JSON.`,
-    config: { responseMimeType: "application/json" }
+export const getDogmaticLinksForCatechism = async (p: any[]): Promise<any> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Dogmatic links for CIC paragraphs. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
   });
-  return safeJsonParse(response.text || "", {});
 };
 
-export const getMagisteriumDocs = async (category: string): Promise<any[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `3 docs: "${category}". JSON.`,
-    config: { responseMimeType: "application/json" }
+export const getDogmas = async (q: string): Promise<any[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Dogmas search ${q}. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
 
-export const getDogmas = async (query: string): Promise<Dogma[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Dogmas: "${query}". JSON.`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text || "", []);
-};
-
-export async function* getTheologicalDialogueStream(message: string) {
+export async function* getTheologicalDialogueStream(m: string) {
   const ai = getAIInstance();
   const stream = await ai.models.generateContentStream({
     model: 'gemini-3-pro-preview',
-    contents: message,
-    config: { systemInstruction: "Teólogo católico fiel." }
+    contents: m,
+    config: { systemInstruction: "Teólogo católico." }
   });
-  for await (const chunk of stream) {
-    yield chunk.text || "";
-  }
+  for await (const chunk of stream) { yield chunk.text || ""; }
 }
 
 export const getThomisticSynthesis = async (topic: string): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Suma: "${topic}". JSON.`,
-    config: { responseMimeType: "application/json" }
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Thomistic synthesis ${topic}. JSON.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", {});
   });
-  return safeJsonParse(response.text || "", { title: topic, objections: [], sedContra: "", respondeo: "", replies: [] });
 };
 
-export const getLectioPoints = async (text: string): Promise<string[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `3 pontos Lectio: "${text}". JSON ARRAY.`,
-    config: { responseMimeType: "application/json" }
+export const getLectioPoints = async (t: string): Promise<string[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Lectio points for ${t}. JSON ARRAY.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
 
-export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<string[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `4 temas teologia. JSON ARRAY.`,
-    config: { responseMimeType: "application/json" }
+export const getAIStudySuggestions = async (l: Language): Promise<string[]> => {
+  return withRetry(async () => {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `4 study suggestions. JSON ARRAY.`,
+      config: { responseMimeType: "application/json" }
+    });
+    return safeJsonParse(response.text || "", []);
   });
-  return safeJsonParse(response.text || "", []);
 };
