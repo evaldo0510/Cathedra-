@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Icons } from '../constants';
 import { CommunityQuestion, User } from '../types';
 
@@ -21,17 +21,6 @@ const MOCK_QUESTIONS: CommunityQuestion[] = [
     replies: [
       { id: 'r1', userId: 'ai', userName: 'Cathedra AI', content: 'Todo dogma é uma doutrina, mas nem toda doutrina é um dogma. Dogmas são verdades reveladas por Deus e proclamadas pelo Magistério como infalíveis.', createdAt: new Date().toISOString(), isAI: true }
     ]
-  },
-  {
-    id: '2',
-    userId: 'u2',
-    userName: 'Estudiosa Maria',
-    title: 'Como iniciar na Lectio Divina?',
-    content: 'Quero começar a ler a Bíblia de forma orante mas me sinto perdida por onde começar.',
-    createdAt: new Date().toISOString(),
-    votes: 8,
-    category: 'Espiritualidade',
-    replies: []
   }
 ];
 
@@ -69,105 +58,159 @@ const Community: React.FC<CommunityProps> = ({ user, onNavigateLogin }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-32">
-      <header className="text-center space-y-8">
-        <div className="flex justify-center">
-          <div className="p-8 bg-[#fcf8e8] rounded-full border border-[#d4af37]/30 shadow-sacred">
-            <Icons.Users className="w-16 h-16 text-[#8b0000]" />
+    <div className="max-w-7xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-32">
+      {/* AULA MAGNA - FEATURED CONTENT (ESTRUTURA MESTRA PCH) */}
+      <section className="relative overflow-hidden rounded-[4rem] bg-[#1a1a1a] p-10 md:p-20 shadow-3xl border border-gold/30 group">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black opacity-80" />
+          <img 
+            src="https://images.unsplash.com/photo-1548610762-656391d1ad4d?auto=format&fit=crop&q=80&w=1600" 
+            alt="Sanctuary" 
+            className="w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-[10s]"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-4xl space-y-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gold/10 rounded-2xl flex items-center justify-center border border-gold/30">
+              <Icons.Feather className="w-6 h-6 text-gold" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gold">Aula Magna • Cátedra do Mestre</span>
           </div>
-        </div>
-        <h2 className="text-7xl font-serif font-bold text-stone-900 tracking-tight">Aula Magna</h2>
-        <p className="text-stone-400 italic font-serif text-2xl">A busca da verdade em comunhão.</p>
-        
-        <button 
-          onClick={handleAsk}
-          className="mt-8 px-12 py-5 bg-[#1a1a1a] text-[#d4af37] rounded-full font-black uppercase tracking-widest text-xs shadow-2xl hover:bg-[#8b0000] hover:text-white transition-all active:scale-95"
-        >
-          Propor Questão à Comunidade
-        </button>
-      </header>
 
-      {isAsking && (
-        <section className="bg-white p-12 rounded-[4rem] border border-[#d4af37]/30 shadow-3xl space-y-8 animate-in zoom-in-95 duration-500">
-           <h3 className="text-3xl font-serif font-bold text-stone-900">Nova Disputatio</h3>
-           <div className="space-y-6">
-              <input 
-                type="text" 
-                placeholder="Título da sua dúvida..."
-                value={newTitle}
-                onChange={e => setNewTitle(e.target.value)}
-                className="w-full px-10 py-6 bg-stone-50 border border-stone-100 rounded-[2rem] outline-none font-serif italic text-2xl"
-              />
-              <textarea 
-                placeholder="Explique sua dúvida em detalhes..."
-                value={newContent}
-                onChange={e => setNewContent(e.target.value)}
-                className="w-full h-48 px-10 py-6 bg-stone-50 border border-stone-100 rounded-[2rem] outline-none font-serif italic text-2xl resize-none"
-              />
-              <div className="flex gap-4">
-                 <button onClick={submitQuestion} className="flex-1 py-6 bg-[#d4af37] text-stone-900 rounded-[2rem] font-black uppercase tracking-widest">Publicar Questão</button>
-                 <button onClick={() => setIsAsking(false)} className="px-10 py-6 bg-stone-50 text-stone-400 rounded-[2rem] font-black uppercase tracking-widest">Cancelar</button>
+          <div className="space-y-8">
+            <h2 className="text-5xl md:text-8xl font-serif font-bold text-white tracking-tight leading-none">
+              O Eterno Agora: <br/> <span className="text-gold">A Teologia da Missa</span>
+            </h2>
+            
+            <div className="space-y-8 border-l-4 border-gold/40 pl-8 md:pl-12">
+              {/* O Gancho (Paradoxo/Quebra de Padrão) */}
+              <div className="space-y-4">
+                <p className="text-2xl md:text-4xl font-serif italic text-white/90 leading-tight">
+                  "Você vê um altar, um padre e um rito. Mas o que seus olhos não alcançam é que, naquele instante, o tempo se rompe."
+                </p>
+                <p className="text-lg md:text-2xl font-serif text-white/50 italic">
+                  O mundo diz que a Missa é uma lembrança. A Igreja diz que é Presença.
+                </p>
               </div>
-           </div>
-        </section>
-      )}
+              
+              {/* A Descrição (A Jornada/Revelação) */}
+              <p className="text-lg md:text-2xl font-serif text-white/70 leading-relaxed max-w-3xl">
+                Nesta aula, afastamos o véu do hábito para revelar o sacrifício que sustenta o universo. Entenda não apenas os gestos, mas o Mistério que eles escondem. Saia da assistência passiva e entre na participação sagrada.
+              </p>
+            </div>
+          </div>
 
-      <div className="space-y-10">
-        <div className="flex items-center justify-between border-b border-stone-100 pb-8">
-           <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-stone-300">Questiones Recentes</h3>
-           <div className="flex gap-4">
-              <span className="text-[9px] font-black text-[#d4af37] uppercase tracking-widest">Feed Vivo</span>
-           </div>
+          <button className="px-12 py-6 bg-gold hover:bg-yellow-400 text-stone-900 rounded-full font-black uppercase tracking-widest text-[11px] shadow-2xl hover:scale-105 transition-all active:scale-95">
+            Adentrar o Mistério
+          </button>
         </div>
+      </section>
 
-        <div className="grid gap-10">
-          {questions.map(q => (
-            <article key={q.id} className="bg-white p-12 rounded-[4rem] border border-stone-100 shadow-xl group hover:border-[#d4af37]/40 transition-all">
-               <div className="flex justify-between items-start mb-8">
+      <div className="grid lg:grid-cols-12 gap-12">
+        {/* DISPUTATIONES - COMMUNITY QUESTIONS */}
+        <main className="lg:col-span-8 space-y-10">
+          <div className="flex items-center justify-between border-b dark:border-stone-800 pb-8">
+            <div className="space-y-1">
+              <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100">Disputationes</h3>
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Diálogos entre a Razão e a Fé</p>
+            </div>
+            <button 
+              onClick={handleAsk}
+              className="px-8 py-4 bg-stone-900 dark:bg-stone-100 text-gold dark:text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-xl hover:scale-105 transition-all"
+            >
+              Propor Questão
+            </button>
+          </div>
+
+          <div className="space-y-8">
+            {isAsking && (
+              <section className="bg-white dark:bg-stone-900 p-10 rounded-[3rem] border-2 border-gold/30 shadow-3xl space-y-8 animate-in zoom-in-95 duration-500">
+                <h3 className="text-2xl font-serif font-bold">Nova Investigação</h3>
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    placeholder="Sua pergunta (Ex: A natureza da Graça...)"
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    className="w-full px-8 py-5 bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif italic text-xl"
+                  />
+                  <textarea 
+                    placeholder="Aprofunde seu questionamento..."
+                    value={newContent}
+                    onChange={e => setNewContent(e.target.value)}
+                    className="w-full h-40 px-8 py-5 bg-stone-50 dark:bg-stone-800 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none font-serif italic text-xl resize-none"
+                  />
+                  <div className="flex gap-4">
+                    <button onClick={submitQuestion} className="flex-1 py-5 bg-gold text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px]">Publicar</button>
+                    <button onClick={() => setIsAsking(false)} className="px-8 py-5 bg-stone-100 dark:bg-stone-800 text-stone-400 rounded-2xl font-black uppercase tracking-widest text-[10px]">Cancelar</button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {questions.map(q => (
+              <article key={q.id} className="bg-white dark:bg-stone-900 p-10 rounded-[3.5rem] border border-stone-100 dark:border-stone-800 shadow-xl group hover:border-gold/40 transition-all">
+                <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 bg-stone-900 text-[#d4af37] rounded-full flex items-center justify-center font-bold text-xs">
-                        {q.userName.charAt(0)}
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[#8b0000]">{q.userName}</p>
-                        <p className="text-[9px] text-stone-300">{new Date(q.createdAt).toLocaleDateString()}</p>
-                     </div>
+                    <div className="w-10 h-10 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center font-bold text-stone-400">
+                      {q.userName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gold">{q.userName}</p>
+                      <p className="text-[8px] text-stone-300">{new Date(q.createdAt).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div className="px-4 py-1.5 bg-stone-50 rounded-full text-[9px] font-black uppercase tracking-widest text-stone-400">
-                     {q.category}
-                  </div>
-               </div>
+                </div>
 
-               <h4 className="text-3xl font-serif font-bold text-stone-900 mb-4 group-hover:text-[#8b0000] transition-colors">{q.title}</h4>
-               <p className="text-stone-500 font-serif italic text-xl leading-relaxed mb-10">"{q.content}"</p>
+                <h4 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 mb-3 group-hover:text-gold transition-colors">{q.title}</h4>
+                <p className="text-stone-500 dark:text-stone-400 font-serif italic text-lg leading-relaxed mb-8">"{q.content}"</p>
 
-               <div className="space-y-6">
+                <div className="space-y-4">
                   {q.replies.map(r => (
-                    <div key={r.id} className={`p-8 rounded-[3rem] border-l-8 ${r.isAI ? 'bg-[#fcf8e8] border-[#d4af37]' : 'bg-stone-50 border-stone-200'}`}>
-                       <div className="flex items-center gap-3 mb-4">
-                          {r.isAI && <Icons.Feather className="w-4 h-4 text-[#d4af37]" />}
-                          <span className="text-[9px] font-black uppercase tracking-widest text-stone-400">{r.userName}</span>
-                       </div>
-                       <p className="text-stone-800 font-serif italic text-lg">{r.content}</p>
+                    <div key={r.id} className={`p-6 rounded-[2rem] border-l-4 ${r.isAI ? 'bg-[#fcf8e8] dark:bg-stone-800/40 border-gold' : 'bg-stone-50 dark:bg-stone-800 border-stone-200'}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        {r.isAI && <Icons.Feather className="w-3 h-3 text-gold" />}
+                        <span className="text-[9px] font-black uppercase tracking-widest text-stone-400">{r.userName}</span>
+                      </div>
+                      <p className="text-stone-800 dark:text-stone-200 font-serif italic text-base leading-relaxed">{r.content}</p>
                     </div>
                   ))}
-               </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </main>
 
-               <div className="mt-10 pt-8 border-t border-stone-50 flex items-center justify-between">
-                  <button className="flex items-center gap-3 text-stone-300 hover:text-[#d4af37] transition-colors">
-                     <Icons.History className="w-5 h-5" />
-                     <span className="text-[10px] font-black uppercase tracking-widest">Sicut ({q.votes})</span>
-                  </button>
-                  <button 
-                    onClick={() => { if(!user) onNavigateLogin(); }}
-                    className="text-[10px] font-black uppercase tracking-widest text-[#8b0000] hover:scale-105 transition-all"
-                  >
-                    Responder Questão →
-                  </button>
-               </div>
-            </article>
-          ))}
-        </div>
+        {/* SIDEBAR - TOP SCHOLARS */}
+        <aside className="lg:col-span-4 space-y-10">
+          <section className="bg-white dark:bg-stone-900 p-10 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-xl">
+            <h3 className="text-xl font-serif font-bold mb-8 flex items-center gap-3">
+              <Icons.Star className="w-5 h-5 text-gold" />
+              Estudiosos da Cátedra
+            </h3>
+            <div className="space-y-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-default">
+                  <div className="w-12 h-12 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-gold font-bold">
+                    {i}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Scholar #{i}</p>
+                    <p className="text-[9px] text-stone-400 font-black uppercase tracking-widest">{100 * (4-i)} Disputationes</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-sacred p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group">
+            <Icons.Cross className="absolute -bottom-10 -right-10 w-48 h-48 text-white/10 group-hover:rotate-12 transition-transform duration-[2s]" />
+            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gold mb-4">Sursum Corda</h4>
+            <p className="text-2xl font-serif font-bold mb-6">"Onde houver caridade e amor, Deus aí está."</p>
+            <p className="text-sm font-serif italic text-white/60">Contorne o barulho do mundo. Mergulhe no silêncio da busca pela Verdade em nossa comunidade.</p>
+          </section>
+        </aside>
       </div>
     </div>
   );

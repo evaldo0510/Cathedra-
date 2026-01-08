@@ -1,10 +1,8 @@
 
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { Icons } from '../constants';
 import { StudyResult } from '../types';
-import { decodeBase64, decodeAudioData } from '../utils/audio';
-import { generateSpeech, getAIStudySuggestions } from '../services/gemini';
-import ActionButtons from '../components/ActionButtons';
+import { getAIStudySuggestions } from '../services/gemini';
 import { LangContext } from '../App';
 
 const DEFAULT_TOPICS = [
@@ -17,13 +15,9 @@ const DEFAULT_TOPICS = [
 const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string) => void }> = ({ data, onSearch }) => {
   const { lang, t } = useContext(LangContext);
   const [query, setQuery] = useState('');
-  const [isReading, setIsReading] = useState(false);
   const [suggestedTopics, setSuggestedTopics] = useState<string[]>(DEFAULT_TOPICS);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
   const handleTriggerSearch = (term?: string) => {
     const finalTerm = term || query;
     if (!finalTerm.trim()) return;
@@ -46,47 +40,57 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
 
   return (
     <div className="max-w-7xl mx-auto pb-24 space-y-8 px-2 md:px-0 page-enter">
-      {/* Search Header */}
       <header className={`transition-all duration-700 ${data ? 'mb-4' : 'min-h-[50vh] flex flex-col justify-center'}`}>
-        <div className="text-center space-y-4 mb-8">
+        <div className="text-center space-y-4 mb-12">
           <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-[#d4af37] tracking-tight">Investigação</h2>
-          <p className="text-stone-400 font-serif italic text-lg md:text-2xl italic">"Fides quaerens intellectum"</p>
+          <p className="text-stone-400 font-serif italic text-lg md:text-2xl">"Fides quaerens intellectum"</p>
         </div>
         
         <div className="max-w-4xl mx-auto px-2">
-          <div className="relative flex flex-col gap-3">
-              <div className="relative">
-                <input 
-                  type="text" 
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
-                  placeholder="Ex: Primado de Pedro..."
-                  className="w-full pl-6 pr-14 py-5 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-3xl outline-none font-serif text-lg shadow-lg focus:border-gold transition-all dark:text-white"
-                />
-                <button 
-                  onClick={handleMagicSuggestion}
-                  disabled={loadingSuggestions}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-3 text-gold active:scale-90 transition-all"
-                >
-                  {loadingSuggestions ? <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" /> : <Icons.Feather className="w-6 h-6" />}
-                </button>
+          <div className="relative w-full max-w-2xl mx-auto flex flex-col gap-6">
+            <div className="relative group w-full">
+              {/* Ícone de Lupa/Vela Estilizado */}
+              <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none z-10">
+                <svg className="h-6 w-6 text-yellow-600 transition-colors group-focus-within:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
+              
+              {/* Input com PCH Profissional */}
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
+                className="block w-full pl-16 pr-14 py-6 border border-gray-700 dark:border-stone-800 rounded-2xl leading-5 bg-gray-900 dark:bg-stone-900 text-gray-100 placeholder-gray-500 focus:outline-none focus:bg-gray-800 focus:border-yellow-500 transition duration-150 ease-in-out font-serif italic text-xl shadow-2xl"
+                placeholder="Qual resposta sua alma busca hoje?" 
+                aria-label="Buscar na Doutrina"
+              />
+
               <button 
-                onClick={() => handleTriggerSearch()}
-                className="w-full py-5 bg-[#1a1a1a] dark:bg-[#d4af37] text-gold dark:text-stone-900 rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all"
+                onClick={handleMagicSuggestion}
+                disabled={loadingSuggestions}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-gold hover:text-yellow-400 active:scale-90 transition-all"
               >
-                Pesquisar
+                {loadingSuggestions ? <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" /> : <Icons.Feather className="w-6 h-6" />}
               </button>
+            </div>
+
+            <button 
+              onClick={() => handleTriggerSearch()}
+              className="w-full py-6 bg-gold hover:bg-yellow-400 text-stone-900 rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl active:scale-95 transition-all"
+            >
+              {t('investigate')} a Verdade
+            </button>
           </div>
 
           {!data && (
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
+            <div className="mt-12 flex flex-wrap justify-center gap-3">
                  {suggestedTopics.map(topic => (
                    <button 
                     key={topic}
                     onClick={() => handleTriggerSearch(topic)}
-                    className="px-4 py-2 bg-white dark:bg-stone-800 text-stone-500 border border-stone-100 dark:border-stone-700 rounded-full text-[10px] font-serif italic transition-all shadow-sm"
+                    className="px-6 py-3 bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-400 border border-stone-100 dark:border-stone-800 rounded-full text-[10px] font-serif italic transition-all shadow-sm hover:border-gold hover:text-gold"
                    >
                      {topic}
                    </button>
@@ -96,8 +100,7 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
         </div>
       </header>
 
-      {/* Results View */}
-      {data && (
+      {data ? (
         <div className="space-y-8 animate-in fade-in duration-700">
           <section className="bg-white dark:bg-stone-900 p-6 md:p-12 rounded-[2.5rem] shadow-xl border border-stone-100 dark:border-stone-800">
               <span className="text-[9px] font-black uppercase tracking-widest text-[#d4af37]">Síntese Teológica</span>
@@ -120,6 +123,13 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
                ))}
             </div>
           </div>
+        </div>
+      ) : query && (
+        <div className="text-center py-20 animate-in fade-in">
+           <Icons.Cross className="w-16 h-16 text-stone-200 dark:text-stone-800 mx-auto mb-6 opacity-40" />
+           <p className="text-2xl font-serif italic text-stone-400 max-w-md mx-auto">
+             {t('empty_state')}
+           </p>
         </div>
       )}
     </div>

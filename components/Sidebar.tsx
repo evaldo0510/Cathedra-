@@ -18,21 +18,20 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
   const languages: { code: Language, label: string, flag: string }[] = [
     { code: 'pt', label: 'Português', flag: '🇧🇷' },
     { code: 'en', label: 'English', flag: '🇺🇸' },
-    { code: 'la', label: 'Latina', flag: 'Vaticano' },
+    { code: 'la', label: 'Latina', flag: '🇻🇦' },
     { code: 'es', label: 'Español', flag: '🇪🇸' },
     { code: 'it', label: 'Italiano', flag: '🇮🇹' },
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
   ];
 
-  const items = [
-    { r: AppRoute.DASHBOARD, l: t('home'), i: Icons.Home },
-    { r: AppRoute.BIBLE, l: t('bible'), i: Icons.Book },
-    { r: AppRoute.CATECHISM, l: t('catechism'), i: Icons.Cross },
-    { r: AppRoute.SAINTS, l: t('saints'), i: Icons.Users },
-    { r: AppRoute.STUDY_MODE, l: t('study'), i: Icons.Layout },
-    { r: AppRoute.COMMUNITY, l: t('community'), i: Icons.Users },
-    { r: AppRoute.LITURGICAL_CALENDAR, l: t('calendar'), i: Icons.History },
+  const menuItems = [
+    { name: 'Nártex (Início)', icon: Icons.Home, path: AppRoute.DASHBOARD },
+    { name: 'Sagradas Escrituras', icon: Icons.Book, path: AppRoute.BIBLE },
+    { name: 'Doutrina & Verdade', icon: Icons.Cross, path: AppRoute.CATECHISM },
+    { name: 'Testemunhas da Fé', icon: Icons.Users, path: AppRoute.SAINTS },
+    { name: 'Conexões Divinas', icon: Icons.Layout, path: AppRoute.STUDY_MODE, subtitle: 'Bíblia + Tradição' },
+    { name: 'Cátedra do Mestre', icon: Icons.Feather, path: AppRoute.COMMUNITY },
   ];
 
   const handleNavigation = (route: AppRoute) => {
@@ -41,27 +40,31 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
   };
 
   return (
-    <aside className="h-full bg-[#1a1a1a] text-white flex flex-col p-8 shadow-2xl border-r border-[#d4af37]/20 z-50 overflow-y-auto custom-scrollbar">
+    <aside className="h-full bg-[#0c0a09] text-white flex flex-col p-8 shadow-2xl border-r border-[#d4af37]/20 z-50 overflow-y-auto custom-scrollbar">
       <div className="mb-12 flex flex-col items-center">
         <Logo className="w-16 h-16 mb-4" />
         <h1 className="text-2xl font-serif font-bold text-[#d4af37] tracking-[0.1em]">CATHEDRA</h1>
         <p className="text-[8px] uppercase tracking-[0.4em] text-white/40 font-bold">Sanctuarium Digitale</p>
       </div>
       
-      <nav className="flex-1 space-y-2">
-        {items.map(item => (
+      <nav className="flex-1 space-y-4">
+        {menuItems.map(item => (
           <button 
-            key={item.l}
-            onClick={() => handleNavigation(item.r)}
-            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all group ${currentPath === item.r ? 'bg-[#d4af37] text-stone-900 font-bold shadow-lg shadow-gold/20' : 'hover:bg-white/5 text-white/60'}`}
+            key={item.name}
+            onClick={() => handleNavigation(item.path)}
+            className={`w-full flex items-center gap-5 px-4 py-3 rounded-xl transition-all group ${currentPath === item.path ? 'bg-white/5 border border-[#d4af37]/30' : 'hover:bg-white/5'}`}
           >
-            <item.i className={`w-5 h-5 ${currentPath === item.r ? 'text-stone-900' : 'text-[#d4af37]'}`} />
-            <span className="text-sm tracking-wide">{item.l}</span>
+            <item.icon className={`w-6 h-6 flex-shrink-0 ${currentPath === item.path ? 'text-yellow-400' : 'text-stone-500 group-hover:text-yellow-400'}`} />
+            <div className="flex flex-col items-start min-w-0">
+              <span className={`font-serif text-lg transition-colors ${currentPath === item.path ? 'text-yellow-400 font-bold' : 'text-yellow-500 hover:text-yellow-400'}`}>
+                {item.name}
+              </span>
+              {item.subtitle && <span className="text-[9px] italic text-white/30 truncate w-full">{item.subtitle}</span>}
+            </div>
           </button>
         ))}
       </nav>
 
-      {/* LANGUAGE SELECTOR */}
       <div className="mt-10 pt-8 border-t border-white/10 space-y-4">
         <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/20 ml-4">Linguam Elige</p>
         <div className="grid grid-cols-2 gap-2">
