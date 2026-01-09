@@ -40,6 +40,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive, onNavigateDogmas }) =
   };
 
   const visibleParagraphs = useMemo(() => {
+    if (!Array.isArray(allParagraphs)) return [];
     return allParagraphs.slice(0, visibleCount);
   }, [allParagraphs, visibleCount]);
 
@@ -55,9 +56,10 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive, onNavigateDogmas }) =
 
     try {
       const data = await getCatechismSearch(term, {}, lang);
-      setAllParagraphs(data);
+      const paragraphs = Array.isArray(data) ? data : [];
+      setAllParagraphs(paragraphs);
       
-      const firstBatch = data.slice(0, ITEMS_PER_PAGE);
+      const firstBatch = paragraphs.slice(0, ITEMS_PER_PAGE);
       if (firstBatch.length > 0) {
         const links = await getDogmaticLinksForCatechism(firstBatch);
         setDogmaticLinks(links);
@@ -76,15 +78,17 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive, onNavigateDogmas }) =
     setAllParagraphs([]);
     try {
       const data = await getCatechismSearch(`parágrafo ${jumpNumber}`, {}, lang);
-      setAllParagraphs(data);
-      if (data.length > 0) {
-        const links = await getDogmaticLinksForCatechism(data);
+      const paragraphs = Array.isArray(data) ? data : [];
+      setAllParagraphs(paragraphs);
+      if (paragraphs.length > 0) {
+        const links = await getDogmaticLinksForCatechism(paragraphs);
         setDogmaticLinks(links);
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
   const loadMore = async () => {
+    if (!Array.isArray(allParagraphs)) return;
     const nextCount = visibleCount + ITEMS_PER_PAGE;
     setLoadingMore(true);
     try {
@@ -163,7 +167,7 @@ const Catechism: React.FC<CatechismProps> = ({ onDeepDive, onNavigateDogmas }) =
               </article>
             ))}
 
-            {allParagraphs.length > visibleCount && (
+            {Array.isArray(allParagraphs) && allParagraphs.length > visibleCount && (
               <div className="flex flex-col items-center pt-10">
                 <button onClick={loadMore} disabled={loadingMore} className="px-16 py-6 bg-[#fcf8e8] dark:bg-stone-900 text-gold border-2 border-gold/30 rounded-full font-black uppercase tracking-[0.3em] text-[11px] hover:bg-gold hover:text-stone-900 transition-all flex items-center gap-4 disabled:opacity-50">
                   {loadingMore ? <div className="w-5 h-5 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <span>Prosseguir no Estudo</span>}

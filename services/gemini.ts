@@ -40,6 +40,17 @@ const safeJsonParse = (text: string, fallback: any) => {
   } catch (e) { return fallback; }
 };
 
+// Auxiliar para garantir que o retorno seja sempre um array
+const ensureArray = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    // Se o modelo retornou um objeto como { "verses": [...] } ou { "results": [...] }
+    const key = Object.keys(data).find(k => Array.isArray(data[k]));
+    if (key) return data[key];
+  }
+  return [];
+};
+
 export const fetchRealBibleText = async (book: string, chapter: number, version: string = 'catolica', lang: Language = 'pt'): Promise<Verse[]> => {
   return withRetry(async () => {
     const ai = getAIInstance();
@@ -48,8 +59,8 @@ export const fetchRealBibleText = async (book: string, chapter: number, version:
       contents: `Texto integral (todos os versículos) de ${book}, capítulo ${chapter}, versão ${version}. Retorne um ARRAY JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": number, "text": "string"}]`,
       config: { temperature: 0.1, responseMimeType: "application/json" }
     });
-    const parsed = safeJsonParse(response.text || "", []);
-    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Empty Bible response");
+    const parsed = ensureArray(safeJsonParse(response.text || "", []));
+    if (parsed.length === 0) throw new Error("Empty Bible response");
     return parsed;
   });
 };
@@ -62,7 +73,7 @@ export const searchBible = async (query: string, lang: Language = 'pt'): Promise
       contents: `Pesquise versículos para: "${query}". JSON ARRAY: [{"book": "string", "chapter": number, "verse": number, "text": "string"}]`,
       config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -74,7 +85,7 @@ export const getMagisteriumDocs = async (category: string, lang: Language = 'pt'
       contents: `Liste 4 documentos principais da categoria "${category}". JSON ARRAY: [{title, source, year, summary}]`,
       config: { systemInstruction: getSystemInstruction(lang), responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -163,7 +174,7 @@ export const getWeeklyCalendar = async (): Promise<any[]> => {
       contents: `Calendário Litúrgico de 7 dias. JSON ARRAY.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -175,7 +186,7 @@ export const getSaintsList = async (): Promise<any[]> => {
       contents: `Saints list. JSON.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -196,10 +207,10 @@ export const getCatechismSearch = async (q: string, f: any, lang: Language): Pro
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Catechism search ${q}. JSON.`,
+      contents: `Catechism search results for "${q}" in ${lang}. JSON ARRAY of paragraphs.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -223,7 +234,7 @@ export const getDogmas = async (q: string): Promise<any[]> => {
       contents: `Dogmas search ${q}. JSON.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -257,7 +268,7 @@ export const getLectioPoints = async (t: string): Promise<string[]> => {
       contents: `Lectio points for ${t}. JSON ARRAY.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
 
@@ -269,6 +280,6 @@ export const getAIStudySuggestions = async (l: Language): Promise<string[]> => {
       contents: `4 study suggestions. JSON ARRAY.`,
       config: { responseMimeType: "application/json" }
     });
-    return safeJsonParse(response.text || "", []);
+    return ensureArray(safeJsonParse(response.text || "", []));
   });
 };
