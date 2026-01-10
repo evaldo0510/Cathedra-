@@ -108,7 +108,12 @@ const DailyLiturgy: React.FC = () => {
       {/* SANTO DO DIA (BANNER PÔSTER) */}
       {data?.saint && (
         <section className="relative h-[450px] rounded-[4rem] overflow-hidden group shadow-3xl">
-           <SacredImage src={data.saint.image} alt={data.saint.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[15s]" />
+           <SacredImage 
+             src={data.saint.image} 
+             alt={data.saint.name} 
+             liturgicalColor={calendar?.color}
+             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[15s]" 
+           />
            <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-transparent to-transparent" />
            <div className="absolute bottom-12 left-12 space-y-2">
               <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gold">Memória de Hoje</span>

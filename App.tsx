@@ -66,22 +66,17 @@ const App: React.FC = () => {
     localStorage.setItem('cathedra_dark', String(isDark));
   }, [isDark]);
 
-  useEffect(() => {
-    const handleError = (e: PromiseRejectionEvent) => {
-      if (e.reason?.message?.includes('429')) {
-        setGlobalError("Os arquivos da eternidade estão muito requisitados agora. Aguarde um instante para continuar sua busca.");
-        setTimeout(() => setGlobalError(null), 6000);
-      }
-    };
-    window.addEventListener('unhandledrejection', handleError);
-    return () => window.removeEventListener('unhandledrejection', handleError);
-  }, []);
-
   const handleSearch = useCallback(async (topic: string) => {
     setRoute(AppRoute.STUDY_MODE);
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
+      
+      // Persistência automática no histórico para o Dashboard
+      const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
+      const filtered = history.filter((h: any) => h.topic !== result.topic);
+      localStorage.setItem('cathedra_history', JSON.stringify([result, ...filtered].slice(0, 10)));
+      
     } catch (e) { console.error(e); } 
   }, [lang]);
 
@@ -96,29 +91,16 @@ const App: React.FC = () => {
     switch (route) {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
-      case AppRoute.BIBLE: return <Bible onDeepDive={handleSearch} />;
+      case AppRoute.BIBLE: return <Bible />;
       case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
       case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
-      case AppRoute.BREVIARY: return <Breviary />;
-      case AppRoute.MISSAL: return <Missal />;
-      case AppRoute.PRAYERS: return <Prayers />;
-      case AppRoute.FAVORITES: return <Favorites />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} onNavigateDogmas={(q) => { setDogmaSearch(q); setRoute(AppRoute.DOGMAS); }} />;
       case AppRoute.SAINTS: return <Saints />;
       case AppRoute.MAGISTERIUM: return <Magisterium />;
       case AppRoute.DOGMAS: return <Dogmas initialQuery={dogmaSearch} />;
       case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
-      case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
-      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.POENITENTIA: return <Poenitentia />;
-      case AppRoute.ORDO_MISSAE: return <OrdoMissae />;
-      case AppRoute.ROSARY: return <Rosary />;
-      case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
-      case AppRoute.LITANIES: return <Litanies />;
-      case AppRoute.CERTAMEN: return <Certamen />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
-      case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
   }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch]);
@@ -135,14 +117,6 @@ const App: React.FC = () => {
   return (
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
-        
-        {globalError && (
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-lg bg-stone-900 text-gold p-6 rounded-[2rem] shadow-3xl border border-gold/30 animate-in slide-in-from-top-4 duration-500 flex items-center gap-6">
-             <div className="p-3 bg-gold/10 rounded-xl"><Icons.History className="w-6 h-6 animate-pulse" /></div>
-             <p className="font-serif italic text-lg leading-tight">{globalError}</p>
-          </div>
-        )}
-
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
           <div className={`relative h-full w-80 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>

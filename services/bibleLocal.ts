@@ -13,21 +13,93 @@ export type BibleVersion = {
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  // CATÓLICAS - TRADIÇÃO LATINA (API & IA)
-  { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). Fonte: Codex Digital.', isLatin: true, isCatholic: true },
-  { id: 'nvulgata', slug: 'ai_nvulgata', name: 'Nova Vulgata', lang: 'la', description: 'Edição típica do Vaticano. Fonte: Exegese IA.', isLatin: true, isCatholic: true, isIA: true },
+  // ESTUDO EXEGÉTICO E ACADÊMICO (IA ASSISTED PARA PRECISÃO)
+  { 
+    id: 'jerusalem', 
+    slug: 'ai_jerusalem', 
+    name: 'B. de Jerusalém', 
+    lang: 'pt', 
+    description: 'Referência exegética mundial. Tradução baseada nos originais com rigor científico.', 
+    isCatholic: true, 
+    isIA: true 
+  },
+  { 
+    id: 'teb', 
+    slug: 'ai_teb', 
+    name: 'TEB (Ecumênica)', 
+    lang: 'pt', 
+    description: 'Tradução Ecumênica da Bíblia. Famosa pela precisão técnica e notas teológicas profundas.', 
+    isCatholic: true, 
+    isIA: true 
+  },
+  { 
+    id: 'peregrino', 
+    slug: 'ai_peregrino', 
+    name: 'B. do Peregrino', 
+    lang: 'pt', 
+    description: 'Tradução de Luis Alonso Schökel. Foco na beleza literária e poética dos textos originais.', 
+    isCatholic: true, 
+    isIA: true 
+  },
   
-  // CATÓLICAS - PORTUGUÊS (IA ASSISTED)
-  { id: 'ave_maria', slug: 'ai_ave_maria', name: 'Ave Maria', lang: 'pt', description: 'Tradução clássica da Editora Ave Maria.', isCatholic: true, isIA: true },
-  { id: 'jerusalem', slug: 'ai_jerusalem', name: 'B. de Jerusalém', lang: 'pt', description: 'Referência exegética e acadêmica mundial.', isCatholic: true, isIA: true },
-  { id: 'cnbb', slug: 'ai_cnbb', name: 'Bíblia da CNBB', lang: 'pt', description: 'Tradução oficial para a liturgia no Brasil.', isCatholic: true, isIA: true },
+  // PADRÕES LITÚRGICOS E POPULARES
+  { 
+    id: 'cnbb', 
+    slug: 'ai_cnbb', 
+    name: 'Bíblia da CNBB', 
+    lang: 'pt', 
+    description: 'Tradução oficial da Igreja no Brasil para a liturgia e sacramentos.', 
+    isCatholic: true, 
+    isIA: true 
+  },
+  { 
+    id: 'ave_maria', 
+    slug: 'ai_ave_maria', 
+    name: 'Ave Maria', 
+    lang: 'pt', 
+    description: 'A versão mais popular entre os fiéis lusófonos desde 1959.', 
+    isCatholic: true, 
+    isIA: true 
+  },
   
-  // CATÓLICAS - ENGLISH (API)
-  { id: 'drb', slug: 'drb', name: 'Douay-Rheims', lang: 'en', description: 'The traditional English Catholic translation.', isCatholic: true },
+  // TRADIÇÃO LATINA E HISTÓRICA
+  { 
+    id: 'vulgata', 
+    slug: 'clementine', 
+    name: 'Vulgata Clementina', 
+    lang: 'la', 
+    description: 'Bíblia Sacra (Ed. 1592). O padrão latino histórico da Igreja Católica.', 
+    isLatin: true, 
+    isCatholic: true 
+  },
+  { 
+    id: 'nvulgata', 
+    slug: 'ai_nvulgata', 
+    name: 'Nova Vulgata', 
+    lang: 'la', 
+    description: 'Edição típica oficial do Vaticano (promulgada por S. João Paulo II).', 
+    isLatin: true, 
+    isCatholic: true, 
+    isIA: true 
+  },
   
-  // OUTRAS VERSÕES DE ESTUDO (API)
-  { id: 'almeida', slug: 'almeida', name: 'Almeida Revista', lang: 'pt', description: 'João Ferreira de Almeida Revista e Atualizada.', isCatholic: false },
-  { id: 'kjv', slug: 'kjv', name: 'King James', lang: 'en', description: 'Authorized Version (English Classic).', isCatholic: false }
+  // REFERÊNCIAS INTERNACIONAIS (API)
+  { 
+    id: 'drb', 
+    slug: 'drb', 
+    name: 'Douay-Rheims', 
+    lang: 'en', 
+    description: 'A tradicional Bíblia Católica de língua inglesa, baseada na Vulgata.', 
+    isCatholic: true 
+  },
+  { 
+    id: 'kjv', 
+    slug: 'kjv', 
+    name: 'King James', 
+    lang: 'en', 
+    description: 'Clássico da literatura inglesa (Authorized Version). Uso comparativo.', 
+    isCatholic: false 
+  }
 ];
 
 export const LATIN_BOOK_NAMES: Record<string, string> = {
@@ -44,7 +116,7 @@ export const LATIN_BOOK_NAMES: Record<string, string> = {
   "Jeremias": "Prophetia Ieremiae", "Lamentações": "Lamentationes", "Baruc": "Prophetia Baruch",
   "Ezequiel": "Prophetia Ezechielis", "Daniel": "Prophetia Danielis", "Oseias": "Prophetia Osee",
   "Joel": "Prophetia Ioel", "Amós": "Prophetia Amos", "Abdias": "Prophetia Abdiae",
-  "Jonas": "Prophetia Ionae", "Miqueias": "Prophetia Michaeae", "Naum": "Prophetia Nahum",
+  "Jonas": "Prophetia Ionae", "Miqueias": "Prophetia Michaeae", "Naum": "Prophetia NAM",
   "Habacuc": "Prophetia Habacuc", "Sofonias": "Prophetia Sophoniae", "Ageu": "Prophetia Aggaei",
   "Zacarias": "Prophetia Zachariae", "Malaquias": "Prophetia Malachiae", "Mateus": "Evangelium secundum Matthaeum",
   "Marcos": "Evangelium secundum Marcum", "Lucas": "Evangelium secundum Lucam", "João": "Evangelium secundum Ioannem",
@@ -85,5 +157,5 @@ export const getChapterCount = (book: string): number => {
 };
 
 export const fetchLocalFallback = (book: string, chapter: number): Verse[] => {
-  return [{ book, chapter, verse: 1, text: "Carregando das fontes sagradas..." }];
+  return [{ book, chapter, verse: 1, text: "Recuperando texto da Tradição..." }];
 };
