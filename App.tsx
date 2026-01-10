@@ -26,6 +26,7 @@ import OrdoMissae from './pages/OrdoMissae';
 import Rosary from './pages/Rosary';
 import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
+import Certamen from './pages/Certamen';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy } from './services/gemini';
 import { Icons, Logo } from './constants';
@@ -65,7 +66,6 @@ const App: React.FC = () => {
     localStorage.setItem('cathedra_dark', String(isDark));
   }, [isDark]);
 
-  // Handler Global de Erros de API
   useEffect(() => {
     const handleError = (e: PromiseRejectionEvent) => {
       if (e.reason?.message?.includes('429')) {
@@ -116,6 +116,7 @@ const App: React.FC = () => {
       case AppRoute.ROSARY: return <Rosary />;
       case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
       case AppRoute.LITANIES: return <Litanies />;
+      case AppRoute.CERTAMEN: return <Certamen />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
@@ -135,7 +136,6 @@ const App: React.FC = () => {
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         
-        {/* TOAST DE ERRO GLOBAL */}
         {globalError && (
           <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-lg bg-stone-900 text-gold p-6 rounded-[2rem] shadow-3xl border border-gold/30 animate-in slide-in-from-top-4 duration-500 flex items-center gap-6">
              <div className="p-3 bg-gold/10 rounded-xl"><Icons.History className="w-6 h-6 animate-pulse" /></div>

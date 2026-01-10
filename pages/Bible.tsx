@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { Icons } from '../constants';
 import { fetchRealBibleText, fetchComparisonVerses } from '../services/gemini';
 import { fetchExternalBibleText } from '../services/bibleApi';
@@ -21,7 +21,10 @@ const Bible: React.FC = () => {
   const [selectedVersion, setSelectedVersion] = useState<BibleVersion>(BIBLE_VERSIONS[0]);
   
   const [showBookSelector, setShowBookSelector] = useState(false);
+  const [showChapterSelector, setShowChapterSelector] = useState(false);
   const [showVersionSelector, setShowVersionSelector] = useState(false);
+  const [bookSearch, setBookSearch] = useState('');
+  
   const [comparisonVerses, setComparisonVerses] = useState<Record<number, any>>({});
 
   const loadContent = useCallback(async (book: string, chapter: number, version: BibleVersion, currentLang: Language) => {
@@ -29,14 +32,11 @@ const Bible: React.FC = () => {
     setComparisonVerses({});
     
     try {
-      // 1. Tentar API Externa (Manuscrito Digital)
       const apiData = await fetchExternalBibleText(book, chapter, version.slug);
-      
       if (apiData && apiData.length > 0) {
         setVerses(apiData);
         setSourceType('codex');
       } else {
-        // 2. Fallback Inteligente (IA para versões modernas ou católicas restritas)
         const aiData = await fetchRealBibleText(book, chapter, version.name, currentLang);
         if (aiData && aiData.length > 0) {
           setVerses(aiData);
@@ -71,52 +71,81 @@ const Bible: React.FC = () => {
     } catch (e) { console.error(e); }
   };
 
+  const filteredCanon = useMemo(() => {
+    if (!bookSearch) return CANON;
+    const search = bookSearch.toLowerCase();
+    const newCanon: any = {};
+    
+    Object.entries(CANON).forEach(([testament, categories]) => {
+      const filteredCategories: any = {};
+      Object.entries(categories as any).forEach(([cat, books]) => {
+        const matchedBooks = (books as string[]).filter(b => b.toLowerCase().includes(search));
+        if (matchedBooks.length > 0) filteredCategories[cat] = matchedBooks;
+      });
+      if (Object.keys(filteredCategories).length > 0) newCanon[testament] = filteredCategories;
+    });
+    
+    return newCanon;
+  }, [bookSearch]);
+
   const isVulgataMode = selectedVersion.isLatin || lang === 'la';
 
   return (
     <div className={`max-w-7xl mx-auto pb-48 space-y-12 page-enter relative px-4 transition-all duration-1000 ${isVulgataMode ? 'vulgata-theme' : ''}`}>
-      {/* BARRA DE NAVEGAÇÃO SUPERIOR */}
+      
+      {/* BARRA DE NAVEGAÇÃO SUPERIOR REESTILIZADA */}
       <nav className="sticky top-4 z-[140] bg-white/90 dark:bg-stone-950/90 backdrop-blur-xl p-4 md:p-6 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-2xl space-y-6">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
-             <button onClick={() => setShowBookSelector(true)} className={`flex flex-col items-start gap-0.5 px-8 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all ${isVulgataMode ? 'bg-[#1a1a1a] text-gold' : 'bg-stone-900 dark:bg-gold text-gold dark:text-stone-900'}`}>
-                <span className="text-[8px] font-black uppercase tracking-widest opacity-50">{isVulgataMode ? 'LIBRUM' : 'LIVRO'}</span>
-                <div className="flex items-center gap-3">
-                  <Icons.Book className="w-5 h-5" />
-                  <span className="font-serif font-bold text-xl">{isVulgataMode ? LATIN_BOOK_NAMES[selectedBook] || selectedBook : selectedBook} {selectedChapter}</span>
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+             {/* SELETOR DE LIVRO */}
+             <button onClick={() => setShowBookSelector(true)} className={`flex flex-col items-start gap-0.5 px-6 py-3 rounded-2xl shadow-lg hover:scale-105 transition-all ${isVulgataMode ? 'bg-[#1a1a1a] text-gold' : 'bg-stone-900 dark:bg-gold text-gold dark:text-stone-900'}`}>
+                <span className="text-[7px] font-black uppercase tracking-widest opacity-50">Librum</span>
+                <div className="flex items-center gap-2">
+                  <Icons.Book className="w-4 h-4" />
+                  <span className="font-serif font-bold text-lg">{isVulgataMode ? LATIN_BOOK_NAMES[selectedBook] || selectedBook : selectedBook}</span>
                 </div>
              </button>
 
-             <button onClick={() => setShowVersionSelector(true)} className="flex flex-col items-start gap-0.5 px-8 py-4 rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 shadow-lg hover:border-gold transition-all group">
-                <span className="text-[8px] font-black uppercase tracking-widest text-stone-400">Interpretatio</span>
-                <div className="flex items-center gap-3">
+             {/* SELETOR DE CAPÍTULO */}
+             <button onClick={() => setShowChapterSelector(true)} className="flex flex-col items-start gap-0.5 px-6 py-3 rounded-2xl bg-white dark:bg-stone-800 border border-stone-100 dark:border-stone-700 shadow-md hover:border-gold transition-all">
+                <span className="text-[7px] font-black uppercase tracking-widest text-stone-400">Caput</span>
+                <div className="flex items-center gap-2">
                    <Icons.Layout className="w-4 h-4 text-gold" />
-                   <span className="font-serif font-bold text-lg dark:text-white">{selectedVersion.name}</span>
-                   {selectedVersion.isCatholic && <Icons.Cross className="w-3 h-3 text-sacred" />}
+                   <span className="font-serif font-bold text-lg dark:text-white">{selectedChapter}</span>
+                </div>
+             </button>
+
+             {/* SELETOR DE VERSÃO */}
+             <button onClick={() => setShowVersionSelector(true)} className="flex flex-col items-start gap-0.5 px-6 py-3 rounded-2xl bg-stone-50 dark:bg-stone-900 border border-stone-100 dark:border-stone-800 shadow-sm hover:border-gold transition-all group">
+                <span className="text-[7px] font-black uppercase tracking-widest text-stone-400">Versio</span>
+                <div className="flex items-center gap-2">
+                   <Icons.Globe className="w-4 h-4 text-sacred" />
+                   <span className="font-serif font-bold text-lg dark:text-stone-300">{selectedVersion.name}</span>
                 </div>
              </button>
           </div>
 
           <div className="flex items-center gap-6">
-             {/* STATUS DA FONTE */}
-             <div className="flex flex-col items-end border-r border-stone-100 dark:border-stone-800 pr-6">
-                <span className="text-[7px] font-black uppercase text-stone-400 mb-1">Status da Fonte</span>
+             <div className="hidden md:flex flex-col items-end border-r border-stone-100 dark:border-stone-800 pr-6">
+                <span className="text-[7px] font-black uppercase text-stone-400 mb-1">Fons Autoris</span>
                 <div className="flex items-center gap-2">
                    <div className={`w-2 h-2 rounded-full animate-pulse ${sourceType === 'codex' ? 'bg-emerald-500' : 'bg-gold'}`} />
                    <span className={`text-[9px] font-bold uppercase ${sourceType === 'codex' ? 'text-emerald-500' : 'text-gold'}`}>
-                      {sourceType === 'codex' ? 'Ex Fontibus (Codex)' : 'Exegese Gerativa'}
+                      {sourceType === 'codex' ? 'Codex Digital' : 'Exegese IA'}
                    </span>
                 </div>
              </div>
              
              <div className="flex bg-stone-100 dark:bg-stone-900 p-1 rounded-2xl">
-                <button onClick={() => selectedChapter > 1 && setSelectedChapter(selectedChapter - 1)} className="p-3 text-stone-400 hover:text-gold"><Icons.ArrowDown className="w-5 h-5 rotate-90" /></button>
-                <button onClick={() => selectedChapter < getChapterCount(selectedBook) && setSelectedChapter(selectedChapter + 1)} className="p-3 text-stone-400 hover:text-gold"><Icons.ArrowDown className="w-5 h-5 -rotate-90" /></button>
+                <button onClick={() => selectedChapter > 1 && setSelectedChapter(selectedChapter - 1)} className="p-3 text-stone-400 hover:text-gold transition-colors"><Icons.ArrowDown className="w-5 h-5 rotate-90" /></button>
+                <div className="w-px h-8 bg-stone-200 dark:bg-stone-800 self-center" />
+                <button onClick={() => selectedChapter < getChapterCount(selectedBook) && setSelectedChapter(selectedChapter + 1)} className="p-3 text-stone-400 hover:text-gold transition-colors"><Icons.ArrowDown className="w-5 h-5 -rotate-90" /></button>
              </div>
           </div>
         </div>
       </nav>
 
+      {/* CONTEÚDO DA BÍBLIA */}
       <main className="space-y-12">
         {loading ? (
           <div className="space-y-8 animate-pulse p-10 max-w-5xl mx-auto">
@@ -132,34 +161,38 @@ const Bible: React.FC = () => {
                 <h2 className="text-5xl md:text-9xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter">
                   {isVulgataMode ? LATIN_BOOK_NAMES[selectedBook] || selectedBook : selectedBook} <span className="text-gold">{selectedChapter}</span>
                 </h2>
-                <div className="flex flex-col items-center gap-2 mt-6">
-                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-stone-400">{selectedVersion.description}</p>
-                   <div className="h-px w-20 bg-gold/20" />
-                </div>
              </header>
 
-             <div className="space-y-10">
+             <div className="space-y-12">
                 {verses.map((v, i) => (
                   <div key={i} className="group">
-                    <div className="flex gap-10 items-start p-8 rounded-[3rem] hover:bg-stone-50 dark:hover:bg-white/[0.02] transition-all relative">
-                       <span className={`text-sm font-serif font-bold mt-2 w-8 flex-shrink-0 text-right ${isVulgataMode ? 'text-sacred' : 'text-gold/40'}`}>{v.verse}</span>
+                    <div className="flex gap-8 items-start p-6 rounded-[2.5rem] hover:bg-stone-50 dark:hover:bg-white/[0.02] transition-all relative">
+                       {/* NÚMERO DO VERSÍCULO - GATILHO PARA COMPARAÇÃO */}
+                       <button 
+                        onClick={() => toggleSynoptic(v.verse)}
+                        className={`text-sm font-serif font-bold mt-2 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${comparisonVerses[v.verse] ? 'bg-sacred text-white' : 'bg-stone-50 dark:bg-stone-800 text-gold/40 hover:bg-gold hover:text-white'}`}
+                       >
+                         {v.verse}
+                       </button>
+
                        <div className="flex-1 space-y-6">
                           <p className={`font-serif leading-relaxed text-stone-800 dark:text-stone-200 tracking-tight text-2xl md:text-4xl ${isVulgataMode ? 'italic' : ''}`}>
                              {v.text}
                           </p>
                           <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => toggleSynoptic(v.verse)} className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${comparisonVerses[v.verse] ? 'bg-sacred text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-400 hover:text-gold'}`}>Sinopse IA</button>
+                             <button onClick={() => toggleSynoptic(v.verse)} className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${comparisonVerses[v.verse] ? 'bg-sacred text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-400 hover:text-gold'}`}>Sinopse & Comparação</button>
                              <ActionButtons itemId={`bible_${v.book}_${v.chapter}_${v.verse}`} type="verse" title={`${v.book} ${v.chapter}:${v.verse}`} content={v.text} />
                           </div>
                        </div>
                     </div>
 
+                    {/* COMPARAÇÃO SINÓTICA LADO A LADO */}
                     {comparisonVerses[v.verse] && (
-                       <div className="mt-6 ml-16 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-6 duration-500">
+                       <div className="mt-6 ml-16 grid grid-cols-1 md:grid-cols-3 gap-4 animate-in slide-in-from-top-6 duration-500">
                           {Object.entries(comparisonVerses[v.verse]).map(([ver, text]: [string, any]) => (
-                             <div key={ver} className="p-8 bg-[#fcf8e8] dark:bg-stone-800/40 rounded-[2.5rem] border border-gold/10 space-y-3">
-                                <span className="text-[8px] font-black uppercase tracking-widest text-sacred">{ver}</span>
+                             <div key={ver} className="p-6 bg-[#fcf8e8] dark:bg-stone-800/40 rounded-[2rem] border border-gold/10 flex flex-col justify-between group/comp">
                                 <p className="text-base font-serif italic text-stone-600 dark:text-stone-300 leading-relaxed">"{text}"</p>
+                                <span className="text-[8px] font-black uppercase tracking-widest text-sacred/40 mt-4 group-hover/comp:text-sacred transition-colors">{ver}</span>
                              </div>
                           ))}
                        </div>
@@ -170,6 +203,81 @@ const Bible: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* MODAL SELETOR DE LIVRO COM BUSCA */}
+      {showBookSelector && (
+         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowBookSelector(false)}>
+            <div className="bg-white dark:bg-stone-950 w-full max-w-6xl max-h-[85vh] rounded-[4rem] shadow-3xl overflow-hidden flex flex-col border border-white/10 animate-modal-zoom" onClick={e => e.stopPropagation()}>
+               <header className="p-8 border-b dark:border-stone-900 bg-stone-50/50 dark:bg-stone-900/50 flex flex-col gap-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-4xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Scriptuarium</h2>
+                    <button onClick={() => setShowBookSelector(false)} className="p-4 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full"><Icons.Cross className="w-6 h-6 rotate-45" /></button>
+                  </div>
+                  <div className="relative">
+                    <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
+                    <input 
+                      type="text" 
+                      placeholder="Pesquisar livro... (Ex: Êxodo, Lucas, Salmos)" 
+                      value={bookSearch}
+                      onChange={e => setBookSearch(e.target.value)}
+                      className="w-full pl-16 pr-6 py-5 bg-white dark:bg-stone-800 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none font-serif italic text-xl focus:border-gold transition-all"
+                      autoFocus
+                    />
+                  </div>
+               </header>
+               <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+                  {Object.entries(filteredCanon).map(([testament, categories]) => (
+                     <div key={testament} className="mb-16">
+                        <div className="flex items-center gap-6 mb-10">
+                          <h3 className="text-[12px] font-black uppercase tracking-[0.5em] text-gold whitespace-nowrap">{testament}</h3>
+                          <div className="h-px flex-1 bg-gold/10" />
+                        </div>
+                        <div className="space-y-12">
+                           {Object.entries(categories as any).map(([cat, books]) => (
+                              <section key={cat}>
+                                 <h4 className="text-[9px] font-black uppercase tracking-widest text-stone-300 mb-6 ml-2">{cat}</h4>
+                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                    {(books as string[]).map(b => (
+                                       <button key={b} onClick={() => { setSelectedBook(b); setSelectedChapter(1); setShowBookSelector(false); setBookSearch(''); }} className={`p-4 rounded-xl font-serif font-bold text-lg text-left transition-all border-2 ${selectedBook === b ? 'bg-gold text-stone-900 border-gold shadow-lg' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold/30'}`}>
+                                          {isVulgataMode ? LATIN_BOOK_NAMES[b]?.split(' ').pop() || b : b}
+                                       </button>
+                                    ))}
+                                 </div>
+                              </section>
+                           ))}
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* MODAL SELETOR DE CAPÍTULO (GRID) */}
+      {showChapterSelector && (
+         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowChapterSelector(false)}>
+            <div className="bg-white dark:bg-stone-950 w-full max-w-2xl rounded-[3rem] shadow-3xl overflow-hidden border border-white/10 animate-modal-zoom" onClick={e => e.stopPropagation()}>
+               <header className="p-8 border-b dark:border-stone-900 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-3xl font-serif font-bold">{selectedBook}</h2>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Selecione o Capítulo</p>
+                  </div>
+                  <button onClick={() => setShowChapterSelector(false)} className="p-4 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full"><Icons.Cross className="w-5 h-5 rotate-45" /></button>
+               </header>
+               <div className="p-10 grid grid-cols-5 md:grid-cols-8 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  {Array.from({ length: getChapterCount(selectedBook) }).map((_, i) => (
+                    <button 
+                      key={i} 
+                      onClick={() => { setSelectedChapter(i + 1); setShowChapterSelector(false); }}
+                      className={`aspect-square flex items-center justify-center rounded-xl font-serif font-bold text-xl transition-all border-2 ${selectedChapter === i + 1 ? 'bg-sacred text-white border-sacred' : 'bg-stone-50 dark:bg-stone-900 border-transparent hover:border-gold'}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+               </div>
+            </div>
+         </div>
+      )}
 
       {/* MODAL SELETOR DE VERSÃO */}
       {showVersionSelector && (
@@ -196,39 +304,6 @@ const Bible: React.FC = () => {
                        <h4 className="text-2xl font-serif font-bold">{v.name}</h4>
                        <p className="text-sm italic text-stone-400 leading-tight">{v.description}</p>
                     </button>
-                  ))}
-               </div>
-            </div>
-         </div>
-      )}
-
-      {/* MODAL SELETOR DE LIVRO */}
-      {showBookSelector && (
-         <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowBookSelector(false)}>
-            <div className="bg-white dark:bg-stone-950 w-full max-w-6xl max-h-[85vh] rounded-[4rem] shadow-3xl overflow-hidden flex flex-col border border-white/10 animate-modal-zoom" onClick={e => e.stopPropagation()}>
-               <header className="p-12 border-b dark:border-stone-900 bg-stone-50/50 dark:bg-stone-900/50 flex justify-between items-center">
-                  <h2 className="text-5xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Scriptuarium</h2>
-                  <button onClick={() => setShowBookSelector(false)} className="p-4 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full"><Icons.Cross className="w-6 h-6 rotate-45" /></button>
-               </header>
-               <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
-                  {Object.entries(CANON).map(([testament, categories]) => (
-                     <div key={testament} className="mb-16">
-                        <h3 className="text-[12px] font-black uppercase tracking-[0.5em] text-gold mb-10 text-center">{testament}</h3>
-                        <div className="space-y-12">
-                           {Object.entries(categories).map(([cat, books]) => (
-                              <section key={cat}>
-                                 <h4 className="text-[9px] font-black uppercase tracking-widest text-stone-300 mb-6 ml-2">{cat}</h4>
-                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                    {books.map(b => (
-                                       <button key={b} onClick={() => { setSelectedBook(b); setSelectedChapter(1); setShowBookSelector(false); }} className={`p-5 rounded-2xl font-serif font-bold text-lg text-left transition-all border-2 ${selectedBook === b ? 'bg-gold text-stone-900 border-gold shadow-lg scale-105' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold/30'}`}>
-                                          {isVulgataMode ? LATIN_BOOK_NAMES[b]?.split(' ').pop() || b : b}
-                                       </button>
-                                    ))}
-                                 </div>
-                              </section>
-                           ))}
-                        </div>
-                     </div>
                   ))}
                </div>
             </div>

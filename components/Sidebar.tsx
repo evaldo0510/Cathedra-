@@ -17,34 +17,29 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
 
   const menuGroups = [
     {
-      title: 'Principal',
+      title: 'Santuário',
       items: [
         { name: 'Início', icon: Icons.Home, path: AppRoute.DASHBOARD },
-        { name: 'Sagradas Escrituras', icon: Icons.Book, path: AppRoute.BIBLE },
-        { name: 'Liturgia Diária', icon: Icons.History, path: AppRoute.DAILY_LITURGY },
-        { name: 'Calendário Litúrgico', icon: Icons.Globe, path: AppRoute.LITURGICAL_CALENDAR },
+        { name: 'Bíblia', icon: Icons.Book, path: AppRoute.BIBLE, subtitle: 'Scriptuarium' },
+        { name: 'Liturgia Diária', icon: Icons.History, path: AppRoute.DAILY_LITURGY, subtitle: 'Lecionário' },
+        { name: 'Calendário Litúrgico', icon: Icons.Globe, path: AppRoute.LITURGICAL_CALENDAR, subtitle: 'Cronos Sagrado' },
       ]
     },
     {
-      title: 'Doutrina & Estudo',
+      title: 'Sacra Doctrina',
       items: [
-        { name: 'Catecismo (CIC)', icon: Icons.Cross, path: AppRoute.CATECHISM },
-        { name: 'Opera Omnia', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'S. Tomás de Aquino' },
-        { name: 'Magistério', icon: Icons.ExternalLink, path: AppRoute.MAGISTERIUM },
-        { name: 'Verdades de Fé', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'Dogmas' },
-        { name: 'Sanctorum', icon: Icons.Users, path: AppRoute.SAINTS, subtitle: 'Vida dos Santos' },
+        { name: 'Catecismo', icon: Icons.Cross, path: AppRoute.CATECHISM, subtitle: 'Codex Fidei' },
+        { name: 'Magistério', icon: Icons.ExternalLink, path: AppRoute.MAGISTERIUM, subtitle: 'Enchiridion' },
+        { name: 'Dogmas', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'Verdades de Fé' },
+        { name: 'Santos', icon: Icons.Users, path: AppRoute.SAINTS, subtitle: 'Sanctorum' },
       ]
     },
     {
-      title: 'Vida de Oração',
+      title: 'Estudo & Oração',
       items: [
-        { name: 'Lectio Divina', icon: Icons.Search, path: AppRoute.LECTIO_DIVINA },
-        { name: 'Rosárium', icon: Icons.Star, path: AppRoute.ROSARY, subtitle: 'Santo Terço' },
-        { name: 'Via Crucis', icon: Icons.ArrowDown, path: AppRoute.VIA_CRUCIS, subtitle: 'Via Sacra' },
-        { name: 'Litaniæ', icon: Icons.Audio, path: AppRoute.LITANIES, subtitle: 'Ladainhas' },
-        { name: 'Ordo Missæ', icon: Icons.Layout, path: AppRoute.ORDO_MISSAE, subtitle: 'Ordinário' },
-        { name: 'Poenitentia', icon: Icons.Cross, path: AppRoute.POENITENTIA, subtitle: 'Confissão' },
-        { name: 'Thesaurus Precum', icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: 'Orações' },
+        { name: 'Estudo', icon: Icons.Layout, path: AppRoute.STUDY_MODE, subtitle: 'Investigação IA' },
+        { name: 'Oração', icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: 'Thesaurus Precum' },
+        { name: 'Certamen', icon: Icons.Star, path: AppRoute.CERTAMEN, subtitle: 'Quiz Sacro' },
       ]
     }
   ];

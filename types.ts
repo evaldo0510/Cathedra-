@@ -17,6 +17,16 @@ export interface UniversalSearchResult {
   relevance: number;
 }
 
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  category: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
 export interface CatechismHierarchy {
   id: string;
   title: string;
@@ -52,6 +62,7 @@ export interface LiturgyInfo {
   psalterWeek?: string;
   date: string;
   isHolyDayOfObligation?: boolean;
+  saints?: string[];
 }
 
 export interface DailyLiturgyContent {
@@ -62,31 +73,6 @@ export interface DailyLiturgyContent {
   secondReading?: { reference: string; text: string };
   gospel: { reference: string; text: string; homily?: string; reflection?: string; calendar?: any };
   saint?: Saint;
-}
-
-export interface AquinasWork {
-  id: string;
-  title: string;
-  category: 'summa' | 'disputed' | 'commentary' | 'opuscula';
-  description: string;
-  parts: string[];
-}
-
-export interface ThomisticArticle {
-  reference: string;
-  questionTitle: string;
-  articleTitle: string;
-  objections: { id: number; text: string }[];
-  sedContra: string;
-  respondeo: string;
-  replies: { id: number; text: string }[];
-  latin?: {
-    articleTitle: string;
-    objections: string[];
-    sedContra: string;
-    respondeo: string;
-    replies: string[];
-  };
 }
 
 export interface User {
@@ -101,7 +87,7 @@ export interface User {
     versesSaved: number;
     studiesPerformed: number;
     daysActive: number;
-    lastChapterRead?: string;
+    quizScore?: number;
   };
 }
 
@@ -167,13 +153,23 @@ export interface Gospel {
   calendar?: any;
 }
 
-export interface CommunityReply {
+// Added missing interfaces for theological modules
+export interface ThomisticArticle {
+  reference: string;
+  questionTitle: string;
+  articleTitle: string;
+  objections: { id: number; text: string }[];
+  sedContra: string;
+  respondeo: string;
+  replies: { id: number; text: string }[];
+}
+
+export interface AquinasWork {
   id: string;
-  userId: string;
-  userName: string;
-  content: string;
-  createdAt: string;
-  isAI?: boolean;
+  title: string;
+  category: string;
+  description: string;
+  parts: string[];
 }
 
 export interface CommunityQuestion {
@@ -185,7 +181,14 @@ export interface CommunityQuestion {
   createdAt: string;
   votes: number;
   category: string;
-  replies: CommunityReply[];
+  replies: {
+    id: string;
+    userId: string;
+    userName: string;
+    content: string;
+    createdAt: string;
+    isAI: boolean;
+  }[];
 }
 
 export enum AppRoute {
@@ -213,5 +216,6 @@ export enum AppRoute {
   ORDO_MISSAE = '/ordinario-missa',
   ROSARY = '/rosario',
   VIA_CRUCIS = '/via-sacra',
-  LITANIES = '/ladainhas'
+  LITANIES = '/ladainhas',
+  CERTAMEN = '/quiz'
 }

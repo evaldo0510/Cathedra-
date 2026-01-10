@@ -1,23 +1,20 @@
 
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from "@google/genai";
-import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dogma, Language, ThomisticArticle, UniversalSearchResult, CatechismHierarchy, DailyLiturgyContent } from "../types";
+import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dogma, Language, ThomisticArticle, UniversalSearchResult, CatechismHierarchy, DailyLiturgyContent, QuizQuestion } from "../types";
 
+// Fixed: Strictly following naming and initialization guidelines
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
-// Utilitário para pausa (Backoff)
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Wrapper resiliente para chamadas Gemini
 async function generateWithRetry(config: any, retries = 3, backoff = 1500): Promise<any> {
   const ai = getAIInstance();
   try {
     const response = await ai.models.generateContent(config);
     return response;
   } catch (error: any) {
-    // Se for erro de cota (429) e ainda houver tentativas
     if (error?.message?.includes('429') || error?.status === 429) {
       if (retries > 0) {
-        console.warn(`Cota atingida. Tentando novamente em ${backoff}ms... (${retries} restantes)`);
         await sleep(backoff);
         return generateWithRetry(config, retries - 1, backoff * 2);
       }
@@ -42,7 +39,6 @@ const safeJsonParse = (text: string, fallback: any) => {
 
 const ensureArray = (data: any): any[] => Array.isArray(data) ? data : [];
 
-// CACHE LOGIC
 const getCache = (key: string) => {
   const saved = localStorage.getItem(`cathedra_cache_${key}`);
   if (!saved) return null;
@@ -59,22 +55,28 @@ const setCache = (key: string, data: any, ttlHours = 12) => {
   localStorage.setItem(`cathedra_cache_${key}`, JSON.stringify({ data, expiry }));
 };
 
+export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Gere 5 perguntas de quiz sobre "${category}" no nível "${difficulty}" para o aplicativo Cathedra. 
+                 Idioma: ${lang}. 
+                 Retorne APENAS um JSON array: [{ "id": "uuid", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "...", "category": "${category}", "difficulty": "${difficulty}" }]`,
+      config: { responseMimeType: "application/json" }
+    });
+    return ensureArray(safeJsonParse(response.text || "", []));
+  } catch (e) { return []; }
+};
+
 export const fetchRealBibleText = async (book: string, chapter: number, version: string, lang: Language = 'pt'): Promise<Verse[]> => {
   const cacheKey = `bible_${book}_${chapter}_${version}_${lang}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
-
-  const isVulgata = version.toLowerCase().includes('vulgata');
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Retorne o texto exato de ${book} ${chapter} na versão ${version}. 
-                 ${isVulgata ? 'IMPORTANTE: Use o texto da Biblia Sacra Vulgata.' : ''} 
-                 Idioma: ${lang}. JSON array: [{ "book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..." }]`,
-      config: { 
-        systemInstruction: "Você é um bibliotecário do Vaticano perito em manuscritos.",
-        responseMimeType: "application/json" 
-      }
+      contents: `Retorne o texto exato de ${book} ${chapter} na versão ${version}. Idioma: ${lang}. JSON array: [{ "book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..." }]`,
+      config: { responseMimeType: "application/json" }
     });
     const result = ensureArray(safeJsonParse(response.text || "", []));
     if (result.length > 0) setCache(cacheKey, result, 24);
@@ -87,21 +89,16 @@ export const getDailyBundle = async (lang: Language = 'pt'): Promise<any> => {
   const cacheKey = `bundle_${today}_${lang}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
-
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um bundle diário de conteúdo católico em ${lang}. 
-                 Retorne JSON: {
-                   "saint": { "name": "Nome do Santo", "image": "URL Unsplash de arte sacra" },
-                   "gospel": { "reference": "Ref", "text": "Texto" }
-                 }`,
+      contents: `Gere um bundle diário de conteúdo católico em ${lang}. JSON: { "saint": { "name": "Nome", "image": "url" }, "gospel": { "reference": "Ref", "text": "Texto" } }`,
       config: { responseMimeType: "application/json" }
     });
     const result = safeJsonParse(response.text || "", {});
     if (result.saint) setCache(cacheKey, result, 12);
     return result;
-  } catch (e) { return { saint: { name: "Igreja Católica", image: "" }, gospel: { reference: "", text: "" } }; }
+  } catch (e) { return { saint: { name: "Igreja", image: "" }, gospel: { reference: "", text: "" } }; }
 };
 
 export const fetchDailyVerse = async (lang: Language = 'pt'): Promise<any> => {
@@ -109,12 +106,10 @@ export const fetchDailyVerse = async (lang: Language = 'pt'): Promise<any> => {
   const cacheKey = `daily_verse_${today}_${lang}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
-
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere o versículo do dia em ${lang} com uma URL de imagem do Unsplash relacionada a catolicismo. 
-                 Retorne JSON: { "verse": "texto", "reference": "ref", "imageUrl": "url" }`,
+      contents: `Versículo do dia em ${lang}. JSON: { "verse": "texto", "reference": "ref", "imageUrl": "url" }`,
       config: { responseMimeType: "application/json" }
     });
     const result = safeJsonParse(response.text || "", {});
@@ -127,8 +122,7 @@ export const universalSearch = async (query: string, lang: Language = 'pt'): Pro
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Busque no Depósito da Fé: "${query}". Idioma: ${lang}.
-                 Retorne JSON array: [{ "id": "${Math.random()}", "type": "verse|catechism|dogma", "title": "...", "snippet": "...", "source": { "name": "...", "code": "..." }, "relevance": 0.9 }]`,
+      contents: `Busque no Depósito da Fé: "${query}". Idioma: ${lang}. JSON array: [{ "id": "1", "type": "verse", "title": "...", "snippet": "...", "source": { "name": "...", "code": "..." }, "relevance": 0.9 }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -139,13 +133,7 @@ export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'):
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-pro-preview',
-      contents: `Estudo teológico profundo sobre: "${topic}". Idioma: ${lang}.
-                 Retorne JSON: {
-                   "topic": "${topic}", "summary": "...",
-                   "bibleVerses": [{ "book": "...", "chapter": 1, "verse": 1, "text": "..." }],
-                   "catechismParagraphs": [{ "number": 1, "content": "..." }],
-                   "magisteriumDocs": [], "saintsQuotes": []
-                 }`,
+      contents: `Estudo profundo sobre: "${topic}". Idioma: ${lang}. JSON: { "topic": "...", "summary": "...", "bibleVerses": [], "catechismParagraphs": [], "magisteriumDocs": [], "saintsQuotes": [] }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -156,21 +144,11 @@ export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): P
   const cacheKey = `liturgy_${date}_${lang}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
-
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere a Liturgia da Missa (Lectionarium) para ${date}. Idioma ${lang}.
-                 Retorne JSON: { 
-                   "date": "${date}",
-                   "collect": "oração coleta", 
-                   "firstReading": { "reference": "livro", "text": "texto" },
-                   "psalm": { "title": "salmo", "text": "texto" },
-                   "secondReading": { "reference": "livro", "text": "texto" },
-                   "gospel": { "reference": "livro", "text": "texto", "reflection": "breve reflexão", "homily": "homilia", "calendar": { "color": "green|purple|white|red", "dayName": "nome", "cycle": "A|B|C", "rank": "Solenidade|Féria" } },
-                   "saint": { "name": "nome", "image": "unsplash_url" }
-                 }`,
-      config: { systemInstruction: "Você é um liturgista perito no Missale Romanum.", responseMimeType: "application/json" }
+      contents: `Liturgia para ${date}. Idioma ${lang}. JSON: { "date": "${date}", "collect": "...", "firstReading": {}, "psalm": {}, "gospel": {}, "saint": {} }`,
+      config: { responseMimeType: "application/json" }
     });
     const result = safeJsonParse(response.text || "", {});
     if (result.date) setCache(cacheKey, result, 48);
@@ -182,17 +160,8 @@ export const fetchThomisticArticle = async (work: string, reference: string, lan
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-pro-preview',
-      contents: `Recupere o Artigo da Summa Theologiae: "${reference}" (${work}). Idioma ${lang}.
-                 Retorne JSON: { 
-                   "reference": "${reference}",
-                   "questionTitle": "...",
-                   "articleTitle": "...",
-                   "objections": [{ "id": 1, "text": "..." }],
-                   "sedContra": "...", 
-                   "respondeo": "...", 
-                   "replies": [{ "id": 1, "text": "..." }]
-                 }`,
-      config: { systemInstruction: "Você é um bibliotecário do Angelicum.", responseMimeType: "application/json" }
+      contents: `Artigo da Summa: "${reference}". Idioma ${lang}. JSON: { "reference": "...", "questionTitle": "...", "articleTitle": "...", "objections": [], "sedContra": "...", "respondeo": "...", "replies": [] }`,
+      config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
   } catch (e) { throw e; }
@@ -206,11 +175,7 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' },
-          },
-        },
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
       },
     });
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
@@ -221,7 +186,7 @@ export const fetchLitanies = async (type: string, lang: Language = 'pt'): Promis
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere a ladainha: "${type}" em ${lang}. JSON: { "title": "...", "items": [{ "call": "...", "response": "..." }] }`,
+      contents: `Ladainha: "${type}" em ${lang}. JSON: { "title": "...", "items": [{ "call": "...", "response": "..." }] }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -232,7 +197,7 @@ export const getDogmas = async (query: string): Promise<Dogma[]> => {
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Liste dogmas católicos relacionados a: "${query}". JSON array: [{ "title": "...", "definition": "...", "council": "...", "year": "...", "period": "...", "tags": [] }]`,
+      contents: `Liste dogmas sobre: "${query}". JSON array: [{ "title": "...", "definition": "..." }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -243,7 +208,7 @@ export const getCatechismSearch = async (query: string, options: any = {}, lang:
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Busque no Catecismo: "${query}". Idioma: ${lang}. JSON array: [{ "number": 1, "content": "...", "context": "..." }]`,
+      contents: `Busque no Catecismo: "${query}". Idioma: ${lang}. JSON array: [{ "number": 1, "content": "..." }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -254,7 +219,7 @@ export const getCatechismHierarchy = async (parentId?: string, lang: Language = 
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Retorne a hierarquia do Catecismo ${parentId ? `sob o ID ${parentId}` : 'nível raiz'}. Idioma: ${lang}. JSON array: [{ "id": "...", "title": "...", "level": "part|section|chapter|article|paragraph", "number": "..." }]`,
+      contents: `Hierarquia do Catecismo ${parentId || 'raiz'}. Idioma: ${lang}. JSON array: [{ "id": "...", "title": "...", "level": "part" }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -265,7 +230,7 @@ export const fetchComparisonVerses = async (book: string, chapter: number, verse
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Compare ${book} ${chapter}:${verse} em: ${versions.join(', ')}. Idioma: ${lang}. JSON: { "Versão": "Texto" }`,
+      contents: `Compare ${book} ${chapter}:${verse} em: ${versions.join(', ')}. JSON: { "Versão": "Texto" }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -276,7 +241,7 @@ export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<stri
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Sugira 4 temas teológicos em ${lang}. JSON array de strings: ["Tema 1", "Tema 2", "Tema 3", "Tema 4"]`,
+      contents: `Sugira 4 temas teológicos em ${lang}. JSON array de strings.`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -287,7 +252,7 @@ export const getSaintsList = async (): Promise<Saint[]> => {
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Retorne uma lista de 12 santos católicos famosos. JSON array: [{ "name": "...", "feastDay": "...", "patronage": "...", "biography": "...", "image": "unsplash_url", "quote": "..." }]`,
+      contents: `Liste 12 santos católicos famosos. JSON array: [{ "name": "...", "feastDay": "...", "image": "unsplash_url" }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -298,7 +263,7 @@ export const getMagisteriumDocs = async (category: string, lang: Language = 'pt'
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Liste documentos do Magistério em "${category}". Idioma: ${lang}. JSON array: [{ "title": "...", "source": "...", "year": "...", "summary": "..." }]`,
+      contents: `Documentos do Magistério: "${category}". JSON array: [{ "title": "...", "summary": "..." }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
@@ -309,7 +274,7 @@ export const fetchBreviaryHour = async (hour: string, lang: Language = 'pt'): Pr
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere o Ofício Divino para "${hour}" em ${lang}. JSON: { "hourName": "...", "invitatory": "...", "hymn": "...", "psalms": [{ "ref": "...", "text": "..." }], "prayer": "..." }`,
+      contents: `Ofício Divino: "${hour}" em ${lang}. JSON: { "hourName": "...", "hymn": "...", "psalms": [], "prayer": "..." }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -320,7 +285,7 @@ export const fetchDailyMass = async (lang: Language = 'pt'): Promise<any> => {
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Ordinário da Missa em ${lang}. JSON: { "intro": { "antiphon": "...", "collect": "..." }, "word": { "firstReading": { "ref": "...", "text": "..." }, "psalm": { "text": "..." }, "gospel": { "ref": "...", "text": "..." } }, "eucharist": { "prayer": "..." } }`,
+      contents: `Missa em ${lang}. JSON: { "intro": {}, "word": {}, "eucharist": {} }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -343,11 +308,10 @@ export const getDailyGospel = async (): Promise<Gospel> => {
   const cacheKey = `gospel_text_${today}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
-
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Retorne o Evangelho da missa de hoje (${today}). JSON: { "reference": "...", "text": "...", "reflection": "..." }`,
+      contents: `Evangelho de hoje (${today}). JSON: { "reference": "...", "text": "..." }`,
       config: { responseMimeType: "application/json" }
     });
     const result = safeJsonParse(response.text || "", {});
@@ -360,7 +324,7 @@ export const getMoralDiscernment = async (input: string, lang: Language = 'pt'):
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-pro-preview',
-      contents: `Discernimento moral sobre: "${input}". Idioma: ${lang}. JSON: { "gravity": "mortal|venial", "explanation": "...", "cicRef": "..." }`,
+      contents: `Moral: "${input}". JSON: { "gravity": "mortal", "explanation": "..." }`,
       config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", {});
@@ -373,119 +337,72 @@ export async function* getTheologicalDialogueStream(message: string): AsyncItera
     const responseStream = await ai.models.generateContentStream({
       model: 'gemini-3-pro-preview',
       contents: message,
-      config: {
-        systemInstruction: "Você é S. Tomás de Aquino. Responda com rigor escolástico."
-      }
+      config: { systemInstruction: "Você é S. Tomás de Aquino." }
     });
-
-    for await (const chunk of responseStream) {
-      if (chunk.text) yield chunk.text;
-    }
-  } catch (e) {
-    yield "O silêncio é a linguagem da eternidade, mas aqui ele se deve a uma sobrecarga em nossos arquivos. Por favor, aguarde um instante e tente novamente.";
-  }
+    for await (const chunk of responseStream) if (chunk.text) yield chunk.text;
+  } catch (e) { yield "Sobrecarga."; }
 }
 
-// Fix: Adicionando funções ausentes exportadas pelos componentes
-
-/**
- * Busca hagiografia detalhada de um santo via IA.
- */
 export const searchSaint = async (query: string): Promise<Saint> => {
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
-    contents: `Pesquise sobre o santo: "${query}". Retorne JSON: { "name": "...", "feastDay": "...", "patronage": "...", "biography": "...", "image": "unsplash_url", "quote": "..." }`,
+    contents: `Pesquise santo: "${query}". JSON: { "name": "...", "biography": "..." }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", {});
 };
 
-/**
- * Obtém links dogmáticos baseados em parágrafos do Catecismo.
- */
 export const getDogmaticLinksForCatechism = async (paragraphs: CatechismParagraph[]): Promise<Record<number, Dogma[]>> => {
   const numbers = paragraphs.map(p => p.number).join(', ');
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
-    contents: `Para os parágrafos do Catecismo ${numbers}, liste dogmas relacionados. Retorne JSON: { "número_do_parágrafo": [{ "title": "...", "definition": "..." }] }`,
+    contents: `Dogmas para parágrafos ${numbers}. JSON: { "número": [] }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", {});
 };
 
-/**
- * Gera análise profunda de documentos do Magistério.
- */
 export const getMagisteriumDeepDive = async (title: string, lang: Language = 'pt'): Promise<any> => {
   const response = await generateWithRetry({
     model: 'gemini-3-pro-preview',
-    contents: `Análise profunda do documento do Magistério: "${title}". Idioma: ${lang}. 
-               Retorne JSON: { 
-                 "historicalContext": "...", 
-                 "corePoints": ["..."], 
-                 "modernApplication": "...", 
-                 "relatedCatechism": ["..."] 
-               }`,
+    contents: `Análise: "${title}". JSON: { "historicalContext": "..." }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", {});
 };
 
-/**
- * Gera síntese teológica tomista (Summa Disputatio).
- */
 export const getThomisticSynthesis = async (query: string): Promise<any> => {
   const response = await generateWithRetry({
     model: 'gemini-3-pro-preview',
-    contents: `Gere uma síntese tomista (Estilo Summa) sobre: "${query}". 
-               Retorne JSON: { 
-                 "title": "...", 
-                 "objections": ["..."], 
-                 "sedContra": "...", 
-                 "respondeo": "...", 
-                 "replies": ["..."] 
-               }`,
+    contents: `Síntese Tomista: "${query}". JSON: { "title": "..." }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", {});
 };
 
-/**
- * Recupera comentário da Catena Aurea (Cadeia de Ouro).
- */
 export const getCatenaAureaCommentary = async (verse: Verse): Promise<any> => {
   const response = await generateWithRetry({
     model: 'gemini-3-pro-preview',
-    contents: `Gere um comentário da Catena Aurea (Cadeia de Ouro) para ${verse.book} ${verse.chapter}:${verse.verse}. 
-               Retorne JSON: { 
-                 "content": "...", 
-                 "fathers": ["..."], 
-                 "sources": [{ "title": "...", "uri": "..." }] 
-               }`,
+    contents: `Catena Aurea ${verse.book} ${verse.chapter}:${verse.verse}. JSON: { "content": "..." }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", {});
 };
 
-/**
- * Gera calendário litúrgico mensal completo.
- */
 export const fetchMonthlyCalendar = async (month: number, year: number, lang: Language = 'pt'): Promise<LiturgyInfo[]> => {
+  const cacheKey = `calendar_${month}_${year}_${lang}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
-    contents: `Gere o calendário litúrgico completo para o mês ${month} de ${year}. Idioma: ${lang}. 
-               Retorne JSON array: [{ 
-                 "date": "YYYY-MM-DD", 
-                 "color": "green|purple|white|red|rose|black", 
-                 "season": "...", 
-                 "rank": "...", 
-                 "dayName": "...", 
-                 "cycle": "A|B|C", 
-                 "week": "...", 
-                 "psalterWeek": "...", 
-                 "isHolyDayOfObligation": false 
-               }]`,
+    contents: `Gere o calendário litúrgico completo para o mês ${month} de ${year}. 
+               Para cada dia, inclua: data (YYYY-MM-DD), cor litúrgica (green/purple/white/red/rose/black), tempo litúrgico, classe/ranking, nome do dia, ciclo e uma lista de 1 a 3 santos celebrados no dia.
+               Retorne APENAS um JSON array de objetos LiturgyInfo.`,
     config: { responseMimeType: "application/json" }
   });
-  return ensureArray(safeJsonParse(response.text || "", []));
+  
+  const result = ensureArray(safeJsonParse(response.text || "", []));
+  if (result.length > 0) setCache(cacheKey, result, 168); // 1 semana de cache
+  return result;
 };
