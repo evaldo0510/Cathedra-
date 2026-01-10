@@ -20,7 +20,6 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
   const [filterTag, setFilterTag] = useState<FilterTag>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
-  // Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout to avoid browser/node conflicts
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchDogmas = useCallback(async (q: string) => {
@@ -28,7 +27,6 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
     try {
       const data = await getDogmas(q);
       setDogmas(data);
-      // Auto-expandir grupos se não for modo lista
       if (viewMode !== 'list') {
         const allKeys = new Set<string>(data.map(d => viewMode === 'period' ? (d.period || 'Geral') : (d.council || 'Geral')));
         setExpandedGroups(allKeys);
@@ -40,7 +38,6 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
     }
   }, [viewMode]);
 
-  // Debounce para busca em tempo real
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     
@@ -72,8 +69,10 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
 
   const filteredDogmas = useMemo(() => {
     return dogmas.filter(d => {
+      if (!d.tags) return filterTag === 'all';
       const matchesFilter = filterTag === 'all' || 
         d.tags.some(t => {
+          if (!t) return false;
           const lowerT = t.toLowerCase();
           if (filterTag === 'marian') return lowerT.includes('maria') || lowerT.includes('nossa senhora') || lowerT.includes('virgem');
           if (filterTag === 'christological') return lowerT.includes('cristo') || lowerT.includes('jesus') || lowerT.includes('encarnação');
@@ -119,7 +118,7 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
               </span>
               <span className="text-stone-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 bg-stone-50 dark:bg-stone-800/50 px-3 py-1 rounded-full">
                 <Icons.History className="w-3 h-3" />
-                {d.council} • {d.year}
+                {d.council || 'Magistério'} • {d.year || 'S/D'}
               </span>
             </div>
             
@@ -150,7 +149,7 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
 
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-stone-50 dark:border-stone-800 mt-6">
         <div className="flex gap-1.5 flex-wrap">
-           {d.tags.map((tag, tIdx) => (
+           {d.tags?.map((tag, tIdx) => (
              <span key={tIdx} className="text-[8px] font-black uppercase tracking-tighter text-stone-400 bg-stone-50 dark:bg-stone-800 px-2.5 py-1 rounded-lg border border-stone-100/50 dark:border-stone-700">
                #{tag}
              </span>
@@ -182,7 +181,6 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
         </div>
       </header>
 
-      {/* Controles de Busca e Filtro */}
       <section className="bg-white dark:bg-stone-900 p-6 md:p-10 rounded-[3.5rem] shadow-3xl border border-stone-100 dark:border-stone-800 space-y-8 sticky top-4 z-[140] backdrop-blur-xl bg-white/90 dark:bg-stone-900/90">
         <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
            <div className="flex flex-wrap justify-center lg:justify-start gap-2">
@@ -238,7 +236,6 @@ const Dogmas: React.FC<DogmasProps> = ({ initialQuery = '' }) => {
         </div>
       </section>
 
-      {/* Renderização do Conteúdo */}
       <div className="pb-40 min-h-[40vh]">
         {loading && dogmas.length === 0 ? (
           <div className="grid gap-8">

@@ -1,6 +1,30 @@
 
 export type Language = 'pt' | 'en' | 'es' | 'la' | 'it' | 'fr' | 'de';
 
+export interface SourceMetadata {
+  name: string;
+  code: string; 
+  reliability: 'high' | 'medium';
+  uri?: string;
+}
+
+export interface UniversalSearchResult {
+  id: string;
+  type: 'verse' | 'catechism' | 'dogma' | 'saint' | 'aquinas' | 'magisterium';
+  title: string;
+  snippet: string;
+  source: SourceMetadata;
+  relevance: number;
+}
+
+export interface CatechismHierarchy {
+  id: string;
+  title: string;
+  level: 'part' | 'section' | 'chapter' | 'article' | 'paragraph';
+  number?: string;
+  children?: CatechismHierarchy[];
+}
+
 export interface Verse {
   book: string;
   chapter: number;
@@ -8,85 +32,61 @@ export interface Verse {
   text: string;
 }
 
-export interface SavedSearchFilter {
+export interface SavedItem {
   id: string;
-  name: string;
-  query: string;
-  books: string[];
-  chapters: string[];
-  verses: string[];
-  createdAt: string;
-}
-
-export interface CatechismParagraph {
-  number: number;
-  title?: string;
-  content: string;
-  source?: string;
-  tags?: string[];
-}
-
-export interface Saint {
-  name: string;
-  feastDay: string;
-  patronage: string;
-  biography: string;
-  image?: string;
-  quote?: string;
-  sources?: { title: string; uri: string }[];
-}
-
-export interface Dogma {
+  type: 'verse' | 'catechism' | 'dogma' | 'study' | 'liturgy' | 'prayer' | 'aquinas';
   title: string;
-  definition: string;
-  council: string;
-  year: string;
-  tags: string[];
-  sourceUrl?: string;
-  period?: string;
+  content: string;
+  timestamp: string;
+  metadata?: any;
 }
 
 export interface LiturgyInfo {
-  color: string;
+  color: 'green' | 'purple' | 'white' | 'red' | 'rose' | 'black';
   season: string;
   rank: string;
+  rankValue: number;
   dayName: string;
   cycle: string;
   week: string;
   psalterWeek?: string;
-  date?: string;
+  date: string;
+  isHolyDayOfObligation?: boolean;
 }
 
-export interface LiturgyReading {
+export interface DailyLiturgyContent {
+  date: string;
+  collect: string;
+  firstReading: { reference: string; text: string };
+  psalm: { title: string; text: string };
+  secondReading?: { reference: string; text: string };
+  gospel: { reference: string; text: string; homily?: string; reflection?: string; calendar?: any };
+  saint?: Saint;
+}
+
+export interface AquinasWork {
+  id: string;
   title: string;
+  category: 'summa' | 'disputed' | 'commentary' | 'opuscula';
+  description: string;
+  parts: string[];
+}
+
+export interface ThomisticArticle {
   reference: string;
-  text: string;
-}
-
-export interface Gospel extends LiturgyReading {
-  reflection: string;
-  calendar: LiturgyInfo;
-  firstReading?: LiturgyReading;
-  psalm?: LiturgyReading;
-  secondReading?: LiturgyReading;
-  sources?: { title: string; uri: string }[];
-}
-
-export interface StudyResult {
-  topic: string;
-  summary: string;
-  bibleVerses: Verse[];
-  catechismParagraphs: CatechismParagraph[];
-  magisteriumDocs: {
-    title: string;
-    content: string;
-    source: string;
-  }[];
-  saintsQuotes: {
-    saint: string;
-    quote: string;
-  }[];
-  sources?: { title: string; uri: string }[];
+  questionTitle: string;
+  articleTitle: string;
+  objections: { id: number; text: string }[];
+  sedContra: string;
+  respondeo: string;
+  replies: { id: number; text: string }[];
+  latin?: {
+    articleTitle: string;
+    objections: string[];
+    sedContra: string;
+    respondeo: string;
+    replies: string[];
+  };
 }
 
 export interface User {
@@ -103,6 +103,68 @@ export interface User {
     daysActive: number;
     lastChapterRead?: string;
   };
+}
+
+export interface Saint {
+  name: string;
+  feastDay: string;
+  patronage: string;
+  biography: string;
+  image: string;
+  quote?: string;
+}
+
+export interface CatechismParagraph {
+  number: number;
+  content: string;
+  context?: string;
+}
+
+export interface MagisteriumDoc {
+  title: string;
+  source: string;
+  year: string;
+  summary: string;
+}
+
+export interface SaintQuote {
+  saint: string;
+  quote: string;
+}
+
+export interface StudyResult {
+  topic: string;
+  summary: string;
+  bibleVerses: Verse[];
+  catechismParagraphs: CatechismParagraph[];
+  magisteriumDocs: MagisteriumDoc[];
+  saintsQuotes: SaintQuote[];
+}
+
+export interface Dogma {
+  title: string;
+  definition: string;
+  council?: string;
+  year?: string;
+  period?: string;
+  tags?: string[];
+  sourceUrl?: string;
+}
+
+export interface Prayer {
+  id: string;
+  title: string;
+  latin?: string;
+  vernacular: string;
+  category: 'daily' | 'marian' | 'latin' | 'rosary' | 'litany' | string;
+}
+
+export interface Gospel {
+  reference: string;
+  text: string;
+  reflection?: string;
+  homily?: string;
+  calendar?: any;
 }
 
 export interface CommunityReply {
@@ -141,8 +203,15 @@ export enum AppRoute {
   CHECKOUT = '/assinar',
   MAGISTERIUM = '/magisterio',
   DOGMAS = '/dogmas',
-  SOCIAL_DOCTRINE = '/doutrina-social',
-  COLLOQUIUM = '/colloquium',
-  ABOUT = '/sobre',
-  AQUINAS = '/aquinate'
+  BREVIARY = '/breviario',
+  MISSAL = '/missal',
+  DAILY_LITURGY = '/liturgia-diaria',
+  PRAYERS = '/oracoes',
+  FAVORITES = '/favoritos',
+  AQUINAS_OPERA = '/aquinas-opera',
+  POENITENTIA = '/confissao',
+  ORDO_MISSAE = '/ordinario-missa',
+  ROSARY = '/rosario',
+  VIA_CRUCIS = '/via-sacra',
+  LITANIES = '/ladainhas'
 }

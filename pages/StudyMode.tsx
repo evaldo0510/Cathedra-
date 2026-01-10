@@ -42,21 +42,19 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
     <div className="max-w-7xl mx-auto pb-24 space-y-8 px-2 md:px-0 page-enter">
       <header className={`transition-all duration-700 ${data ? 'mb-4' : 'min-h-[50vh] flex flex-col justify-center'}`}>
         <div className="text-center space-y-4 mb-12">
-          <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-[#d4af37] tracking-tight">Investigação</h2>
+          <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-[#d4af37] tracking-tight">Investigação Teológica</h2>
           <p className="text-stone-400 font-serif italic text-lg md:text-2xl">"Fides quaerens intellectum"</p>
         </div>
         
         <div className="max-w-4xl mx-auto px-2">
           <div className="relative w-full max-w-2xl mx-auto flex flex-col gap-6">
             <div className="relative group w-full">
-              {/* Ícone de Lupa/Vela Estilizado */}
               <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none z-10">
                 <svg className="h-6 w-6 text-yellow-600 transition-colors group-focus-within:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
               
-              {/* Input com PCH Profissional */}
               <input
                 type="text"
                 value={query}
@@ -80,13 +78,13 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
               onClick={() => handleTriggerSearch()}
               className="w-full py-6 bg-gold hover:bg-yellow-400 text-stone-900 rounded-3xl font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl active:scale-95 transition-all"
             >
-              {t('investigate')} a Verdade
+              Investigar a Verdade
             </button>
           </div>
 
           {!data && (
             <div className="mt-12 flex flex-wrap justify-center gap-3">
-                 {suggestedTopics.map(topic => (
+                 {suggestedTopics?.map(topic => (
                    <button 
                     key={topic}
                     onClick={() => handleTriggerSearch(topic)}
@@ -115,12 +113,26 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
                <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400 flex items-center gap-2 ml-4">
                  <Icons.Book className="w-4 h-4 text-sacred" /> Escritura
                </h4>
-               {data.bibleVerses.map((v, i) => (
+               {data.bibleVerses?.map((v, i) => (
                  <article key={i} className="p-6 bg-white dark:bg-stone-900 rounded-[2rem] border border-stone-50 dark:border-stone-800 shadow-md">
                     <p className="text-[9px] font-black text-sacred uppercase tracking-widest mb-2">{v.book} {v.chapter}:{v.verse}</p>
                     <p className="text-base font-serif italic text-stone-800 dark:text-stone-200 leading-snug">"{v.text}"</p>
                  </article>
                ))}
+               {!data.bibleVerses?.length && <p className="text-stone-400 italic text-center p-4">Nenhuma referência direta encontrada.</p>}
+            </div>
+
+            <div className="space-y-4">
+               <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400 flex items-center gap-2 ml-4">
+                 <Icons.Cross className="w-4 h-4 text-gold" /> Tradição & Catecismo
+               </h4>
+               {data.catechismParagraphs?.map((p, i) => (
+                 <article key={i} className="p-6 bg-[#1a1a1a] text-white rounded-[2rem] border border-white/5 shadow-xl">
+                    <p className="text-[9px] font-black text-gold uppercase tracking-widest mb-2">CIC {p.number}</p>
+                    <p className="text-base font-serif italic text-white/80 leading-snug">"{p.content}"</p>
+                 </article>
+               ))}
+               {!data.catechismParagraphs?.length && <p className="text-stone-400 italic text-center p-4">Buscando parágrafos doutrinais...</p>}
             </div>
           </div>
         </div>
@@ -128,7 +140,7 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
         <div className="text-center py-20 animate-in fade-in">
            <Icons.Cross className="w-16 h-16 text-stone-200 dark:text-stone-800 mx-auto mb-6 opacity-40" />
            <p className="text-2xl font-serif italic text-stone-400 max-w-md mx-auto">
-             {t('empty_state')}
+             Inicie sua busca acima para mergulhar no mistério.
            </p>
         </div>
       )}

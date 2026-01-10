@@ -43,9 +43,10 @@ const Magisterium: React.FC = () => {
     setActiveCategory(category);
     try {
       const data = await getMagisteriumDocs(category, lang);
-      setDocs(data);
+      setDocs(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
+      setDocs([]);
     } finally {
       setLoadingDocs(false);
     }
@@ -55,7 +56,6 @@ const Magisterium: React.FC = () => {
     setSelectedDoc(doc);
     setDeepDive(null);
     setLoadingDeepDive(true);
-    // Scroll suave para a seção de detalhes
     setTimeout(() => {
       document.getElementById('deep-dive-section')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -76,7 +76,6 @@ const Magisterium: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-48">
-      {/* HEADER MONUMENTAL */}
       <header className="text-center space-y-8">
         <div className="flex justify-center">
           <div className="p-10 bg-[#fdfcf8] dark:bg-stone-900 rounded-full border-2 border-gold/30 shadow-sacred relative group">
@@ -92,7 +91,6 @@ const Magisterium: React.FC = () => {
         </div>
       </header>
 
-      {/* SELETOR DE CATEGORIAS */}
       <nav className="flex flex-wrap justify-center gap-4 bg-white/50 dark:bg-stone-900/50 p-4 rounded-[3.5rem] border border-stone-100 dark:border-stone-800 backdrop-blur-md max-w-5xl mx-auto shadow-xl">
         {CATEGORIES.map(cat => (
           <button 
@@ -106,7 +104,6 @@ const Magisterium: React.FC = () => {
         ))}
       </nav>
 
-      {/* GRID DE DOCUMENTOS CARREGADOS ABAIXO DO SELETOR */}
       <section className="space-y-12">
         {loadingDocs ? (
           <div className="grid md:grid-cols-2 gap-8">
@@ -116,7 +113,7 @@ const Magisterium: React.FC = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-8">
-            {docs.map((doc, i) => (
+            {docs?.map((doc, i) => (
               <article 
                 key={i} 
                 className={`p-10 rounded-[3.5rem] border-2 transition-all duration-500 group relative overflow-hidden flex flex-col justify-between ${selectedDoc?.title === doc.title ? 'bg-gold/5 border-gold shadow-2xl' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold hover:shadow-xl'}`}
@@ -141,7 +138,6 @@ const Magisterium: React.FC = () => {
         )}
       </section>
 
-      {/* SEÇÃO DE APROFUNDAMENTO DINÂMICO (DEEP DIVE) */}
       <div id="deep-dive-section" className="scroll-mt-32">
         {loadingDeepDive && (
           <div className="py-24 text-center space-y-8 bg-[#fcf8e8] dark:bg-stone-900/50 rounded-[4rem] border-2 border-dashed border-gold/20">
@@ -159,7 +155,6 @@ const Magisterium: React.FC = () => {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Contexto Histórico */}
               <div className="bg-white dark:bg-stone-900 p-12 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl space-y-6">
                  <div className="flex items-center gap-4 text-sacred">
                     <Icons.History className="w-6 h-6" />
@@ -170,7 +165,6 @@ const Magisterium: React.FC = () => {
                  </p>
               </div>
 
-              {/* Aplicação Moderna */}
               <div className="bg-white dark:bg-stone-900 p-12 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl space-y-6">
                  <div className="flex items-center gap-4 text-gold">
                     <Icons.Globe className="w-6 h-6" />
@@ -181,14 +175,13 @@ const Magisterium: React.FC = () => {
                  </p>
               </div>
 
-              {/* Pontos Cardeais */}
               <div className="bg-[#fcf8e8] dark:bg-stone-800/40 p-12 rounded-[4rem] border border-gold/20 shadow-xl col-span-1 md:col-span-2 space-y-10">
                  <div className="flex items-center gap-4">
                     <div className="p-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-xl"><Icons.Layout className="w-6 h-6" /></div>
                     <h4 className="text-3xl font-serif font-bold">Pilares do Ensinamento</h4>
                  </div>
                  <div className="grid md:grid-cols-3 gap-8">
-                    {deepDive.corePoints.map((point, idx) => (
+                    {deepDive.corePoints?.map((point, idx) => (
                       <div key={idx} className="bg-white dark:bg-stone-900 p-8 rounded-3xl border border-gold/10 relative group">
                         <span className="absolute -top-4 -left-4 w-10 h-10 bg-gold text-stone-900 rounded-full flex items-center justify-center font-black shadow-lg">{idx + 1}</span>
                         <p className="text-lg font-serif italic text-stone-700 dark:text-stone-300 leading-tight">"{point}"</p>
@@ -197,7 +190,6 @@ const Magisterium: React.FC = () => {
                  </div>
               </div>
 
-              {/* Conexão com o Catecismo */}
               <div className="bg-stone-900 p-14 rounded-[5rem] text-white shadow-3xl col-span-1 md:col-span-2 relative overflow-hidden group">
                  <Icons.Cross className="absolute -bottom-20 -right-20 w-96 h-96 text-gold/5 group-hover:scale-110 transition-transform duration-[8s]" />
                  <div className="relative z-10 space-y-8 text-center md:text-left">
@@ -206,7 +198,7 @@ const Magisterium: React.FC = () => {
                        <h4 className="text-3xl md:text-5xl font-serif font-bold text-gold tracking-tighter">Nexo com o Catecismo (CIC)</h4>
                     </div>
                     <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                       {deepDive.relatedCatechism.map((ref, idx) => (
+                       {deepDive.relatedCatechism?.map((ref, idx) => (
                          <div key={idx} className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-serif italic text-xl text-white/80 hover:bg-gold/10 hover:border-gold transition-all">
                            {ref}
                          </div>
