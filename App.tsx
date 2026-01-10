@@ -29,8 +29,9 @@ import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy } from './services/gemini';
-import { Icons, Logo } from './constants';
+import { Icons, MobileLogo } from './constants';
 import { UI_TRANSLATIONS } from './services/translations';
+import { notificationService } from './services/notifications';
 
 interface LanguageContextType {
   lang: Language;
@@ -51,14 +52,16 @@ const App: React.FC = () => {
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [dogmaSearch, setDogmaSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [globalError, setGlobalError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('cathedra_user');
     return saved ? JSON.parse(saved) : null;
   });
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
 
-  useEffect(() => { setTimeout(() => setLoading(false), 300); }, []);
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 800);
+    notificationService.initNotifications(lang);
+  }, [lang]);
 
   useEffect(() => {
     if (isDark) document.documentElement.classList.add('dark');
@@ -71,18 +74,18 @@ const App: React.FC = () => {
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
-      
-      // Persistência automática no histórico para o Dashboard
       const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
       const filtered = history.filter((h: any) => h.topic !== result.topic);
       localStorage.setItem('cathedra_history', JSON.stringify([result, ...filtered].slice(0, 10)));
-      
     } catch (e) { console.error(e); } 
   }, [lang]);
 
   const navigateTo = useCallback((r: AppRoute) => {
     setRoute(r);
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    setIsSidebarOpen(false);
+    // Smooth scroll para o topo ao mudar de rota
+    const mainArea = document.querySelector('main');
+    if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const t = useCallback((key: string) => UI_TRANSLATIONS[lang][key] || key, [lang]);
@@ -101,15 +104,28 @@ const App: React.FC = () => {
       case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
+      case AppRoute.CERTAMEN: return <Certamen />;
+      case AppRoute.POENITENTIA: return <Poenitentia />;
+      case AppRoute.ORDO_MISSAE: return <OrdoMissae />;
+      case AppRoute.ROSARY: return <Rosary />;
+      case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
+      case AppRoute.LITANIES: return <Litanies />;
+      case AppRoute.PRAYERS: return <Prayers />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
   }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch]);
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-[1000]">
-        <Logo className="w-20 h-20 mb-4 animate-pulse" />
-        <h1 className="text-2xl font-serif text-yellow-600 tracking-[0.2em]">CATHEDRA</h1>
+      <div className="fixed inset-0 bg-[#0c0a09] flex flex-col items-center justify-center z-[1000] space-y-8">
+        <div className="relative">
+          <div className="w-32 h-32 border-2 border-gold/10 border-t-gold rounded-full animate-spin" />
+          <MobileLogo className="w-16 h-16 absolute inset-0 m-auto animate-pulse" />
+        </div>
+        <div className="text-center">
+           <h1 className="text-3xl font-serif text-gold tracking-[0.3em] font-bold">CATHEDRA</h1>
+           <p className="text-[10px] uppercase tracking-[0.5em] text-white/30 mt-2">Custodire et Tradere</p>
+        </div>
       </div>
     );
   }
@@ -117,22 +133,33 @@ const App: React.FC = () => {
   return (
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
-        <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-300 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
-          <div className="absolute inset-0 bg-black/40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
-          <div className={`relative h-full w-80 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        {/* Sidebar adaptativo */}
+        <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+          <div className={`relative h-full w-80 shadow-3xl transition-transform duration-500 ease-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
             <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} />
           </div>
         </div>
         
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-          <div className="lg:hidden p-4 border-b dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-[140]">
-             <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-stone-900 dark:text-gold"><Icons.Menu className="w-6 h-6" /></button>
-             <Logo className="w-8 h-8" />
-             <button onClick={() => setIsDark(!isDark)} className="p-2">{isDark ? <Icons.Globe className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5 text-stone-400" />}</button>
+          {/* Header Mobile Otimizado */}
+          <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
+             <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
+               <Icons.Menu className="w-6 h-6" />
+             </button>
+             <div className="flex flex-col items-center" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
+                <MobileLogo className="w-9 h-9" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-gold mt-1">Cathedra</span>
+             </div>
+             <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
+               {isDark ? <Icons.Globe className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
+             </button>
           </div>
+
           <div className="flex-1 p-4 md:p-12 lg:p-16 pb-24 max-w-[1400px] mx-auto w-full">
             {content}
           </div>
+
           <Footer onNavigate={navigateTo} />
         </main>
       </div>

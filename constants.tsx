@@ -8,24 +8,18 @@ export const COLORS = {
   background: '#fdfcf8', 
 };
 
+// Logo Principal - Majestosa e Completa
 export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
   <div className={`relative flex items-center justify-center group ${className}`}>
-    {/* Efeito de Aura Divina atrás da logo */}
     <div className="absolute inset-0 bg-gold/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-    
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-sm">
-      {/* Círculo de Glória (Outer Ring) */}
       <circle cx="50" cy="50" r="46" stroke="#d4af37" strokeWidth="1.5" strokeDasharray="2 4" className="opacity-40" />
-      
-      {/* Silhueta da Cathedra (Trono/Cátedra) */}
       <path 
         d="M30 75V40C30 34.4772 34.4772 30 40 30H60C65.5228 30 70 34.4772 70 40V75" 
         stroke="#d4af37" 
         strokeWidth="3.5" 
         strokeLinecap="round" 
       />
-      
-      {/* Base do Códice (Livro Sagrado) */}
       <path 
         d="M25 75C25 75 35 70 50 70C65 70 75 75 75 75V82C75 82 65 77 50 77C35 77 25 82 25 82V75Z" 
         fill="#d4af37" 
@@ -33,15 +27,28 @@ export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12"
         stroke="#d4af37" 
         strokeWidth="2.5" 
       />
-      
-      {/* A Cruz Central (Finíssima) */}
       <path d="M50 38V62M42 46H58" stroke="#d4af37" strokeWidth="2.5" strokeLinecap="round" />
-      
-      {/* Pontos de Luz (As 4 Marcas da Igreja) */}
       <circle cx="50" cy="18" r="2" fill="#d4af37" />
       <circle cx="82" cy="50" r="2" fill="#d4af37" />
       <circle cx="50" cy="82" r="2" fill="#d4af37" />
       <circle cx="18" cy="50" r="2" fill="#d4af37" />
+    </svg>
+  </div>
+);
+
+// Logo Mobile - Minimalista e Icônica (Monograma)
+export const MobileLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      {/* Apenas o trono simplificado e a cruz para máxima legibilidade */}
+      <path 
+        d="M35 70V45C35 42.2386 37.2386 40 40 40H60C62.7614 40 65 42.2386 65 45V70" 
+        stroke="#d4af37" 
+        strokeWidth="5" 
+        strokeLinecap="round" 
+      />
+      <path d="M50 45V65M43 52H57" stroke="#d4af37" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="2" className="opacity-20" />
     </svg>
   </div>
 );

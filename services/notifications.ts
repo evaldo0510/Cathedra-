@@ -1,5 +1,6 @@
 
 import { getDailyBundle } from './gemini';
+import { AppRoute } from '../types';
 
 export class NotificationService {
   private static instance: NotificationService;
@@ -40,14 +41,14 @@ export class NotificationService {
   private async sendWelcomeNotification() {
     await this.sendLocalNotification(
       "Santuário Ativado 🏛️",
-      "Que a luz de Cristo ilumine sua jornada. Você receberá a liturgia e o santo do dia aqui diariamente."
+      "Que a luz de Cristo ilumine sua jornada. Você receberá a liturgia e o santo do dia aqui diariamente.",
+      AppRoute.DASHBOARD
     );
   }
 
   public async scheduleDailyReminder(lang: any = 'pt') {
     if (Notification.permission !== 'granted') return;
 
-    // Usar data local para o lembrete para ser consistente com o usuário
     const today = new Date().toLocaleDateString('pt-BR');
     const lastReminder = localStorage.getItem('cathedra_last_reminder_date');
 
@@ -55,14 +56,20 @@ export class NotificationService {
       try {
         const bundle = await getDailyBundle(lang);
         const title = `Lumen Diei: ${bundle.saint.name} 🏛️`;
-        const body = `Hoje celebramos ${bundle.saint.name}. Liturgia: ${bundle.gospel.reference}. Clique para meditar agora.`;
+        const body = `Hoje celebramos ${bundle.saint.name}. Liturgia: ${bundle.gospel.reference}. Toque para ler agora.`;
         
-        await this.sendLocalNotification(title, body);
+        await this.sendLocalNotification(title, body, AppRoute.SAINTS, {
+          actions: [
+            { action: 'read-liturgy', title: 'Ler Liturgia' },
+            { action: 'see-saint', title: 'Ver Santo' }
+          ]
+        });
         localStorage.setItem('cathedra_last_reminder_date', today);
       } catch (e) {
         await this.sendLocalNotification(
           "Cathedra: Alimento Espiritual",
-          "A liturgia e o santo do dia já estão disponíveis para sua meditação."
+          "A liturgia e o santo do dia já estão disponíveis para sua meditação.",
+          AppRoute.DAILY_LITURGY
         );
         localStorage.setItem('cathedra_last_reminder_date', today);
       }
@@ -76,11 +83,10 @@ export class NotificationService {
     const midnight = new Date();
     midnight.setHours(24, 0, 0, 0);
     const msUntilMidnight = midnight.getTime() - now.getTime();
-    // Re-agenda para 1 minuto após a meia-noite para garantir a virada do dia
     setTimeout(() => this.scheduleDailyReminder(lang), msUntilMidnight + 60000); 
   }
 
-  public async sendLocalNotification(title: string, body: string) {
+  public async sendLocalNotification(title: string, body: string, url: string = '/', extra: any = {}) {
     if (Notification.permission !== 'granted') return;
 
     if ('serviceWorker' in navigator) {
@@ -88,19 +94,20 @@ export class NotificationService {
         const registration = await navigator.serviceWorker.ready;
         registration.showNotification(title, {
           body,
-          icon: 'https://img.icons8.com/ios-filled/512/d4af37/cross.png',
-          badge: 'https://img.icons8.com/ios-filled/96/d4af37/cross.png',
+          icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png',
+          badge: 'https://img.icons8.com/ios-filled/96/d4af37/throne.png',
           vibrate: [200, 100, 200],
           tag: 'daily-liturgy',
           renotify: true,
           requireInteraction: true,
-          data: { url: '/' }
+          data: { url },
+          ...extra
         } as any);
       } catch (e) {
-        new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/cross.png' });
+        new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png' });
       }
     } else {
-      new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/cross.png' });
+      new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png' });
     }
   }
 }
