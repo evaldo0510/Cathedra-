@@ -8,47 +8,75 @@ export const COLORS = {
   background: '#fdfcf8', 
 };
 
-// Logo Principal - Majestosa e Completa
+// Logo Principal - Heráldica Moderna e Majestosa
 export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
   <div className={`relative flex items-center justify-center group ${className}`}>
-    <div className="absolute inset-0 bg-gold/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-sm">
-      <circle cx="50" cy="50" r="46" stroke="#d4af37" strokeWidth="1.5" strokeDasharray="2 4" className="opacity-40" />
+    {/* Brilho de Fundo Dinâmico */}
+    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+    
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-2xl">
+      <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#d4af37" />
+          <stop offset="50%" stopColor="#fbfbfb" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#b8952e" />
+        </linearGradient>
+        <filter id="innerShadow">
+          <feOffset dx="0" dy="1" />
+          <feGaussianBlur stdDeviation="1" result="offset-blur" />
+          <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
+          <feFlood floodColor="black" floodOpacity="0.5" result="color" />
+          <feComposite operator="in" in="color" in2="inverse" result="shadow" />
+          <feComposite operator="over" in="shadow" in2="SourceGraphic" />
+        </filter>
+      </defs>
+      
+      {/* Anel de Glória Externo */}
+      <circle cx="50" cy="50" r="48" stroke="url(#goldGrad)" strokeWidth="0.5" strokeDasharray="4 4" className="opacity-40 animate-[spin_20s_linear_infinite]" />
+      
+      {/* Estrutura da Cathedra (Trono) */}
       <path 
-        d="M30 75V40C30 34.4772 34.4772 30 40 30H60C65.5228 30 70 34.4772 70 40V75" 
-        stroke="#d4af37" 
-        strokeWidth="3.5" 
+        d="M25 75V35C25 29.4772 29.4772 25 35 25H65C70.5228 25 75 29.4772 75 35V75" 
+        stroke="url(#goldGrad)" 
+        strokeWidth="4" 
         strokeLinecap="round" 
+        filter="url(#innerShadow)"
       />
+      
+      {/* Base do Trono com chanfro */}
       <path 
-        d="M25 75C25 75 35 70 50 70C65 70 75 75 75 75V82C75 82 65 77 50 77C35 77 25 82 25 82V75Z" 
+        d="M20 75H80L85 85H15L20 75Z" 
         fill="#d4af37" 
-        fillOpacity="0.15"
-        stroke="#d4af37" 
-        strokeWidth="2.5" 
+        fillOpacity="0.1"
+        stroke="url(#goldGrad)" 
+        strokeWidth="3" 
       />
-      <path d="M50 38V62M42 46H58" stroke="#d4af37" strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="50" cy="18" r="2" fill="#d4af37" />
-      <circle cx="82" cy="50" r="2" fill="#d4af37" />
-      <circle cx="50" cy="82" r="2" fill="#d4af37" />
-      <circle cx="18" cy="50" r="2" fill="#d4af37" />
+      
+      {/* Cruz Central (Chi-Rho inspirada) */}
+      <path d="M50 32V60" stroke="url(#goldGrad)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M38 42H62" stroke="url(#goldGrad)" strokeWidth="4" strokeLinecap="round" />
+      
+      {/* Detalhes Pontuais (As 4 Marcas da Igreja) */}
+      <circle cx="50" cy="15" r="2.5" fill="#d4af37" className="animate-pulse" />
+      <circle cx="85" cy="50" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:0.5s]" />
+      <circle cx="50" cy="85" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:1s]" />
+      <circle cx="15" cy="50" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:1.5s]" />
     </svg>
   </div>
 );
 
-// Logo Mobile - Minimalista e Icônica (Monograma)
+// Logo Mobile - Monograma de Alta Fidelidade
 export const MobileLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
   <div className={`relative flex items-center justify-center ${className}`}>
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      {/* Apenas o trono simplificado e a cruz para máxima legibilidade */}
       <path 
-        d="M35 70V45C35 42.2386 37.2386 40 40 40H60C62.7614 40 65 42.2386 65 45V70" 
+        d="M30 70V40C30 34.4772 34.4772 30 40 30H60C65.5228 30 70 34.4772 70 40V70" 
         stroke="#d4af37" 
-        strokeWidth="5" 
+        strokeWidth="7" 
         strokeLinecap="round" 
       />
-      <path d="M50 45V65M43 52H57" stroke="#d4af37" strokeWidth="5" strokeLinecap="round" />
-      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="2" className="opacity-20" />
+      <path d="M50 35V65" stroke="#d4af37" strokeWidth="7" strokeLinecap="round" />
+      <path d="M40 45H60" stroke="#d4af37" strokeWidth="7" strokeLinecap="round" />
     </svg>
   </div>
 );

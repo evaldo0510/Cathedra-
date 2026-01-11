@@ -2,7 +2,6 @@
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from "@google/genai";
 import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dogma, Language, ThomisticArticle, UniversalSearchResult, CatechismHierarchy, DailyLiturgyContent, QuizQuestion } from "../types";
 
-// Fixed: Strictly following naming and initialization guidelines
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -55,6 +54,29 @@ const setCache = (key: string, data: any, ttlHours = 12) => {
   localStorage.setItem(`cathedra_cache_${key}`, JSON.stringify({ data, expiry }));
 };
 
+export const fetchRealBibleText = async (book: string, chapter: number, version: string, lang: Language = 'pt'): Promise<Verse[]> => {
+  const cacheKey = `bible_${book}_${chapter}_${version}_${lang}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Você é um erudito bíblico. Retorne TODO o texto integral de ${book}, capítulo ${chapter}, na versão "${version}". 
+                 Idioma do texto: ${lang}. 
+                 Formato: Retorne APENAS um array JSON de objetos: [{"book": "${book}", "chapter": ${chapter}, "verse": número, "text": "conteúdo do versículo"}]. 
+                 Não pule nenhum versículo.`,
+      config: { responseMimeType: "application/json" }
+    });
+    const result = ensureArray(safeJsonParse(response.text || "", []));
+    if (result.length > 0) setCache(cacheKey, result, 720); // Cache de 30 dias para textos bíblicos
+    return result;
+  } catch (e) { 
+    console.error("AI Bible Fetch Error:", e);
+    return []; 
+  }
+};
+
 export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
   try {
     const response = await generateWithRetry({
@@ -65,22 +87,6 @@ export const fetchQuizQuestions = async (category: string, difficulty: string, l
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
-  } catch (e) { return []; }
-};
-
-export const fetchRealBibleText = async (book: string, chapter: number, version: string, lang: Language = 'pt'): Promise<Verse[]> => {
-  const cacheKey = `bible_${book}_${chapter}_${version}_${lang}`;
-  const cached = getCache(cacheKey);
-  if (cached) return cached;
-  try {
-    const response = await generateWithRetry({
-      model: 'gemini-3-flash-preview',
-      contents: `Retorne o texto exato de ${book} ${chapter} na versão ${version}. Idioma: ${lang}. JSON array: [{ "book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..." }]`,
-      config: { responseMimeType: "application/json" }
-    });
-    const result = ensureArray(safeJsonParse(response.text || "", []));
-    if (result.length > 0) setCache(cacheKey, result, 24);
-    return result;
   } catch (e) { return []; }
 };
 

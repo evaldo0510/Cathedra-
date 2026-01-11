@@ -13,93 +13,13 @@ export type BibleVersion = {
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  // ESTUDO EXEGÉTICO E ACADÊMICO (IA ASSISTED PARA PRECISÃO)
-  { 
-    id: 'jerusalem', 
-    slug: 'ai_jerusalem', 
-    name: 'B. de Jerusalém', 
-    lang: 'pt', 
-    description: 'Referência exegética mundial. Tradução baseada nos originais com rigor científico.', 
-    isCatholic: true, 
-    isIA: true 
-  },
-  { 
-    id: 'teb', 
-    slug: 'ai_teb', 
-    name: 'TEB (Ecumênica)', 
-    lang: 'pt', 
-    description: 'Tradução Ecumênica da Bíblia. Famosa pela precisão técnica e notas teológicas profundas.', 
-    isCatholic: true, 
-    isIA: true 
-  },
-  { 
-    id: 'peregrino', 
-    slug: 'ai_peregrino', 
-    name: 'B. do Peregrino', 
-    lang: 'pt', 
-    description: 'Tradução de Luis Alonso Schökel. Foco na beleza literária e poética dos textos originais.', 
-    isCatholic: true, 
-    isIA: true 
-  },
-  
-  // PADRÕES LITÚRGICOS E POPULARES
-  { 
-    id: 'cnbb', 
-    slug: 'ai_cnbb', 
-    name: 'Bíblia da CNBB', 
-    lang: 'pt', 
-    description: 'Tradução oficial da Igreja no Brasil para a liturgia e sacramentos.', 
-    isCatholic: true, 
-    isIA: true 
-  },
-  { 
-    id: 'ave_maria', 
-    slug: 'ai_ave_maria', 
-    name: 'Ave Maria', 
-    lang: 'pt', 
-    description: 'A versão mais popular entre os fiéis lusófonos desde 1959.', 
-    isCatholic: true, 
-    isIA: true 
-  },
-  
-  // TRADIÇÃO LATINA E HISTÓRICA
-  { 
-    id: 'vulgata', 
-    slug: 'clementine', 
-    name: 'Vulgata Clementina', 
-    lang: 'la', 
-    description: 'Bíblia Sacra (Ed. 1592). O padrão latino histórico da Igreja Católica.', 
-    isLatin: true, 
-    isCatholic: true 
-  },
-  { 
-    id: 'nvulgata', 
-    slug: 'ai_nvulgata', 
-    name: 'Nova Vulgata', 
-    lang: 'la', 
-    description: 'Edição típica oficial do Vaticano (promulgada por S. João Paulo II).', 
-    isLatin: true, 
-    isCatholic: true, 
-    isIA: true 
-  },
-  
-  // REFERÊNCIAS INTERNACIONAIS (API)
-  { 
-    id: 'drb', 
-    slug: 'drb', 
-    name: 'Douay-Rheims', 
-    lang: 'en', 
-    description: 'A tradicional Bíblia Católica de língua inglesa, baseada na Vulgata.', 
-    isCatholic: true 
-  },
-  { 
-    id: 'kjv', 
-    slug: 'kjv', 
-    name: 'King James', 
-    lang: 'en', 
-    description: 'Clássico da literatura inglesa (Authorized Version). Uso comparativo.', 
-    isCatholic: false 
-  }
+  { id: 'jerusalem', slug: 'ai_jerusalem', name: 'B. de Jerusalém', lang: 'pt', description: 'Referência exegética mundial. Tradução baseada nos originais.', isCatholic: true, isIA: true },
+  { id: 'cnbb', slug: 'ai_cnbb', name: 'Bíblia da CNBB', lang: 'pt', description: 'Tradução oficial da Igreja no Brasil para a liturgia.', isCatholic: true, isIA: true },
+  { id: 'ave_maria', slug: 'ai_ave_maria', name: 'Ave Maria', lang: 'pt', description: 'A versão mais popular entre os fiéis lusófonos.', isCatholic: true, isIA: true },
+  { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). O padrão latino histórico.', isLatin: true, isCatholic: true },
+  { id: 'nvulgata', slug: 'ai_nvulgata', name: 'Nova Vulgata', lang: 'la', description: 'Edição típica oficial do Vaticano.', isLatin: true, isCatholic: true, isIA: true },
+  { id: 'drb', slug: 'drb', name: 'Douay-Rheims', lang: 'en', description: 'Bíblia Católica tradicional em inglês.', isCatholic: true },
+  { id: 'kjv', slug: 'kjv', name: 'King James', lang: 'en', description: 'Clássico da literatura inglesa. Uso comparativo.', isCatholic: false }
 ];
 
 export const LATIN_BOOK_NAMES: Record<string, string> = {
@@ -130,32 +50,42 @@ export const LATIN_BOOK_NAMES: Record<string, string> = {
   "3 João": "Epistula Ioannis III", "Judas": "Epistula Iudae", "Apocalipse": "Apocalypsis Ioannis"
 };
 
-export const DEUTEROCANONICAL_BOOKS = [
-  "Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"
+export const CHAPTER_COUNTS: Record<string, number> = {
+  "Gênesis": 50, "Êxodo": 40, "Levítico": 27, "Números": 36, "Deuteronômio": 34,
+  "Josué": 24, "Juízes": 21, "Rute": 4, "1 Samuel": 31, "2 Samuel": 24,
+  "1 Reis": 22, "2 Reis": 25, "1 Crônicas": 29, "2 Crônicas": 36, "Esdras": 10,
+  "Neemias": 13, "Tobias": 14, "Judite": 16, "Ester": 10, "1 Macabeus": 16, "2 Macabeus": 15,
+  "Jó": 42, "Salmos": 150, "Provérbios": 31, "Eclesiastes": 12, "Cântico dos Cânticos": 8,
+  "Sabedoria": 19, "Eclesiástico": 51, "Isaías": 66, "Jeremias": 52, "Lamentações": 5,
+  "Baruc": 6, "Ezequiel": 48, "Daniel": 14, "Oseias": 14, "Joel": 4, "Amós": 9,
+  "Abdias": 1, "Jonas": 4, "Miqueias": 7, "Naum": 3, "Habacuc": 3, "Sofonias": 3,
+  "Ageu": 2, "Zacarias": 14, "Malaquias": 3, "Mateus": 28, "Marcos": 16, "Lucas": 24,
+  "João": 21, "Atos dos Apóstolos": 28, "Romanos": 16, "1 Coríntios": 16, "2 Coríntios": 13,
+  "Gálatas": 6, "Efésios": 6, "Filipenses": 4, "Colossenses": 4, "1 Tessalonicenses": 5,
+  "2 Tessalonicenses": 3, "1 Timóteo": 6, "2 Timóteo": 4, "Tito": 3, "Filémon": 1,
+  "Hebreus": 13, "Tiago": 5, "1 Pedro": 5, "2 Pedro": 3, "1 João": 5, "2 João": 1,
+  "3 João": 1, "Judas": 1, "Apocalipse": 22
+};
+
+export const DEUTEROCANONICAL_BOOKS = ["Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"];
+
+export const getCatholicCanon = () => ({
+  "Antigo Testamento": {
+    "Pentateuco": ["Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio"],
+    "Históricos": ["Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Tobias", "Judite", "Ester", "1 Macabeus", "2 Macabeus"],
+    "Sapienciais": ["Jó", "Salmos", "Provérbios", "Eclesiastes", "Cântico dos Cânticos", "Sabedoria", "Eclesiástico"],
+    "Proféticos": ["Isaías", "Jeremias", "Lamentações", "Baruc", "Ezequiel", "Daniel", "Oseias", "Joel", "Amós", "Abdias", "Jonas", "Miqueias", "Naum", "Habacuc", "Sofonias", "Ageu", "Zacarias", "Malaquias"]
+  },
+  "Novo Testamento": {
+    "Evangelhos": ["Mateus", "Marcos", "Lucas", "João"],
+    "Atos": ["Atos dos Apóstolos"],
+    "Epístolas": ["Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filémon", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas"],
+    "Profético": ["Apocalipse"]
+  }
+});
+
+export const getChapterCount = (book: string): number => CHAPTER_COUNTS[book] || 20;
+
+export const fetchLocalFallback = (book: string, chapter: number): Verse[] => [
+  { book, chapter, verse: 1, text: "O texto está sendo recuperado da nuvem para o seu dispositivo... Por favor, aguarde a iluminação da Palavra." }
 ];
-
-export const getCatholicCanon = () => {
-  return {
-    "Antigo Testamento": {
-      "Pentateuco": ["Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio"],
-      "Históricos": ["Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Tobias", "Judite", "Ester", "1 Macabeus", "2 Macabeus"],
-      "Sapienciais": ["Jó", "Salmos", "Provérbios", "Eclesiastes", "Cântico dos Cânticos", "Sabedoria", "Eclesiástico"],
-      "Proféticos": ["Isaías", "Jeremias", "Lamentações", "Baruc", "Ezequiel", "Daniel", "Oseias", "Joel", "Amós", "Abdias", "Jonas", "Miqueias", "Naum", "Habacuc", "Sofonias", "Ageu", "Zacarias", "Malaquias"]
-    },
-    "Novo Testamento": {
-      "Evangelhos": ["Mateus", "Marcos", "Lucas", "João"],
-      "Atos": ["Atos dos Apóstolos"],
-      "Epístolas": ["Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filémon", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas"],
-      "Profético": ["Apocalipse"]
-    }
-  };
-};
-
-export const getChapterCount = (book: string): number => {
-  const counts: Record<string, number> = { "Gênesis": 50, "Êxodo": 40, "Levítico": 27, "Números": 36, "Deuteronômio": 34, "Salmos": 150, "Isaías": 66, "Mateus": 28, "Apocalipse": 22 };
-  return counts[book] || 20;
-};
-
-export const fetchLocalFallback = (book: string, chapter: number): Verse[] => {
-  return [{ book, chapter, verse: 1, text: "Recuperando texto da Tradição..." }];
-};

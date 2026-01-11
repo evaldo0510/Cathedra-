@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
@@ -28,10 +28,11 @@ import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import { AppRoute, StudyResult, User, Language } from './types';
-import { getIntelligentStudy } from './services/gemini';
+import { getIntelligentStudy, generateSpeech } from './services/gemini';
 import { Icons, MobileLogo } from './constants';
 import { UI_TRANSLATIONS } from './services/translations';
 import { notificationService } from './services/notifications';
+import { decodeBase64, decodeAudioData } from './utils/audio';
 
 interface LanguageContextType {
   lang: Language;
@@ -58,9 +59,16 @@ const App: React.FC = () => {
   });
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
 
+  // TTS States
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTTSSearching, setIsTTSSearching] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
   useEffect(() => {
     setTimeout(() => setLoading(false), 800);
     notificationService.initNotifications(lang);
+    return () => stopSpeech();
   }, [lang]);
 
   useEffect(() => {
@@ -69,8 +77,79 @@ const App: React.FC = () => {
     localStorage.setItem('cathedra_dark', String(isDark));
   }, [isDark]);
 
+  const stopSpeech = useCallback(() => {
+    if (audioSourceRef.current) {
+      try { audioSourceRef.current.stop(); } catch (e) {}
+      audioSourceRef.current = null;
+    }
+    setIsSpeaking(false);
+    setIsTTSSearching(false);
+  }, []);
+
+  const handleToggleSpeech = async () => {
+    if (isSpeaking || isTTSSearching) {
+      stopSpeech();
+      return;
+    }
+
+    // 1. Extração de texto do conteúdo atual
+    const mainContent = document.querySelector('main article, main section, .page-enter');
+    if (!mainContent) return;
+
+    const elements = mainContent.querySelectorAll('h1, h2, h3, p');
+    let textToRead = "";
+    elements.forEach(el => {
+      // Evita ler botões ou menus internos
+      if (!el.closest('button') && !el.closest('nav')) {
+        textToRead += el.textContent + ". ";
+      }
+    });
+
+    if (!textToRead.trim()) return;
+
+    setIsTTSSearching(true);
+
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      const base64Data = await generateSpeech(textToRead.slice(0, 4000)); // Limite de caracteres para TTS
+      
+      if (base64Data) {
+        const audioBuffer = await decodeAudioData(
+          decodeBase64(base64Data),
+          audioContextRef.current,
+          24000,
+          1
+        );
+
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        
+        source.onended = () => {
+          setIsSpeaking(false);
+          audioSourceRef.current = null;
+        };
+
+        audioSourceRef.current = source;
+        setIsTTSSearching(false);
+        setIsSpeaking(true);
+        source.start(0);
+      } else {
+        throw new Error("TTS failed");
+      }
+    } catch (err) {
+      console.error("Erro no Lectorium:", err);
+      setIsTTSSearching(false);
+      setIsSpeaking(false);
+    }
+  };
+
   const handleSearch = useCallback(async (topic: string) => {
     setRoute(AppRoute.STUDY_MODE);
+    stopSpeech();
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
@@ -78,15 +157,15 @@ const App: React.FC = () => {
       const filtered = history.filter((h: any) => h.topic !== result.topic);
       localStorage.setItem('cathedra_history', JSON.stringify([result, ...filtered].slice(0, 10)));
     } catch (e) { console.error(e); } 
-  }, [lang]);
+  }, [lang, stopSpeech]);
 
   const navigateTo = useCallback((r: AppRoute) => {
     setRoute(r);
     setIsSidebarOpen(false);
-    // Smooth scroll para o topo ao mudar de rota
+    stopSpeech();
     const mainArea = document.querySelector('main');
     if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [stopSpeech]);
 
   const t = useCallback((key: string) => UI_TRANSLATIONS[lang][key] || key, [lang]);
 
@@ -141,7 +220,7 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+        <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
           {/* Header Mobile Otimizado */}
           <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
              <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
@@ -154,6 +233,37 @@ const App: React.FC = () => {
              <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
                {isDark ? <Icons.Globe className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
              </button>
+          </div>
+
+          {/* Lectorium (Floating TTS Controls) */}
+          <div className="fixed bottom-24 right-8 z-[200] md:bottom-12 md:right-12 group">
+             <div className={`absolute -top-12 right-0 bg-stone-900 text-gold text-[8px] font-black uppercase px-4 py-2 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity tracking-widest border border-gold/20 shadow-2xl`}>
+                {isTTSSearching ? 'Preparando Voz Magisterial...' : isSpeaking ? 'Silenciar Áudio' : 'Ouvir Conteúdo'}
+             </div>
+             <button 
+               onClick={handleToggleSpeech}
+               className={`w-16 h-16 rounded-full shadow-3xl flex items-center justify-center transition-all active:scale-90 border-2 ${
+                 isTTSSearching ? 'bg-gold border-gold' : 
+                 isSpeaking ? 'bg-sacred border-sacred animate-pulse' : 
+                 'bg-white dark:bg-stone-800 border-stone-100 dark:border-white/10 hover:border-gold'
+               }`}
+             >
+                {isTTSSearching ? (
+                  <div className="w-6 h-6 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
+                ) : isSpeaking ? (
+                  <Icons.Stop className="w-6 h-6 text-white" />
+                ) : (
+                  <Icons.Audio className={`w-6 h-6 ${isSpeaking ? 'text-white' : 'text-gold'}`} />
+                )}
+             </button>
+             
+             {isSpeaking && (
+               <div className="absolute top-1/2 -left-12 -translate-y-1/2 flex items-center gap-1">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className={`w-1 bg-white/40 rounded-full animate-bounce`} style={{ height: `${i * 6}px`, animationDelay: `${i * 0.2}s` }} />
+                  ))}
+               </div>
+             )}
           </div>
 
           <div className="flex-1 p-4 md:p-12 lg:p-16 pb-24 max-w-[1400px] mx-auto w-full">

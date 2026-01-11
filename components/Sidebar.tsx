@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       title: 'Sacra Doctrina',
       items: [
         { name: 'Codex Fidei (Catecismo)', icon: Icons.Cross, path: AppRoute.CATECHISM, subtitle: 'O mapa seguro da fé católica' },
-        { name: 'Enchiridion (Magistério)', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'O Depósito da Fé preservado' },
+        { name: 'Magistério da Igreja', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'O Ensino Oficial' },
         { name: 'Verdades (Dogmas)', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'A rocha imutável da verdade' },
         { name: 'Sanctorum (Santos)', icon: Icons.Users, path: AppRoute.SAINTS, subtitle: 'Aqueles que viram a Luz' },
       ]
@@ -37,10 +37,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
     {
       title: 'Academia (Estudo)',
       items: [
-        { name: 'Symphonia (Estudo)', icon: Icons.Layout, path: AppRoute.STUDY_MODE, subtitle: 'Bíblia + Tradição via Inteligência IA' },
-        { name: 'Aula Magna (Cathedra)', icon: Icons.Feather, path: AppRoute.COMMUNITY, subtitle: 'Lições profundas e mistério' },
+        { name: 'Symphonia (Estudo)', icon: Icons.Search, path: AppRoute.STUDY_MODE, subtitle: 'Bíblia + Tradição via Inteligência IA' },
+        { name: 'Aula Magna (Comunidade)', icon: Icons.Users, path: AppRoute.COMMUNITY, subtitle: 'Lições profundas e mistério' },
         { name: 'Opera Omnia', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'A sabedoria de S. Tomás de Aquino' },
-        { name: 'Certamen (Quiz)', icon: Icons.Star, path: AppRoute.CERTAMEN, subtitle: 'Duelo intelectual sacro' },
+        { name: 'Certamen (Quiz)', icon: Icons.Layout, path: AppRoute.CERTAMEN, subtitle: 'Duelo intelectual sacro' },
       ]
     },
     {
@@ -89,34 +89,37 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
               {group.title}
             </h3>
             <div className="space-y-1.5">
-              {group.items.map(item => (
-                <button 
-                  key={item.name}
-                  onClick={() => handleNavigation(item.path)}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden active:bg-white/10 ${
-                    currentPath === item.path 
-                      ? 'bg-white/10 border border-[#d4af37]/40 shadow-[inset_0_0_20px_rgba(212,175,55,0.08)]' 
-                      : 'hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  {currentPath === item.path && (
-                    <div className="absolute left-0 top-0 w-1 h-full bg-gold shadow-[0_0_15px_#d4af37]" />
-                  )}
-                  
-                  <div className={`p-2.5 rounded-xl transition-all duration-500 ${currentPath === item.path ? 'bg-gold/10 text-gold scale-110' : 'text-stone-600 group-hover:text-gold/70'}`}>
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                  </div>
-                  
-                  <div className="flex flex-col items-start min-w-0 text-left">
-                    <span className={`font-serif text-[15px] lg:text-[17px] transition-colors leading-tight ${currentPath === item.path ? 'text-gold font-bold' : 'text-stone-300 group-hover:text-white'}`}>
-                      {item.name}
-                    </span>
-                    <span className={`text-[9px] italic truncate w-full transition-opacity mt-0.5 ${currentPath === item.path ? 'text-white/70 opacity-100' : 'text-white/20 group-hover:text-white/40'}`}>
-                      {item.subtitle}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {group.items.map(item => {
+                const isActive = currentPath === item.path;
+                return (
+                  <button 
+                    key={item.name}
+                    onClick={() => handleNavigation(item.path)}
+                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden active:bg-white/10 ${
+                      isActive 
+                        ? 'bg-white/10 border border-[#d4af37]/40 shadow-[inset_0_0_20px_rgba(212,175,55,0.08)]' 
+                        : 'hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-0 w-1 h-full bg-gold shadow-[0_0_15px_#d4af37]" />
+                    )}
+                    
+                    <div className={`p-2.5 rounded-xl transition-all duration-500 ${isActive ? 'bg-gold/10 text-gold scale-110' : 'text-stone-600 group-hover:text-gold/70'}`}>
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                    </div>
+                    
+                    <div className="flex flex-col items-start min-w-0 text-left">
+                      <span className={`font-serif text-[15px] lg:text-[17px] transition-colors leading-tight ${isActive ? 'text-gold font-bold' : 'text-stone-300 group-hover:text-white'}`}>
+                        {item.name}
+                      </span>
+                      <span className={`text-[9px] italic truncate w-full transition-opacity mt-0.5 ${isActive ? 'text-white/70 opacity-100' : 'text-white/20 group-hover:text-white/40'}`}>
+                        {item.subtitle}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
