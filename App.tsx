@@ -78,9 +78,14 @@ const App: React.FC = () => {
   }, [isDark]);
 
   const stopSpeech = useCallback(() => {
+    // Para o áudio da Web Audio API (Gemini)
     if (audioSourceRef.current) {
       try { audioSourceRef.current.stop(); } catch (e) {}
       audioSourceRef.current = null;
+    }
+    // Para o áudio do browser (SpeechSynthesis Fallback)
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
     setIsTTSSearching(false);
@@ -92,20 +97,23 @@ const App: React.FC = () => {
       return;
     }
 
-    // 1. Extração de texto do conteúdo atual
+    // 1. Extração de texto do conteúdo atual de forma limpa
     const mainContent = document.querySelector('main article, main section, .page-enter');
     if (!mainContent) return;
 
-    const elements = mainContent.querySelectorAll('h1, h2, h3, p');
+    const elements = mainContent.querySelectorAll('h1, h2, h3, p, li');
     let textToRead = "";
     elements.forEach(el => {
-      // Evita ler botões ou menus internos
-      if (!el.closest('button') && !el.closest('nav')) {
-        textToRead += el.textContent + ". ";
+      if (!el.closest('button') && !el.closest('nav') && !el.closest('footer')) {
+        const text = el.textContent?.trim();
+        if (text) textToRead += text + ". ";
       }
     });
 
-    if (!textToRead.trim()) return;
+    // Sanitização básica: remove quebras de linha excessivas e espaços duplos
+    textToRead = textToRead.replace(/\s+/g, ' ').trim();
+
+    if (!textToRead) return;
 
     setIsTTSSearching(true);
 
@@ -114,7 +122,13 @@ const App: React.FC = () => {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
-      const base64Data = await generateSpeech(textToRead.slice(0, 4000)); // Limite de caracteres para TTS
+      // IMPORTANTE: Resume o contexto de áudio (obrigatório em muitos browsers após interação)
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      // Tenta o TTS Profissional do Gemini (limite seguro de 2000 caracteres para evitar timeout)
+      const base64Data = await generateSpeech(textToRead.slice(0, 2000)); 
       
       if (base64Data) {
         const audioBuffer = await decodeAudioData(
@@ -138,12 +152,35 @@ const App: React.FC = () => {
         setIsSpeaking(true);
         source.start(0);
       } else {
-        throw new Error("TTS failed");
+        // Se base64Data for nulo, lança erro para cair no fallback
+        throw new Error("Gemini TTS failed");
       }
     } catch (err) {
-      console.error("Erro no Lectorium:", err);
-      setIsTTSSearching(false);
-      setIsSpeaking(false);
+      console.warn("Gemini TTS falhou. Acionando Fallback Lectorium nativo...", err);
+      
+      // Fallback: Web Speech API (Browser Nativo)
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToRead.slice(0, 3000));
+        utterance.lang = lang === 'pt' ? 'pt-BR' : lang === 'la' ? 'it-IT' : lang; // Latim soa melhor com motor italiano
+        utterance.rate = 0.9; // Um pouco mais lento para ser solene
+        
+        utterance.onstart = () => {
+          setIsTTSSearching(false);
+          setIsSpeaking(true);
+        };
+        utterance.onend = () => {
+          setIsSpeaking(false);
+        };
+        utterance.onerror = () => {
+          setIsTTSSearching(false);
+          setIsSpeaking(false);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setIsTTSSearching(false);
+        setIsSpeaking(false);
+      }
     }
   };
 

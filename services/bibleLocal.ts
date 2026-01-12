@@ -13,13 +13,11 @@ export type BibleVersion = {
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: 'jerusalem', slug: 'ai_jerusalem', name: 'B. de Jerusalém', lang: 'pt', description: 'Referência exegética mundial. Tradução baseada nos originais.', isCatholic: true, isIA: true },
+  { id: 'ave_maria', slug: 'ai_ave_maria', name: 'Ave Maria', lang: 'pt', description: 'Tradução clássica e piedosa, favorita dos fiéis católicos.', isCatholic: true, isIA: true },
+  { id: 'jerusalem', slug: 'ai_jerusalem', name: 'B. de Jerusalém', lang: 'pt', description: 'Referência exegética e teológica mundial.', isCatholic: true, isIA: true },
   { id: 'cnbb', slug: 'ai_cnbb', name: 'Bíblia da CNBB', lang: 'pt', description: 'Tradução oficial da Igreja no Brasil para a liturgia.', isCatholic: true, isIA: true },
-  { id: 'ave_maria', slug: 'ai_ave_maria', name: 'Ave Maria', lang: 'pt', description: 'A versão mais popular entre os fiéis lusófonos.', isCatholic: true, isIA: true },
   { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). O padrão latino histórico.', isLatin: true, isCatholic: true },
-  { id: 'nvulgata', slug: 'ai_nvulgata', name: 'Nova Vulgata', lang: 'la', description: 'Edição típica oficial do Vaticano.', isLatin: true, isCatholic: true, isIA: true },
-  { id: 'drb', slug: 'drb', name: 'Douay-Rheims', lang: 'en', description: 'Bíblia Católica tradicional em inglês.', isCatholic: true },
-  { id: 'kjv', slug: 'kjv', name: 'King James', lang: 'en', description: 'Clássico da literatura inglesa. Uso comparativo.', isCatholic: false }
+  { id: 'drb', slug: 'drb', name: 'Douay-Rheims', lang: 'en', description: 'Tradução católica tradicional em língua inglesa.', isCatholic: true },
 ];
 
 export const LATIN_BOOK_NAMES: Record<string, string> = {
@@ -67,7 +65,9 @@ export const CHAPTER_COUNTS: Record<string, number> = {
   "3 João": 1, "Judas": 1, "Apocalipse": 22
 };
 
-export const DEUTEROCANONICAL_BOOKS = ["Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"];
+export const DEUTEROCANONICAL_BOOKS = [
+  "Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"
+];
 
 export const getCatholicCanon = () => ({
   "Antigo Testamento": {
@@ -87,5 +87,5 @@ export const getCatholicCanon = () => ({
 export const getChapterCount = (book: string): number => CHAPTER_COUNTS[book] || 20;
 
 export const fetchLocalFallback = (book: string, chapter: number): Verse[] => [
-  { book, chapter, verse: 1, text: "O texto está sendo recuperado da nuvem para o seu dispositivo... Por favor, aguarde a iluminação da Palavra." }
+  { book, chapter, verse: 1, text: "O Verbo se faz carne. Recuperando manuscrito dos arquivos sagrados... Por favor, aguarde um instante." }
 ];

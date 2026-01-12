@@ -1,18 +1,21 @@
 
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Icons, Logo } from '../constants';
-import { universalSearch, fetchDailyVerse } from '../services/gemini';
+import { universalSearch, fetchDailyVerse, getDailyBundle } from '../services/gemini';
 import { AppRoute, User, UniversalSearchResult, StudyResult } from '../types';
 import SacredImage from '../components/SacredImage';
 import { LangContext } from '../App';
+import ActionButtons from '../components/ActionButtons';
 
 const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (route: AppRoute) => void; user: User | null }> = ({ onSearch, onNavigate, user }) => {
   const { lang } = useContext(LangContext);
   const [dailyVerse, setDailyVerse] = useState<any>(null);
+  const [dailyBundle, setDailyBundle] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<UniversalSearchResult[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingBundle, setLoadingBundle] = useState(true);
   const [recentStudies, setRecentStudies] = useState<StudyResult[]>([]);
 
   const scriptuariumRail = [
@@ -29,8 +32,15 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
 
   useEffect(() => {
     const fetch = async () => {
-      const verse = await fetchDailyVerse(lang);
+      // Carregamento paralelo para eficiência
+      const [verse, bundle] = await Promise.all([
+        fetchDailyVerse(lang),
+        getDailyBundle(lang)
+      ]);
+      
       setDailyVerse(verse);
+      setDailyBundle(bundle);
+      setLoadingBundle(false);
       
       const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
       setRecentStudies(history.slice(0, 5));
@@ -169,6 +179,65 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         </section>
       ) : (
         <div className="space-y-24 px-4 md:px-0">
+          
+          {/* SEÇÃO: SENTENTIA SANCTORUM (CITAÇÃO DO DIA) */}
+          <section className="max-w-4xl mx-auto animate-in slide-in-from-bottom-10 duration-1000">
+            {loadingBundle ? (
+              <div className="bg-white dark:bg-stone-900 h-64 rounded-[3.5rem] animate-pulse shadow-xl border border-stone-100 dark:border-stone-800" />
+            ) : dailyBundle?.saint?.quote && (
+              <div className="bg-white dark:bg-[#1a1917] p-10 md:p-16 rounded-[4rem] shadow-3xl border border-stone-100 dark:border-stone-800 relative overflow-hidden group">
+                {/* Textura de pergaminho sutil */}
+                <div className="absolute inset-0 parchment opacity-20 pointer-events-none" />
+                <div className="absolute top-0 right-0 p-12 opacity-[0.05] group-hover:rotate-12 transition-transform duration-[2000ms]">
+                  <Icons.Feather className="w-56 h-56 text-gold" />
+                </div>
+                
+                <div className="relative z-10 flex flex-col items-center text-center space-y-10">
+                  <div className="flex items-center gap-6">
+                    <div className="h-px w-10 md:w-20 bg-gold/40" />
+                    <span className="text-[11px] md:text-[13px] font-black uppercase tracking-[0.7em] text-gold">Sententia Sanctorum</span>
+                    <div className="h-px w-10 md:w-20 bg-gold/40" />
+                  </div>
+
+                  <div className="space-y-10 max-w-2xl">
+                    <div className="relative px-8">
+                       <Icons.Cross className="absolute -top-4 -left-2 w-10 h-10 text-gold/10 rotate-12" />
+                       <p className="text-4xl md:text-6xl font-serif italic text-stone-800 dark:text-stone-100 leading-snug tracking-tight first-letter:text-8xl first-letter:font-bold first-letter:text-gold first-letter:mr-3 first-letter:float-left">
+                         "{dailyBundle.saint.quote}"
+                       </p>
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-sacred/5 border-2 border-sacred/20 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                        <Icons.Cross className="w-5 h-5 text-sacred" />
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 dark:text-gold">{dailyBundle.saint.name}</h5>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Doutor da Fé • Hodie</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-8 flex flex-wrap justify-center gap-4 border-t border-stone-50 dark:border-stone-800 w-full max-w-md mx-auto">
+                    <ActionButtons 
+                      itemId={`quote_${new Date().toISOString().split('T')[0]}`} 
+                      type="prayer" 
+                      title={`Sententia: ${dailyBundle.saint.name}`} 
+                      content={dailyBundle.saint.quote} 
+                      className="scale-125"
+                    />
+                    <button 
+                      onClick={() => onNavigate(AppRoute.SAINTS)}
+                      className="px-10 py-3 bg-stone-50 dark:bg-stone-800 text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-gold hover:border-gold transition-all rounded-full border border-stone-200 dark:border-stone-700 shadow-md"
+                    >
+                      Vida do Santo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
           {recentStudies.length > 0 && renderRail("Continuar Investigação", recentStudies, 'history')}
           {renderRail("Santuário Hodie", scriptuariumRail)}
           {renderRail("Sacra Doctrina", doctrineRail)}
