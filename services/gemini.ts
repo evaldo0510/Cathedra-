@@ -49,60 +49,52 @@ const getCache = (key: string) => {
   return data;
 };
 
-const setCache = (key: string, data: any, ttlHours = 12) => {
+const setCache = (key: string, data: any, ttlHours = 720) => { // 30 dias de cache para Bíblia
   const expiry = new Date().getTime() + (ttlHours * 60 * 60 * 1000);
   localStorage.setItem(`cathedra_cache_${key}`, JSON.stringify({ data, expiry }));
 };
 
 export const fetchRealBibleText = async (book: string, chapter: number, version: string, lang: Language = 'pt'): Promise<Verse[]> => {
-  const cacheKey = `bible_full_v4_${book}_${chapter}_${version}_${lang}`;
+  const cacheKey = `bible_ave_maria_v1_${book}_${chapter}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
   
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Você é um Lectorium Sagrado. Transcreva o texto INTEGRAL e COMPLETO de ${book}, capítulo ${chapter}, especificamente na tradução "${version}". 
-                 Idioma: ${lang}. 
-                 Regra Crucial: Não resuma. Não pule versículos. Retorne do versículo 1 até o último do capítulo.
-                 Formato: Retorne APENAS um array JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": número, "text": "conteúdo fiel"}].`,
+      contents: `Você é o Lectorium Cathedra. Sua missão é fornecer o texto INTEGRAL, FIEL e COMPLETO da Bíblia na tradução "${version}".
+                 Livro: ${book}
+                 Capítulo: ${chapter}
+                 Idioma: ${lang}
+                 
+                 REGRAS:
+                 1. Retorne TODOS os versículos do capítulo, do 1 ao último, sem exceção.
+                 2. Não resuma. Não pule versículos.
+                 3. Mantenha a pontuação e estilo da tradução ${version}.
+                 
+                 Formato de saída: Apenas um JSON array estrito:
+                 [{"book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..."}, ...]`,
       config: { responseMimeType: "application/json" }
     });
     const result = ensureArray(safeJsonParse(response.text || "", []));
-    if (result.length > 0) setCache(cacheKey, result, 720); 
+    if (result.length > 0) setCache(cacheKey, result); 
     return result;
   } catch (e) { 
-    console.error("AI Bible Fetch Error:", e);
+    console.error("Erro Crítico na Bíblia IA:", e);
     return []; 
   }
 };
 
-export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
+// ... restante dos exports (estudos, liturgia, etc) permanecem iguais ...
+export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Gere 5 perguntas de quiz sobre "${category}" no nível "${difficulty}". Idioma: ${lang}. JSON: [{ "id": "uuid", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "..." }]`,
+      contents: `Busque no Depósito da Fé: "${query}". Idioma: ${lang}. JSON array: [{ "id": "1", "type": "verse", "title": "...", "snippet": "...", "source": { "name": "...", "code": "..." }, "relevance": 0.9 }]`,
       config: { responseMimeType: "application/json" }
     });
     return ensureArray(safeJsonParse(response.text || "", []));
   } catch (e) { return []; }
-};
-
-export const getDailyBundle = async (lang: Language = 'pt'): Promise<any> => {
-  const today = new Date().toISOString().split('T')[0];
-  const cacheKey = `bundle_${today}_${lang}`;
-  const cached = getCache(cacheKey);
-  if (cached) return cached;
-  try {
-    const response = await generateWithRetry({
-      model: 'gemini-3-flash-preview',
-      contents: `Gere um bundle diário católico em ${lang}. JSON: { "saint": { "name": "...", "image": "...", "quote": "..." }, "gospel": { "reference": "...", "text": "..." } }`,
-      config: { responseMimeType: "application/json" }
-    });
-    const result = safeJsonParse(response.text || "", {});
-    if (result.saint) setCache(cacheKey, result, 12);
-    return result;
-  } catch (e) { return { saint: { name: "Igreja" }, gospel: { reference: "", text: "" } }; }
 };
 
 export const fetchDailyVerse = async (lang: Language = 'pt'): Promise<any> => {
@@ -122,15 +114,21 @@ export const fetchDailyVerse = async (lang: Language = 'pt'): Promise<any> => {
   } catch (e) { return null; }
 };
 
-export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
+export const getDailyBundle = async (lang: Language = 'pt'): Promise<any> => {
+  const today = new Date().toISOString().split('T')[0];
+  const cacheKey = `bundle_${today}_${lang}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Busque no Depósito da Fé: "${query}". Idioma: ${lang}. JSON array: [{ "id": "1", "type": "verse", "title": "...", "snippet": "...", "source": { "name": "...", "code": "..." }, "relevance": 0.9 }]`,
+      contents: `Gere um bundle diário católico em ${lang}. JSON: { "saint": { "name": "...", "image": "...", "quote": "..." }, "gospel": { "reference": "...", "text": "..." } }`,
       config: { responseMimeType: "application/json" }
     });
-    return ensureArray(safeJsonParse(response.text || "", []));
-  } catch (e) { return []; }
+    const result = safeJsonParse(response.text || "", {});
+    if (result.saint) setCache(cacheKey, result, 12);
+    return result;
+  } catch (e) { return { saint: { name: "Igreja" }, gospel: { reference: "", text: "" } }; }
 };
 
 export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'): Promise<StudyResult> => {
@@ -142,6 +140,24 @@ export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'):
     });
     return safeJsonParse(response.text || "", {});
   } catch (e) { throw e; }
+};
+
+export const generateSpeech = async (text: string): Promise<string | undefined> => {
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Leia com solenidade: ${text}` }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+      },
+    });
+    const partWithAudio = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.includes('audio'));
+    return partWithAudio?.inlineData?.data;
+  } catch (e) { 
+    return undefined; 
+  }
 };
 
 export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): Promise<DailyLiturgyContent> => {
@@ -169,24 +185,6 @@ export const fetchThomisticArticle = async (work: string, reference: string, lan
     });
     return safeJsonParse(response.text || "", {});
   } catch (e) { throw e; }
-};
-
-export const generateSpeech = async (text: string): Promise<string | undefined> => {
-  try {
-    const ai = getAIInstance();
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Leia com solenidade: ${text}` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-      },
-    });
-    const partWithAudio = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.includes('audio'));
-    return partWithAudio?.inlineData?.data;
-  } catch (e) { 
-    return undefined; 
-  }
 };
 
 export const fetchLitanies = async (type: string, lang: Language = 'pt'): Promise<any> => {
@@ -231,17 +229,6 @@ export const getCatechismHierarchy = async (parentId?: string, lang: Language = 
     });
     return ensureArray(safeJsonParse(response.text || "", []));
   } catch (e) { return []; }
-};
-
-export const fetchComparisonVerses = async (book: string, chapter: number, verse: number, versions: string[], lang: Language = 'pt'): Promise<Record<string, string>> => {
-  try {
-    const response = await generateWithRetry({
-      model: 'gemini-3-flash-preview',
-      contents: `Compare ${book} ${chapter}:${verse} em ${versions.join(', ')}. JSON: { "Versão": "Texto" }`,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text || "", {});
-  } catch (e) { return {}; }
 };
 
 export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<string[]> => {
@@ -408,4 +395,40 @@ export const fetchMonthlyCalendar = async (month: number, year: number, lang: La
   const result = ensureArray(safeJsonParse(response.text || "", []));
   if (result.length > 0) setCache(cacheKey, result, 168);
   return result;
+};
+
+/* Fix: Added missing export for quiz questions used in Certamen.tsx */
+export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Gere 5 perguntas de quiz sobre "${category}" no nível "${difficulty}" em ${lang}.`,
+      config: { 
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              question: { type: Type.STRING },
+              options: { 
+                type: Type.ARRAY, 
+                items: { type: Type.STRING } 
+              },
+              correctAnswer: { type: Type.INTEGER, description: "Índice (0-3) da opção correta" },
+              explanation: { type: Type.STRING },
+              category: { type: Type.STRING },
+              difficulty: { type: Type.STRING }
+            },
+            required: ["id", "question", "options", "correctAnswer", "explanation", "category", "difficulty"]
+          }
+        }
+      }
+    });
+    return ensureArray(safeJsonParse(response.text || "", []));
+  } catch (e) { 
+    console.error("Erro ao carregar quiz:", e);
+    return []; 
+  }
 };
