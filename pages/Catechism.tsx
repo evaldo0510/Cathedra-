@@ -31,11 +31,10 @@ const Catechism: React.FC<{ onDeepDive?: (topic: string) => void, onNavigateDogm
       console.error('Erro ao carregar hierarquia do Catecismo, usando fallback:', e);
       const fallbackData = getCatechismHierarchyFallback(parentId);
       setHierarchy(fallbackData);
-            }{
-    finally { setLoading(false); }
+    }    finally { setLoading(false); }
   };
 
-  const handleNavigate = (item: CatechismHierarchy) => {
+  const handNavigate = (item: CatechismHierarchy) => {
     setCurrentPath([...currentPath, item]);
     // Se o item for um artigo (nível baixo), carregamos os parágrafos dele
     if (item.level === 'article') {
