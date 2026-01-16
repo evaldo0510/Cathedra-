@@ -27,9 +27,11 @@ const Catechism: React.FC<{ onDeepDive?: (topic: string) => void, onNavigateDogm
     try {
       const data = await getCatechismHierarchy(parentId, lang);
       setHierarchy(data);
-    } catch (e)  console.error('Erro ao carregar hierarquia do Catecismo, usando fallback:', e);
+    } catch (e)  
+      console.error('Erro ao carregar hierarquia do Catecismo, usando fallback:', e);
       const fallbackData = getCatechismHierarchyFallback(parentId);
-      setHierarchy(fallbackData); }
+      setHierarchy(fallbackData);
+    }
     finally { setLoading(false); }
   };
 
