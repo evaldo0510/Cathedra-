@@ -49,43 +49,43 @@ const getCache = (key: string) => {
   return data;
 };
 
-const setCache = (key: string, data: any, ttlHours = 720) => { // 30 dias de cache para Bíblia
+const setCache = (key: string, data: any, ttlHours = 720) => {
   const expiry = new Date().getTime() + (ttlHours * 60 * 60 * 1000);
   localStorage.setItem(`cathedra_cache_${key}`, JSON.stringify({ data, expiry }));
 };
 
+/**
+ * Recupera o texto INTEGRAL de um capítulo bíblico.
+ * O prompt foi reforçado para evitar resumos da IA.
+ */
 export const fetchRealBibleText = async (book: string, chapter: number, version: string, lang: Language = 'pt'): Promise<Verse[]> => {
-  const cacheKey = `bible_ave_maria_v1_${book}_${chapter}`;
+  const cacheKey = `bible_full_v8_${book}_${chapter}_${version}`;
   const cached = getCache(cacheKey);
   if (cached) return cached;
   
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Você é o Lectorium Cathedra. Sua missão é fornecer o texto INTEGRAL, FIEL e COMPLETO da Bíblia na tradução "${version}".
-                 Livro: ${book}
-                 Capítulo: ${chapter}
-                 Idioma: ${lang}
+      contents: `Você é o Arquivista do Vaticano. Sua tarefa é fornecer a transcrição INTEGRAL E COMPLETA do livro ${book}, capítulo ${chapter}, na tradução "${version}".
                  
-                 REGRAS:
-                 1. Retorne TODOS os versículos do capítulo, do 1 ao último, sem exceção.
-                 2. Não resuma. Não pule versículos.
-                 3. Mantenha a pontuação e estilo da tradução ${version}.
+                 REGRAS ABSOLUTAS:
+                 1. NÃO RESUMA. NÃO PULE VERSÍCULOS.
+                 2. Retorne TODOS os versículos do 1 ao último do capítulo.
+                 3. Use o formato JSON abaixo.
                  
-                 Formato de saída: Apenas um JSON array estrito:
-                 [{"book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..."}, ...]`,
+                 Formato JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": número, "text": "conteúdo completo do versículo"}]`,
       config: { responseMimeType: "application/json" }
     });
     const result = ensureArray(safeJsonParse(response.text || "", []));
     if (result.length > 0) setCache(cacheKey, result); 
     return result;
   } catch (e) { 
-    console.error("Erro Crítico na Bíblia IA:", e);
+    console.error("Erro crítico ao carregar Bíblia:", e);
     return []; 
   }
 };
 
-// ... restante dos exports (estudos, liturgia, etc) permanecem iguais ...
+// ... (restante das funções de busca e liturgia preservadas)
 export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   try {
     const response = await generateWithRetry({
@@ -174,6 +174,38 @@ export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): P
     if (result.date) setCache(cacheKey, result, 48);
     return result;
   } catch (e) { throw e; }
+};
+
+export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Gere 5 perguntas de quiz sobre "${category}" no nível "${difficulty}" em ${lang}.`,
+      config: { 
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              question: { type: Type.STRING },
+              options: { 
+                type: Type.ARRAY, 
+                items: { type: Type.STRING } 
+              },
+              correctAnswer: { type: Type.INTEGER },
+              explanation: { type: Type.STRING },
+              category: { type: Type.STRING },
+              difficulty: { type: Type.STRING }
+            },
+            required: ["id", "question", "options", "correctAnswer", "explanation", "category", "difficulty"]
+          }
+        }
+      }
+    });
+    return ensureArray(safeJsonParse(response.text || "", []));
+  } catch (e) { return []; }
 };
 
 export const fetchThomisticArticle = async (work: string, reference: string, lang: Language = 'pt'): Promise<ThomisticArticle> => {
@@ -395,40 +427,4 @@ export const fetchMonthlyCalendar = async (month: number, year: number, lang: La
   const result = ensureArray(safeJsonParse(response.text || "", []));
   if (result.length > 0) setCache(cacheKey, result, 168);
   return result;
-};
-
-/* Fix: Added missing export for quiz questions used in Certamen.tsx */
-export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
-  try {
-    const response = await generateWithRetry({
-      model: 'gemini-3-flash-preview',
-      contents: `Gere 5 perguntas de quiz sobre "${category}" no nível "${difficulty}" em ${lang}.`,
-      config: { 
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              id: { type: Type.STRING },
-              question: { type: Type.STRING },
-              options: { 
-                type: Type.ARRAY, 
-                items: { type: Type.STRING } 
-              },
-              correctAnswer: { type: Type.INTEGER, description: "Índice (0-3) da opção correta" },
-              explanation: { type: Type.STRING },
-              category: { type: Type.STRING },
-              difficulty: { type: Type.STRING }
-            },
-            required: ["id", "question", "options", "correctAnswer", "explanation", "category", "difficulty"]
-          }
-        }
-      }
-    });
-    return ensureArray(safeJsonParse(response.text || "", []));
-  } catch (e) { 
-    console.error("Erro ao carregar quiz:", e);
-    return []; 
-  }
 };

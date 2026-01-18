@@ -22,7 +22,7 @@ const SacredImage: React.FC<SacredImageProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
   
-  // Paleta litúrgica estendida com variações de profundidade
+  // Paleta litúrgica estendida com variações de profundidade para o placeholder
   const SACRED_PALETTE: Record<string, { primary: string, accent: string, depth: string }> = {
     green: { primary: '#064e3b', accent: '#059669', depth: '#022c22' }, 
     red: { primary: '#450a0a', accent: '#dc2626', depth: '#2d0606' },   
@@ -37,10 +37,12 @@ const SacredImage: React.FC<SacredImageProps> = ({
     const colorKey = liturgicalColor?.toLowerCase() || 'gold';
     const palette = SACRED_PALETTE[colorKey] || SACRED_PALETTE.gold;
     
+    // Se uma cor dominante for fornecida, usamos ela como base.
+    // Caso contrário, usamos a paleta litúrgica.
     return {
       base: dominantColor || palette.primary,
-      accent: palette.accent,
-      depth: palette.depth
+      accent: dominantColor ? `${dominantColor}cc` : palette.accent,
+      depth: dominantColor ? `${dominantColor}66` : palette.depth
     };
   }, [liturgicalColor, dominantColor]);
 
@@ -61,6 +63,7 @@ const SacredImage: React.FC<SacredImageProps> = ({
     const img = new Image();
     img.src = mainSrc;
     img.onload = () => {
+      // Pequeno delay para garantir que o navegador está pronto para renderizar sem jank
       setTimeout(() => setIsLoaded(true), 50);
     };
     img.onerror = () => { 
@@ -71,87 +74,92 @@ const SacredImage: React.FC<SacredImageProps> = ({
 
   return (
     <div className={`relative bg-[#0c0a09] overflow-hidden ${className} group/sacred`}>
-      {/* Sacrum Nebula Placeholder */}
+      {/* Sacrum Nebula Placeholder - Gradiente dinâmico e animado */}
       <div 
         className={`absolute inset-0 z-0 transition-opacity duration-1000 ease-in-out ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
         style={{ backgroundColor: colors.base }}
       >
-        {/* Camadas de drift para simular nebulosa e luz de velas */}
+        {/* Camadas de drift sutil para simular movimento de névoa ou luz de velas */}
         <div 
-          className="absolute inset-[-50%] opacity-40 animate-drift-slow"
+          className="absolute inset-[-50%] opacity-60 animate-drift-slow"
           style={{
-            background: `radial-gradient(circle at 30% 30%, ${colors.accent} 0%, transparent 60%)`
+            background: `radial-gradient(circle at 40% 40%, ${colors.accent} 0%, transparent 70%)`
           }}
         />
         <div 
-          className="absolute inset-[-50%] opacity-30 animate-drift-reverse"
+          className="absolute inset-[-50%] opacity-40 animate-drift-reverse"
           style={{
-            background: `radial-gradient(circle at 70% 70%, ${colors.depth} 0%, transparent 60%)`
+            background: `radial-gradient(circle at 60% 60%, ${colors.depth} 0%, transparent 70%)`
           }}
         />
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-xl" />
+        
+        {/* Overlay de granulação sutil para textura de papel/pergaminho */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] pointer-events-none" />
+        
+        {/* Filtro de desfoque para suavizar os gradientes do placeholder */}
+        <div className="absolute inset-0 backdrop-blur-2xl" />
       </div>
 
-      {/* Shimmer Sutil de Textura */}
+      {/* Shimmer Sutil de Carregamento */}
       {!isLoaded && (
-        <div className="absolute inset-0 z-[1] overflow-hidden opacity-20">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" 
+        <div className="absolute inset-0 z-[1] overflow-hidden opacity-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent -translate-x-full animate-shimmer-fast" 
                style={{ width: '200%' }} />
         </div>
       )}
 
-      {/* Imagem Principal com Revelação de Filtro */}
+      {/* Imagem Principal - Transição Profissional */}
       <img 
         src={error ? "https://images.unsplash.com/photo-1548610762-656391d1ad4d?auto=format&fit=crop&w=400" : mainSrc} 
         alt={alt}
         loading={priority ? "eager" : "lazy"}
-        className={`relative z-[2] w-full h-full object-cover transition-all duration-[2500ms] cubic-bezier(0.23, 1, 0.32, 1) ${
+        className={`relative z-[2] w-full h-full object-cover transition-all duration-[2000ms] cubic-bezier(0.23, 1, 0.32, 1) ${
           isLoaded 
             ? 'opacity-100 scale-100 blur-0 brightness-100 saturate-100' 
-            : 'opacity-0 scale-110 blur-2xl brightness-125 saturate-50'
+            : 'opacity-0 scale-105 blur-md brightness-110 saturate-50'
         }`}
       />
 
-      {/* Ícone de Carregamento Solene */}
+      {/* Indicador de Carregamento Sacro */}
       {!isLoaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <Icons.Cross className="w-8 h-8 opacity-20 text-gold animate-spin-slow" />
+          <Icons.Cross className="w-10 h-10 opacity-20 text-gold animate-spin-slow" />
         </div>
       )}
       
-      {/* Vinheta de Profundidade Artística */}
-      <div className="absolute inset-0 z-[3] pointer-events-none bg-gradient-to-b from-black/20 via-transparent to-black/70 opacity-60 group-hover/sacred:opacity-40 transition-opacity duration-1000" />
+      {/* Vinheta Artística de Profundidade */}
+      <div className="absolute inset-0 z-[3] pointer-events-none bg-gradient-to-b from-black/20 via-transparent to-black/60 opacity-50 group-hover/sacred:opacity-30 transition-opacity duration-1000" />
       
       <style>{`
-        @keyframes shimmer {
+        @keyframes shimmer-fast {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-        .animate-shimmer {
-          animation: shimmer 3s infinite linear;
+        .animate-shimmer-fast {
+          animation: shimmer-fast 2s infinite linear;
         }
         @keyframes drift-slow {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(5%, 5%) rotate(5deg); }
-          100% { transform: translate(0, 0) rotate(0deg); }
+          0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+          50% { transform: translate(3%, 3%) rotate(2deg) scale(1.1); }
+          100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
         @keyframes drift-reverse {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-5%, -5%) rotate(-5deg); }
-          100% { transform: translate(0, 0) rotate(0deg); }
+          0% { transform: translate(0, 0) rotate(0deg) scale(1.1); }
+          50% { transform: translate(-3%, -3%) rotate(-2deg) scale(1); }
+          100% { transform: translate(0, 0) rotate(0deg) scale(1.1); }
         }
         .animate-drift-slow {
-          animation: drift-slow 12s ease-in-out infinite;
+          animation: drift-slow 15s ease-in-out infinite;
         }
         .animate-drift-reverse {
-          animation: drift-reverse 15s ease-in-out infinite;
+          animation: drift-reverse 18s ease-in-out infinite;
         }
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
         .animate-spin-slow {
-          animation: spin-slow 10s linear infinite;
+          animation: spin-slow 12s linear infinite;
         }
       `}</style>
     </div>

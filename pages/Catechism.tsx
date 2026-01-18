@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Icons } from '../constants';
 import { getCatechismSearch, getDogmaticLinksForCatechism, getCatechismHierarchy } from '../services/gemini';
-import { getCatechismHierarchyFallback } from '../services/catechismData';
 import { CatechismParagraph, Dogma, CatechismHierarchy } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
@@ -27,14 +26,11 @@ const Catechism: React.FC<{ onDeepDive?: (topic: string) => void, onNavigateDogm
     try {
       const data = await getCatechismHierarchy(parentId, lang);
       setHierarchy(data);
-    } catch (e)   {
-      console.error('Erro ao carregar hierarquia do Catecismo, usando fallback:', e);
-      const fallbackData = getCatechismHierarchyFallback(parentId);
-      setHierarchy(fallbackData);
-    }    finally { setLoading(false); }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  const handNavigate = (item: CatechismHierarchy) => {
+  const handleNavigate = (item: CatechismHierarchy) => {
     setCurrentPath([...currentPath, item]);
     // Se o item for um artigo (nível baixo), carregamos os parágrafos dele
     if (item.level === 'article') {
