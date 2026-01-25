@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Icons } from '../constants';
 import { fetchLiturgyByDate, generateSpeech } from '../services/gemini';
 import { LangContext } from '../App';
@@ -12,6 +12,7 @@ const DailyLiturgy: React.FC = () => {
   const { lang } = useContext(LangContext);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [data, setData] = useState<DailyLiturgyContent | null>(null);
+  const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [fontSize, setFontSize] = useState(1.2);
@@ -25,8 +26,9 @@ const DailyLiturgy: React.FC = () => {
     setLoading(true);
     stopAudio();
     try {
-      const result = await fetchLiturgyByDate(selectedDate, lang);
-      setData(result);
+      const { content, sources: rawSources } = await fetchLiturgyByDate(selectedDate, lang);
+      setData(content);
+      setSources(rawSources);
     } catch (e) {
       console.error("Erro no lecionário:", e);
     } finally {
@@ -78,7 +80,7 @@ const DailyLiturgy: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-pulse">
         <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin" />
-        <p className="text-stone-400 font-serif italic text-xl">Compilando o Missal do Dia...</p>
+        <p className="text-stone-400 font-serif italic text-xl">Sincronizando com a Sé Apostólica...</p>
       </div>
     );
   }
@@ -87,14 +89,13 @@ const DailyLiturgy: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 pb-40 animate-in fade-in duration-700 px-2 md:px-0">
-      {/* TOOLBAR SUPERIOR - PROFISSIONAL */}
       <nav className="sticky top-2 md:top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-xl rounded-full md:rounded-[2.5rem] border border-stone-200 dark:border-white/10 shadow-2xl p-2 md:p-3 flex items-center justify-between">
          <div className="flex items-center gap-1 md:gap-2">
             <button 
               onClick={() => setViewMode(viewMode === 'reading' ? 'missal' : 'reading')} 
               className={`px-4 md:px-6 py-2 md:py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'missal' ? 'bg-sacred text-white' : 'bg-stone-50 dark:bg-stone-800 text-stone-400'}`}
             >
-              {viewMode === 'missal' ? 'Modo Missal' : 'Modo Leitura'}
+              {viewMode === 'missal' ? 'Missal' : 'Leitura'}
             </button>
             <input 
               type="date" 
@@ -112,14 +113,11 @@ const DailyLiturgy: React.FC = () => {
             />
          </div>
 
-         <div className="flex gap-2">
-            <button onClick={playAudio} className={`p-3 md:p-4 rounded-full shadow-lg transition-all ${isPlaying ? 'bg-sacred text-white' : 'bg-gold text-stone-900'}`}>
-                {isPlaying ? <Icons.Stop className="w-4 h-4 md:w-5 md:h-5" /> : <Icons.Audio className="w-4 h-4 md:w-5 md:h-5" />}
-            </button>
-         </div>
+         <button onClick={playAudio} className={`p-3 md:p-4 rounded-full shadow-lg transition-all ${isPlaying ? 'bg-sacred text-white' : 'bg-gold text-stone-900'}`}>
+            {isPlaying ? <Icons.Stop className="w-4 h-4 md:w-5 md:h-5" /> : <Icons.Audio className="w-4 h-4 md:w-5 md:h-5" />}
+         </button>
       </nav>
 
-      {/* HEADER DE ESTADO LITÚRGICO */}
       <header className={`bg-white dark:bg-stone-900 p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] shadow-xl border-t-[10px] md:border-t-[16px] ${getLiturgicalColorClass(calendar?.color)} text-center md:text-left`}>
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-sacred mb-2 block">{calendar?.rank}</span>
         <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight leading-none">{calendar?.dayName}</h2>
@@ -130,7 +128,6 @@ const DailyLiturgy: React.FC = () => {
         </div>
       </header>
 
-      {/* TEXTO LITÚRGICO COM SUPORTE A RUBRICAS */}
       <article 
         className="parchment dark:bg-stone-900/50 p-6 md:p-20 rounded-[3rem] md:rounded-[5rem] shadow-inner border border-stone-100 dark:border-stone-800 relative overflow-hidden space-y-12 md:space-y-20"
         style={{ fontSize: `${fontSize}rem`, lineHeight: '1.8' }}
@@ -140,18 +137,15 @@ const DailyLiturgy: React.FC = () => {
         {viewMode === 'missal' && (
           <section className="space-y-6">
             <span className="block text-[0.6em] font-black uppercase text-sacred italic border-b border-sacred/10 pb-2">Ritos Iniciais</span>
-            <p className="text-[0.8em] text-stone-400 italic mb-4 leading-snug">O sacerdote aproxima-se do altar, faz a devida reverência e inicia:</p>
             <p className="font-serif">"Em nome do Pai, e do Filho, e do Espírito Santo. Amém."</p>
           </section>
         )}
 
-        {/* ORATIO COLLECTA */}
         <div className="space-y-6">
            <h4 className="text-[0.6em] font-black uppercase tracking-widest text-sacred">Oração Coleta</h4>
            <p className="font-serif italic text-stone-700 dark:text-stone-300">"{data?.collect}"</p>
         </div>
 
-        {/* LECTIO PRIMA */}
         <section className="space-y-8">
            <header className="flex justify-between items-end border-b border-sacred/10 pb-4">
               <div>
@@ -163,7 +157,6 @@ const DailyLiturgy: React.FC = () => {
            <p className="font-serif text-stone-800 dark:text-stone-200">{data?.firstReading.text}</p>
         </section>
 
-        {/* PSALMUS */}
         <section className="bg-stone-50 dark:bg-stone-950 p-8 md:p-14 rounded-[3rem] border-l-8 border-sacred shadow-xl">
            <span className="text-[0.5em] font-black uppercase text-sacred block mb-6 text-center">Salmo Responsorial</span>
            <div className="text-center space-y-8">
@@ -173,7 +166,6 @@ const DailyLiturgy: React.FC = () => {
            </div>
         </section>
 
-        {/* EVANGELIUM */}
         <section className="space-y-10 relative">
            <div className="absolute -left-10 top-0 bottom-0 w-1 bg-sacred/10 hidden md:block" />
            <header className="flex justify-between items-end border-b border-sacred/10 pb-4">
@@ -188,15 +180,13 @@ const DailyLiturgy: React.FC = () => {
            </p>
         </section>
 
-        {/* HOMILIA / REFLEXÃO ESTRUTURADA */}
         <section className="bg-stone-900 p-8 md:p-20 rounded-[4rem] text-white shadow-3xl relative overflow-hidden group">
-           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-5" />
            <div className="relative z-10 space-y-10">
               <div className="flex items-center gap-6">
                  <div className="p-4 bg-gold text-stone-900 rounded-3xl shadow-2xl rotate-3 group-hover:rotate-0 transition-transform">
                     <Icons.Feather className="w-8 h-8" />
                  </div>
-                 <h4 className="text-3xl font-serif font-bold text-gold">Mystagogia (Homilia)</h4>
+                 <h4 className="text-3xl font-serif font-bold text-gold">Homilia do Dia</h4>
               </div>
               <div className="prose prose-invert max-w-none font-serif text-xl md:text-2xl leading-relaxed italic text-white/90">
                 {data?.gospel.homily || data?.gospel.reflection}
@@ -204,16 +194,26 @@ const DailyLiturgy: React.FC = () => {
            </div>
         </section>
 
-        {viewMode === 'missal' && (
-          <section className="space-y-8 pt-10 border-t border-stone-100 dark:border-stone-800">
-            <span className="block text-[0.6em] font-black uppercase text-sacred italic border-b border-sacred/10 pb-2">Ritos Finais</span>
-            <p className="text-[0.8em] text-stone-400 italic">O sacerdote abençoa o povo:</p>
-            <p className="font-serif">"O Senhor esteja convosco. Abençoe-vos Deus Todo-Poderoso..."</p>
-            <div className="text-center py-10 opacity-20">
-              <Icons.Cross className="w-8 h-8 mx-auto" />
-              <p className="text-[0.5em] font-black uppercase mt-4">Ite, Missa est</p>
-            </div>
-          </section>
+        {/* Fontes da Verdade (Grounding Section) */}
+        {sources.length > 0 && (
+          <footer className="pt-10 border-t border-stone-100 dark:border-stone-800 space-y-4">
+             <h5 className="text-[10px] font-black uppercase tracking-widest text-stone-400 flex items-center gap-2">
+                <Icons.Globe className="w-3 h-3" /> Fontes Verificadas
+             </h5>
+             <div className="flex flex-wrap gap-2">
+                {sources.map((src, idx) => (
+                   <a 
+                    key={idx} 
+                    href={src.web?.uri} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-4 py-1.5 bg-stone-50 dark:bg-stone-800 rounded-full text-[9px] font-bold text-stone-500 hover:text-gold transition-colors truncate max-w-[200px]"
+                   >
+                     {src.web?.title || 'Referência Externa'}
+                   </a>
+                ))}
+             </div>
+          </footer>
         )}
       </article>
 
