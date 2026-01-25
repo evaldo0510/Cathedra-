@@ -27,6 +27,7 @@ import Rosary from './pages/Rosary';
 import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
+import Diagnostics from './pages/Diagnostics';
 import OfflineIndicator from './components/OfflineIndicator';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy, generateSpeech } from './services/gemini';
@@ -134,6 +135,7 @@ const App: React.FC = () => {
       case AppRoute.PRAYERS: return <Prayers />;
       case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => navigateTo(AppRoute.DASHBOARD)} />;
       case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => navigateTo(AppRoute.LOGIN)} />;
+      case AppRoute.DIAGNOSTICS: return <Diagnostics />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
   }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch]);

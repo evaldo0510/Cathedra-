@@ -44,11 +44,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       ]
     },
     {
-      title: 'Devotio (Oração)',
+      title: 'Sistema (Admin)',
       items: [
-        { name: 'Rosárium', icon: Icons.Star, path: AppRoute.ROSARY, subtitle: 'A coroa de rosas da Virgem' },
-        { name: 'Via Crucis', icon: Icons.Cross, path: AppRoute.VIA_CRUCIS, subtitle: 'O caminho doloroso da Redenção' },
-        { name: 'Litaniæ', icon: Icons.Audio, path: AppRoute.LITANIES, subtitle: 'Súplicas rítmicas da tradição' },
+        { name: 'Diagnóstico PWA', icon: Icons.Layout, path: AppRoute.DIAGNOSTICS, subtitle: 'Verificar integridade offline' },
         { name: 'Preces (Orações)', icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: 'O tesouro universal de orações' },
       ]
     }
@@ -61,10 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
 
   return (
     <aside className="h-full bg-[#0c0a09] text-white flex flex-col p-5 md:p-6 shadow-2xl border-r border-[#d4af37]/20 z-50 overflow-hidden relative">
-      {/* Background Decorativo */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
 
-      {/* Botão de Fechar Mobile */}
       <button 
         onClick={onClose} 
         className="lg:hidden absolute top-5 right-5 p-3 text-stone-500 hover:text-gold transition-all active:scale-90 bg-white/5 rounded-2xl border border-white/5 z-20"
@@ -73,14 +69,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         <Icons.Cross className="w-6 h-6 rotate-45" />
       </button>
 
-      {/* Header Centralizado */}
       <div className="mb-10 flex flex-col items-center justify-center relative z-10 pt-4 text-center">
         <Logo className="w-14 h-14 lg:w-16 lg:h-16 mb-4 transition-transform duration-[2000ms] hover:rotate-[360deg] drop-shadow-[0_0_10px_rgba(212,175,55,0.3)]" />
         <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#d4af37] tracking-[0.18em]">CATHEDRA</h1>
         <p className="text-[9px] uppercase tracking-[0.5em] text-white/40 font-black mt-1">Sanctuarium Digitale</p>
       </div>
       
-      {/* Navegação Scrollable */}
       <nav className="flex-1 space-y-10 overflow-y-auto no-scrollbar pb-10 relative z-10 pr-1">
         {menuGroups.map((group, gIdx) => (
           <div key={gIdx} className="space-y-4">
@@ -125,7 +119,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         ))}
       </nav>
 
-      {/* Perfil e Acesso */}
       <div className="mt-auto pt-6 border-t border-white/10 pb-4 relative z-10 bg-[#0c0a09]">
         {user ? (
           <div className="space-y-3">

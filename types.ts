@@ -1,6 +1,35 @@
 
 export type Language = 'pt' | 'en' | 'es' | 'la' | 'it' | 'fr' | 'de';
 
+export enum AppRoute {
+  DASHBOARD = '/',
+  STUDY_MODE = '/study',
+  BIBLE = '/bible',
+  CATECHISM = '/catechism',
+  SAINTS = '/saints',
+  MAGISTERIUM = '/magisterium',
+  DOGMAS = '/dogmas',
+  DAILY_LITURGY = '/daily-liturgy',
+  LITURGICAL_CALENDAR = '/calendar',
+  AQUINAS_OPERA = '/aquinas',
+  PROFILE = '/profile',
+  LOGIN = '/login',
+  CHECKOUT = '/checkout',
+  CERTAMEN = '/quiz',
+  POENITENTIA = '/confession',
+  ORDO_MISSAE = '/mass',
+  ROSARY = '/rosary',
+  VIA_CRUCIS = '/viacrucis',
+  LITANIES = '/litanies',
+  PRAYERS = '/prayers',
+  LECTIO_DIVINA = '/lectio',
+  COMMUNITY = '/community',
+  MISSAL = '/missal',
+  BREVIARY = '/breviary',
+  FAVORITES = '/favorites',
+  DIAGNOSTICS = '/diagnostics'
+}
+
 export interface SourceMetadata {
   name: string;
   code: string; 
@@ -153,7 +182,6 @@ export interface Gospel {
   calendar?: any;
 }
 
-// Added missing interfaces for theological modules
 export interface ThomisticArticle {
   reference: string;
   questionTitle: string;
@@ -181,41 +209,14 @@ export interface CommunityQuestion {
   createdAt: string;
   votes: number;
   category: string;
-  replies: {
-    id: string;
-    userId: string;
-    userName: string;
-    content: string;
-    createdAt: string;
-    isAI: boolean;
-  }[];
+  replies: CommunityReply[];
 }
 
-export enum AppRoute {
-  DASHBOARD = '/',
-  BIBLE = '/biblia',
-  CATECHISM = '/catecismo',
-  SAINTS = '/santos',
-  STUDY_MODE = '/relacional',
-  COMMUNITY = '/aula-magna',
-  LITURGICAL_CALENDAR = '/calendario',
-  LOGIN = '/acesso',
-  PROFILE = '/perfil',
-  ADMIN = '/curadoria',
-  LECTIO_DIVINA = '/lectio',
-  CHECKOUT = '/assinar',
-  MAGISTERIUM = '/magisterio',
-  DOGMAS = '/dogmas',
-  BREVIARY = '/breviario',
-  MISSAL = '/missal',
-  DAILY_LITURGY = '/liturgia-diaria',
-  PRAYERS = '/oracoes',
-  FAVORITES = '/favoritos',
-  AQUINAS_OPERA = '/aquinas-opera',
-  POENITENTIA = '/confissao',
-  ORDO_MISSAE = '/ordinario-missa',
-  ROSARY = '/rosario',
-  VIA_CRUCIS = '/via-sacra',
-  LITANIES = '/ladainhas',
-  CERTAMEN = '/quiz'
+export interface CommunityReply {
+  id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: string;
+  isAI?: boolean;
 }
