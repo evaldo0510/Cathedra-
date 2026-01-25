@@ -1,14 +1,14 @@
 {
-  "name": "Cathedra Digital: Inteligência Teológica Mundial",
+  "name": "Cathedra Digital: Sanctum Teologicum",
   "short_name": "Cathedra",
-  "description": "Plataforma profissional de estudos teológicos católicos multilíngue com IA, Bíblia, Catecismo e Magistério.",
+  "description": "A plataforma definitiva de estudos teológicos católicos com inteligência artificial, acesso offline integral e bibliotecas sacras.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0c0a09",
-  "theme_color": "#1a1a1a",
+  "theme_color": "#0c0a09",
   "orientation": "portrait",
   "scope": "/",
-  "id": "com.cathedra.app.v5",
+  "id": "com.cathedra.app.v1.prod",
   "categories": [
     "education",
     "books",

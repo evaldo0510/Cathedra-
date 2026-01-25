@@ -29,6 +29,7 @@ import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import Diagnostics from './pages/Diagnostics';
 import OfflineIndicator from './components/OfflineIndicator';
+import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy, generateSpeech } from './services/gemini';
 import { Icons, MobileLogo } from './constants';
@@ -56,6 +57,7 @@ const App: React.FC = () => {
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [dogmaSearch, setDogmaSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('cathedra_user');
     return saved ? JSON.parse(saved) : null;
@@ -72,7 +74,13 @@ const App: React.FC = () => {
   useEffect(() => {
     setTimeout(() => setLoading(false), 800);
     notificationService.initNotifications(lang);
-    return () => stopSpeech();
+    
+    const openOmni = () => setIsOmnisearchOpen(true);
+    window.addEventListener('open-omnisearch', openOmni);
+    return () => {
+      stopSpeech();
+      window.removeEventListener('open-omnisearch', openOmni);
+    };
   }, [lang]);
 
   useEffect(() => {
@@ -161,11 +169,19 @@ const App: React.FC = () => {
         
         {/* Indicador de Conectividade Pro */}
         <OfflineIndicator state={connectivity} />
+        
+        {/* Omnisearch Global Modal */}
+        <CommandCenter 
+          isOpen={isOmnisearchOpen} 
+          onClose={() => setIsOmnisearchOpen(false)} 
+          onNavigate={navigateTo} 
+          onSearchSelection={handleSearch} 
+        />
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
           <div className={`relative h-full w-80 shadow-3xl transition-transform duration-500 ease-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} />
+            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onOpenSearch={() => setIsOmnisearchOpen(true)} />
           </div>
         </div>
         
@@ -178,9 +194,14 @@ const App: React.FC = () => {
                 <MobileLogo className="w-9 h-9" />
                 <span className="text-[8px] font-black uppercase tracking-widest text-gold leading-none mt-1">Cathedra</span>
              </div>
-             <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
-               {isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
-             </button>
+             <div className="flex items-center gap-1">
+                <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-gold active:scale-90 transition-transform">
+                  <Icons.Search className="w-5 h-5" />
+                </button>
+                <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
+                  {isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
+                </button>
+             </div>
           </div>
 
           <div className="flex-1 p-4 md:p-12 lg:p-16 pb-24 max-w-[1400px] mx-auto w-full">
