@@ -27,6 +27,7 @@ import Rosary from './pages/Rosary';
 import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
+import OfflineIndicator from './components/OfflineIndicator';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy, generateSpeech } from './services/gemini';
 import { Icons, MobileLogo } from './constants';
@@ -60,11 +61,10 @@ const App: React.FC = () => {
   });
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
 
-  const { isOnline, isSyncing, wasOffline } = useOfflineMode();
+  const connectivity = useOfflineMode();
 
   // TTS States
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTTSSearching, setIsTTSSearching] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
@@ -87,7 +87,6 @@ const App: React.FC = () => {
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     setIsSpeaking(false);
-    setIsTTSSearching(false);
   }, []);
 
   const handleSearch = useCallback(async (topic: string) => {
@@ -133,6 +132,8 @@ const App: React.FC = () => {
       case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
       case AppRoute.LITANIES: return <Litanies />;
       case AppRoute.PRAYERS: return <Prayers />;
+      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => navigateTo(AppRoute.DASHBOARD)} />;
+      case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => navigateTo(AppRoute.LOGIN)} />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
   }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch]);
@@ -156,27 +157,8 @@ const App: React.FC = () => {
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         
-        {/* Offline & Sync Indicators */}
-        <div className="fixed top-0 left-0 right-0 z-[1000] pointer-events-none">
-          {!isOnline && (
-            <div className="bg-sacred text-white py-2 px-6 flex items-center justify-center gap-3 animate-in slide-in-from-top-full duration-500 shadow-2xl pointer-events-auto">
-               <Icons.Globe className="w-4 h-4 animate-pulse" />
-               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Modo Offline: Navegando no Scriptuarium Local</span>
-            </div>
-          )}
-          {isSyncing && isOnline && (
-            <div className="bg-gold text-stone-900 py-2 px-6 flex items-center justify-center gap-3 animate-in slide-in-from-top-full duration-500 shadow-2xl pointer-events-auto">
-               <div className="w-3 h-3 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
-               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sincronizando Depósito da Fé...</span>
-            </div>
-          )}
-          {isOnline && wasOffline && !isSyncing && (
-            <div className="bg-emerald-600 text-white py-2 px-6 flex items-center justify-center gap-3 animate-out fade-out slide-out-to-top duration-1000 pointer-events-auto">
-               <Icons.Star className="w-4 h-4 fill-current" />
-               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Conexão Restabelecida</span>
-            </div>
-          )}
-        </div>
+        {/* Indicador de Conectividade e Sync */}
+        <OfflineIndicator state={connectivity} />
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
@@ -186,13 +168,14 @@ const App: React.FC = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
+          {/* Header Mobile Minimalista */}
           <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
              <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
                <Icons.Menu className="w-6 h-6" />
              </button>
              <div className="flex flex-col items-center" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
                 <MobileLogo className="w-9 h-9" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-gold">Cathedra</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-gold leading-none mt-1">Cathedra</span>
              </div>
              <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
                {isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
