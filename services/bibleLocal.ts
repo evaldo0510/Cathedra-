@@ -1,6 +1,14 @@
 
 import { Verse } from "../types";
 
+export type Book = {
+  id: number;
+  name: string;
+  chapters: number;
+  testament: "AT" | "NT";
+  category: string;
+};
+
 export type BibleVersion = {
   id: string;
   slug: string; 
@@ -15,16 +23,14 @@ export const BIBLE_VERSIONS: BibleVersion[] = [
   { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). Padrão latino.', isCatholic: true },
 ];
 
-export const DEUTEROCANONICAL_BOOKS = [
-  "Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"
-];
-
-export const CATHOLIC_BIBLE_BOOKS = [
+export const CATHOLIC_BIBLE_BOOKS: Book[] = [
+  // PENTATEUCO
   { id: 1, name: "Gênesis", chapters: 50, testament: "AT", category: "Pentateuco" },
   { id: 2, name: "Êxodo", chapters: 40, testament: "AT", category: "Pentateuco" },
   { id: 3, name: "Levítico", chapters: 27, testament: "AT", category: "Pentateuco" },
   { id: 4, name: "Números", chapters: 36, testament: "AT", category: "Pentateuco" },
   { id: 5, name: "Deuteronômio", chapters: 34, testament: "AT", category: "Pentateuco" },
+  // HISTÓRICOS
   { id: 6, name: "Josué", chapters: 24, testament: "AT", category: "Históricos" },
   { id: 7, name: "Juízes", chapters: 21, testament: "AT", category: "Históricos" },
   { id: 8, name: "Rute", chapters: 4, testament: "AT", category: "Históricos" },
@@ -41,61 +47,98 @@ export const CATHOLIC_BIBLE_BOOKS = [
   { id: 19, name: "Ester", chapters: 10, testament: "AT", category: "Históricos" },
   { id: 20, name: "1 Macabeus", chapters: 16, testament: "AT", category: "Históricos" },
   { id: 21, name: "2 Macabeus", chapters: 15, testament: "AT", category: "Históricos" },
-  { id: 22, name: "Jó", chapters: 42, testament: "AT", category: "Poéticos" },
-  { id: 23, name: "Salmos", chapters: 150, testament: "AT", category: "Poéticos" },
-  { id: 24, name: "Provérbios", chapters: 31, testament: "AT", category: "Poéticos" },
-  { id: 25, name: "Eclesiastes", chapters: 12, testament: "AT", category: "Poéticos" },
-  { id: 26, name: "Cântico dos Cânticos", chapters: 8, testament: "AT", category: "Poéticos" },
-  { id: 27, name: "Sabedoria", chapters: 19, testament: "AT", category: "Poéticos" },
-  { id: 28, name: "Eclesiástico", chapters: 51, testament: "AT", category: "Poéticos" },
+  // POÉTICOS E SAPIENCIAIS
+  { id: 22, name: "Jó", chapters: 42, testament: "AT", category: "Sapienciais" },
+  { id: 23, name: "Salmos", chapters: 150, testament: "AT", category: "Sapienciais" },
+  { id: 24, name: "Provérbios", chapters: 31, testament: "AT", category: "Sapienciais" },
+  { id: 25, name: "Eclesiastes", chapters: 12, testament: "AT", category: "Sapienciais" },
+  { id: 26, name: "Cântico dos Cânticos", chapters: 8, testament: "AT", category: "Sapienciais" },
+  { id: 27, name: "Sabedoria", chapters: 19, testament: "AT", category: "Sapienciais" },
+  { id: 28, name: "Eclesiástico", chapters: 51, testament: "AT", category: "Sapienciais" },
+  // PROFETAS MAIORES
   { id: 29, name: "Isaías", chapters: 66, testament: "AT", category: "Profetas" },
   { id: 30, name: "Jeremias", chapters: 52, testament: "AT", category: "Profetas" },
   { id: 31, name: "Lamentações", chapters: 5, testament: "AT", category: "Profetas" },
   { id: 32, name: "Baruc", chapters: 6, testament: "AT", category: "Profetas" },
   { id: 33, name: "Ezequiel", chapters: 48, testament: "AT", category: "Profetas" },
   { id: 34, name: "Daniel", chapters: 14, testament: "AT", category: "Profetas" },
-  { id: 35, name: "Oséias", chapters: 14, testament: "AT", category: "Profetas" },
-  { id: 36, name: "Joel", chapters: 4, testament: "AT", category: "Profetas" },
-  { id: 37, name: "Amós", chapters: 9, testament: "AT", category: "Profetas" },
-  { id: 38, name: "Abdias", chapters: 1, testament: "AT", category: "Profetas" },
-  { id: 39, name: "Jonas", chapters: 4, testament: "AT", category: "Profetas" },
-  { id: 40, name: "Miqueias", chapters: 7, testament: "AT", category: "Profetas" },
-  { id: 41, name: "Naum", chapters: 3, testament: "AT", category: "Profetas" },
-  { id: 42, name: "Habacuc", chapters: 3, testament: "AT", category: "Profetas" },
-  { id: 43, name: "Sofonias", chapters: 3, testament: "AT", category: "Profetas" },
-  { id: 44, name: "Ageu", chapters: 2, testament: "AT", category: "Profetas" },
-  { id: 45, name: "Zacarias", chapters: 14, testament: "AT", category: "Profetas" },
-  { id: 46, name: "Malaquias", chapters: 4, testament: "AT", category: "Profetas" },
+  // PROFETAS MENORES
+  { id: 35, name: "Oseias", chapters: 14, testament: "AT", category: "Profetas Menores" },
+  { id: 36, name: "Joel", chapters: 4, testament: "AT", category: "Profetas Menores" },
+  { id: 37, name: "Amós", chapters: 9, testament: "AT", category: "Profetas Menores" },
+  { id: 38, name: "Abdias", chapters: 1, testament: "AT", category: "Profetas Menores" },
+  { id: 39, name: "Jonas", chapters: 4, testament: "AT", category: "Profetas Menores" },
+  { id: 40, name: "Miqueias", chapters: 7, testament: "AT", category: "Profetas Menores" },
+  { id: 41, name: "Naum", chapters: 3, testament: "AT", category: "Profetas Menores" },
+  { id: 42, name: "Habacuc", chapters: 3, testament: "AT", category: "Profetas Menores" },
+  { id: 43, name: "Sofonias", chapters: 3, testament: "AT", category: "Profetas Menores" },
+  { id: 44, name: "Ageu", chapters: 2, testament: "AT", category: "Profetas Menores" },
+  { id: 45, name: "Zacarias", chapters: 14, testament: "AT", category: "Profetas Menores" },
+  { id: 46, name: "Malaquias", chapters: 4, testament: "AT", category: "Profetas Menores" },
+  // EVANGELHOS
   { id: 47, name: "Mateus", chapters: 28, testament: "NT", category: "Evangelhos" },
   { id: 48, name: "Marcos", chapters: 16, testament: "NT", category: "Evangelhos" },
   { id: 49, name: "Lucas", chapters: 24, testament: "NT", category: "Evangelhos" },
   { id: 50, name: "João", chapters: 21, testament: "NT", category: "Evangelhos" },
-  { id: 51, name: "Atos dos Apóstolos", chapters: 28, testament: "NT", category: "Atos" },
-  { id: 52, name: "Romanos", chapters: 16, testament: "NT", category: "Epístolas" },
-  { id: 53, name: "1 Coríntios", chapters: 16, testament: "NT", category: "Epístolas" },
-  { id: 54, name: "2 Coríntios", chapters: 13, testament: "NT", category: "Epístolas" },
-  { id: 55, name: "Gálatas", chapters: 6, testament: "NT", category: "Epístolas" },
-  { id: 56, name: "Efésios", chapters: 6, testament: "NT", category: "Epístolas" },
-  { id: 57, name: "Filipenses", chapters: 4, testament: "NT", category: "Epístolas" },
-  { id: 58, name: "Colossenses", chapters: 4, testament: "NT", category: "Epístolas" },
-  { id: 59, name: "1 Tessalonicenses", chapters: 5, testament: "NT", category: "Epístolas" },
-  { id: 60, name: "2 Tessalonicenses", chapters: 3, testament: "NT", category: "Epístolas" },
-  { id: 61, name: "1 Timóteo", chapters: 6, testament: "NT", category: "Epístolas" },
-  { id: 62, name: "2 Timóteo", chapters: 4, testament: "NT", category: "Epístolas" },
-  { id: 63, name: "Tito", chapters: 3, testament: "NT", category: "Epístolas" },
-  { id: 64, name: "Filêmon", chapters: 1, testament: "NT", category: "Epístolas" },
-  { id: 65, name: "Hebreus", chapters: 13, testament: "NT", category: "Epístolas" },
-  { id: 66, name: "Tiago", chapters: 5, testament: "NT", category: "Epístolas" },
-  { id: 67, name: "1 Pedro", chapters: 5, testament: "NT", category: "Epístolas" },
-  { id: 68, name: "2 Pedro", chapters: 3, testament: "NT", category: "Epístolas" },
-  { id: 69, name: "1 João", chapters: 5, testament: "NT", category: "Epístolas" },
-  { id: 70, name: "2 João", chapters: 1, testament: "NT", category: "Epístolas" },
-  { id: 71, name: "3 João", chapters: 1, testament: "NT", category: "Epístolas" },
-  { id: 72, name: "Judas", chapters: 1, testament: "NT", category: "Epístolas" },
-  { id: 73, name: "Apocalipse", chapters: 22, testament: "NT", category: "Apocalipse" }
+  // ATOS
+  { id: 51, name: "Atos dos Apóstolos", chapters: 28, testament: "NT", category: "Histórico NT" },
+  // EPÍSTOLAS PAULINAS
+  { id: 52, name: "Romanos", chapters: 16, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 53, name: "1 Coríntios", chapters: 16, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 54, name: "2 Coríntios", chapters: 13, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 55, name: "Gálatas", chapters: 6, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 56, name: "Efésios", chapters: 6, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 57, name: "Filipenses", chapters: 4, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 58, name: "Colossenses", chapters: 4, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 59, name: "1 Tessalonicenses", chapters: 5, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 60, name: "2 Tessalonicenses", chapters: 3, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 61, name: "1 Timóteo", chapters: 6, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 62, name: "2 Timóteo", chapters: 4, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 63, name: "Tito", chapters: 3, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 64, name: "Filêmon", chapters: 1, testament: "NT", category: "Cartas de S. Paulo" },
+  { id: 65, name: "Hebreus", chapters: 13, testament: "NT", category: "Cartas de S. Paulo" },
+  // EPÍSTOLAS CATÓLICAS
+  { id: 66, name: "Tiago", chapters: 5, testament: "NT", category: "Cartas Católicas" },
+  { id: 67, name: "1 Pedro", chapters: 5, testament: "NT", category: "Cartas Católicas" },
+  { id: 68, name: "2 Pedro", chapters: 3, testament: "NT", category: "Cartas Católicas" },
+  { id: 69, name: "1 João", chapters: 5, testament: "NT", category: "Cartas Católicas" },
+  { id: 70, name: "2 João", chapters: 1, testament: "NT", category: "Cartas Católicas" },
+  { id: 71, name: "3 João", chapters: 1, testament: "NT", category: "Cartas Católicas" },
+  { id: 72, name: "Judas", chapters: 1, testament: "NT", category: "Cartas Católicas" },
+  // APOCALIPSE
+  { id: 73, name: "Apocalipse", chapters: 22, testament: "NT", category: "Profecia" }
 ];
 
-export const BIBLE_VERSES: { [key: string]: { [key: string]: string[] } } = {
+// Added DEUTEROCANONICAL_BOOKS export to fix bibleApi.ts import error
+export const DEUTEROCANONICAL_BOOKS = [
+  "Tobias",
+  "Judite",
+  "Sabedoria",
+  "Eclesiástico",
+  "Baruc",
+  "1 Macabeus",
+  "2 Macabeus"
+];
+
+export const getCatholicCanon = () => {
+  const canon: any = { "Antigo Testamento": {}, "Novo Testamento": {} };
+  CATHOLIC_BIBLE_BOOKS.forEach(b => {
+    const test = b.testament === "AT" ? "Antigo Testamento" : "Novo Testamento";
+    if (!canon[test][b.category]) canon[test][b.category] = [];
+    canon[test][b.category].push(b.name);
+  });
+  return canon;
+};
+
+export const getBibleBooks = () => CATHOLIC_BIBLE_BOOKS;
+
+export const getChapterCount = (bookName: string): number => {
+  const book = CATHOLIC_BIBLE_BOOKS.find(b => b.name === bookName);
+  return book ? book.chapters : 1;
+};
+
+// Exemplos estáticos para gratificação instantânea nos livros mais lidos
+export const BIBLE_VERSES_STATIC: Record<string, Record<string, string[]>> = {
   "Gênesis": {
     "1": [
       "No princípio, criou Deus os céus e a terra.",
@@ -106,84 +149,28 @@ export const BIBLE_VERSES: { [key: string]: { [key: string]: string[] } } = {
     ]
   },
   "Salmos": {
-    "1": [
-      "Bem-aventurado o homem que não anda segundo o conselho dos ímpios, nem se detém no caminho dos pecadores, nem se assenta na roda dos escarnecedores.",
-      "Antes tem o seu prazer na lei do Senhor, e na sua lei medita de dia e de noite.",
-      "Pois será como a árvore plantada junto a ribeiros de águas, a qual dá o seu fruto no seu tempo; as suas folhas não cairão, e tudo quanto fizer prosperará."
-    ],
     "23": [
       "O Senhor é o meu pastor, nada me faltará.",
       "Em verdes pastagens me faz repousar e conduz-me a águas tranquilas.",
       "Restaura-me as forças e guia-me por caminhos retos, por amor do seu nome.",
-      "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo.",
-      "Preparas um banquete para mim à vista dos meus inimigos. Unges a minha cabeça com óleo; o meu cálice transborda.",
-      "Sei que a bondade e a fidelidade me acompanharão todos os dias da minha vida, e voltarei a habitar na casa do Senhor por longos dias."
-    ],
-    "91": [
-      "Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.",
-      "Direi do Senhor: Ele é o meu Deus, o meu refúgio, a minha fortaleza, e nele confiarei.",
-      "Porque ele te livrará do laço do passarinheiro, e da peste perniciosa.",
-      "Ele te cobrirá com as suas penas, e debaixo das suas asas te confiarás; a sua verdade será o teu escudo e broquel."
-    ]
-  },
-  "Mateus": {
-    "5": [
-      "Vendo as multidões, Jesus subiu ao monte e se assentou. Seus discípulos aproximaram-se dele,",
-      "e ele começou a ensiná-los, dizendo:",
-      "Bem-aventurados os pobres de espírito, pois deles é o Reino dos céus.",
-      "Bem-aventurados os que choram, pois serão consolados.",
-      "Bem-aventurados os mansos, pois herdarão a terra.",
-      "Bem-aventurados os que têm fome e sede de justiça, pois serão fartos.",
-      "Bem-aventurados os misericordiosos, pois obterão misericórdia."
+      "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo."
     ]
   },
   "João": {
     "1": [
-      "No princípio era a Palavra, e a Palavra estava com Deus, e a Palavra era Deus.",
-      "Ela estava no princípio com Deus.",
-      "Todas as coisas foram feitas por intermédio dela; e sem ela, nada do que foi feito se fez.",
+      "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus.",
+      "Ele estava no princípio com Deus.",
+      "Todas as coisas foram feitas por intermédio dele; e sem ele, nada do que foi feito se fez.",
       "Nela estava a vida, e a vida era a luz dos homens.",
       "A luz resplandece nas trevas, e as trevas não prevaleceram contra ela."
     ]
   }
 };
 
-export const getBibleBooks = () => CATHOLIC_BIBLE_BOOKS;
-
-export const getChapterCount = (bookName: string): number => {
-  const book = CATHOLIC_BIBLE_BOOKS.find(b => b.name === bookName);
-  return book ? book.chapters : 1;
-};
-
-// Funçao para simular versículos para livros que ainda não foram "baixados" ou codificados
-const generateSimulatedVerses = (book: string, chapter: number): Verse[] => {
-  const verses: Verse[] = [];
-  const count = 10 + (chapter % 5); // Simula entre 10 e 15 versículos
-  for (let i = 1; i <= count; i++) {
-    verses.push({
-      book,
-      chapter,
-      verse: i,
-      text: `Texto sagrado de ${book}, capítulo ${chapter}, versículo ${i}. Este volume está em processo de restauração digital completa na sua biblioteca offline.`
-    });
-  }
-  return verses;
-};
-
 export const getBibleVersesLocal = (book: string, chapter: number): Verse[] => {
-  const content = BIBLE_VERSES[book]?.[String(chapter)];
+  const content = BIBLE_VERSES_STATIC[book]?.[String(chapter)];
   if (content) {
     return content.map((text, i) => ({ book, chapter, verse: i + 1, text }));
   }
-  return generateSimulatedVerses(book, chapter);
-};
-
-export const getCatholicCanon = () => {
-  const canon: any = { "Antigo Testamento": {}, "Novo Testamento": {} };
-  CATHOLIC_BIBLE_BOOKS.forEach(b => {
-    const test = b.testament === "AT" ? "Antigo Testamento" : "Novo Testamento";
-    if (!canon[test][b.category]) canon[test][b.category] = [];
-    canon[test][b.category].push(b.name);
-  });
-  return canon;
+  return [];
 };
