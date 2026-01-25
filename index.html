@@ -100,15 +100,25 @@
         }
         .dark .parchment { background-color: #0c0a09; background-image: none; }
 
+        /* Ajuste do Slider (Range input) */
+        input[type='range']::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #d4af37;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+          cursor: pointer;
+        }
+
         .mobile-nav-blur {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             background-color: rgba(26, 26, 26, 0.85);
         }
 
-        /* Melhora a legibilidade em dispositivos pequenos */
         @media (max-width: 640px) {
-            .parchment { padding-left: 1rem; padding-right: 1rem; }
+            .parchment { padding-left: 1.25rem; padding-right: 1.25rem; }
         }
     </style>
 <script type="importmap">
