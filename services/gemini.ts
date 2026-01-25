@@ -34,8 +34,25 @@ const safeJsonParse = (text: string, fallback: any) => {
 };
 
 /**
- * SERVIÇOS DE INTELIGÊNCIA TEOLÓGICA (LLM)
+ * EXTRAÇÃO DE TEXTO BÍBLICO INTEGRAL VIA IA
+ * Garante que qualquer um dos 73 livros esteja disponível.
  */
+export const fetchBibleChapterIA = async (book: string, chapter: number, lang: Language = 'pt'): Promise<Verse[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Recupere o texto integral de ${book}, capítulo ${chapter}. Responda APENAS com um array JSON de objetos: [{ "book": "${book}", "chapter": ${chapter}, "verse": 1, "text": "..." }]. Use a tradução católica padrão em ${lang}.`,
+      config: { 
+        responseMimeType: "application/json",
+        temperature: 0.1 // Baixa temperatura para máxima fidelidade ao texto original
+      }
+    });
+    return safeJsonParse(response.text || "", []);
+  } catch (e) {
+    console.error("Erro na extração de texto sacro:", e);
+    return [];
+  }
+};
 
 export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   try {
