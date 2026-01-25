@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { Icons } from '../constants';
 import { fetchLiturgyByDate, generateSpeech } from '../services/gemini';
 import { LangContext } from '../App';
@@ -14,13 +14,13 @@ const DailyLiturgy: React.FC = () => {
   const [data, setData] = useState<DailyLiturgyContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [fontSize, setFontSize] = useState(1.2); // rem
+  const [fontSize, setFontSize] = useState(1.2);
+  const [viewMode, setViewMode] = useState<'reading' | 'missal'>('reading');
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const loadLiturgy = async (selectedDate: string) => {
-    // Descarrega dados anteriores imediatamente para poupar memória e evitar confusão visual
     setData(null);
     setLoading(true);
     stopAudio();
@@ -28,7 +28,7 @@ const DailyLiturgy: React.FC = () => {
       const result = await fetchLiturgyByDate(selectedDate, lang);
       setData(result);
     } catch (e) {
-      console.error("Erro ao carregar lecionário:", e);
+      console.error("Erro no lecionário:", e);
     } finally {
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -45,12 +45,12 @@ const DailyLiturgy: React.FC = () => {
     setIsPlaying(false);
   };
 
-  const playFullLiturgy = async () => {
+  const playAudio = async () => {
     if (isPlaying) { stopAudio(); return; }
     setIsPlaying(true);
     try {
       if (!data) return;
-      const fullText = `Liturgia de hoje. Oração Coleta: ${data.collect}. Primeira Leitura: ${data.firstReading.text}. Salmo: ${data.psalm.text}. Evangelho: ${data.gospel.text}`;
+      const fullText = `Liturgia de hoje. Primeira Leitura: ${data.firstReading.text}. Salmo: ${data.psalm.text}. Evangelho: ${data.gospel.text}`;
       if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       const base64 = await generateSpeech(fullText);
       if (base64) {
@@ -67,11 +67,9 @@ const DailyLiturgy: React.FC = () => {
 
   const getLiturgicalColorClass = (color?: string) => {
     const map: Record<string, string> = {
-      red: 'border-red-600 text-red-700',
-      green: 'border-emerald-600 text-emerald-700',
-      purple: 'border-purple-600 text-purple-700',
-      white: 'border-gold text-stone-600',
-      rose: 'border-pink-600 text-pink-700'
+      red: 'border-red-600', green: 'border-emerald-600',
+      purple: 'border-purple-600', white: 'border-gold',
+      rose: 'border-pink-600'
     };
     return map[color?.toLowerCase() || 'white'] || 'border-gold';
   };
@@ -80,7 +78,7 @@ const DailyLiturgy: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-pulse">
         <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin" />
-        <p className="text-stone-400 font-serif italic text-xl">Indexando o Lecionário do Dia...</p>
+        <p className="text-stone-400 font-serif italic text-xl">Compilando o Missal do Dia...</p>
       </div>
     );
   }
@@ -88,163 +86,139 @@ const DailyLiturgy: React.FC = () => {
   const calendar = data?.gospel?.calendar;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 pb-32 animate-in fade-in duration-700 px-2 md:px-0">
-      {/* HEADER DE ESTADO LITÚRGICO - Otimizado Mobile */}
-      <header className={`bg-white dark:bg-stone-900 p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] shadow-xl border-t-[8px] md:border-t-[12px] ${getLiturgicalColorClass(calendar?.color)} flex flex-col gap-6`}>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-sacred">{calendar?.rank}</span>
-                <div className="w-1 h-1 bg-stone-300 rounded-full" />
-                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">Ano {calendar?.cycle}</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">{calendar?.dayName}</h2>
-            <p className="text-stone-400 text-sm md:text-lg font-serif italic">{calendar?.season}</p>
-          </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
+    <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 pb-40 animate-in fade-in duration-700 px-2 md:px-0">
+      {/* TOOLBAR SUPERIOR - PROFISSIONAL */}
+      <nav className="sticky top-2 md:top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-xl rounded-full md:rounded-[2.5rem] border border-stone-200 dark:border-white/10 shadow-2xl p-2 md:p-3 flex items-center justify-between">
+         <div className="flex items-center gap-1 md:gap-2">
+            <button 
+              onClick={() => setViewMode(viewMode === 'reading' ? 'missal' : 'reading')} 
+              className={`px-4 md:px-6 py-2 md:py-3 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'missal' ? 'bg-sacred text-white' : 'bg-stone-50 dark:bg-stone-800 text-stone-400'}`}
+            >
+              {viewMode === 'missal' ? 'Modo Missal' : 'Modo Leitura'}
+            </button>
             <input 
               type="date" 
               value={date} 
               onChange={e => setDate(e.target.value)} 
-              className="flex-1 md:flex-none px-4 md:px-6 py-3 bg-stone-50 dark:bg-stone-800 border-none rounded-2xl font-serif text-base md:text-lg outline-none shadow-inner" 
+              className="px-3 md:px-4 py-2 bg-stone-100 dark:bg-stone-900 border-none rounded-full text-[10px] md:text-xs font-serif outline-none" 
             />
-            <button onClick={playFullLiturgy} className={`p-4 md:p-5 rounded-full shadow-2xl transition-all active:scale-95 ${isPlaying ? 'bg-sacred text-white' : 'bg-gold text-stone-900'}`}>
-                {isPlaying ? <Icons.Stop className="w-5 h-5 md:w-6 md:h-6" /> : <Icons.Audio className="w-5 h-5 md:w-6 md:h-6" />}
-            </button>
-          </div>
-        </div>
+         </div>
 
-        {/* Slider de Acessibilidade - Estilo Lectorium */}
-        <div className="flex items-center gap-4 bg-stone-50 dark:bg-stone-800/50 p-4 rounded-2xl border border-stone-100 dark:border-stone-800">
-          <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest hidden xs:block">Tamanho do Texto</span>
-          <input 
-            type="range" 
-            min="0.8" 
-            max="2.5" 
-            step="0.1" 
-            value={fontSize} 
-            onChange={e => setFontSize(parseFloat(e.target.value))}
-            className="flex-1 h-1.5 bg-stone-200 dark:bg-stone-700 rounded-lg appearance-none cursor-pointer accent-gold"
-          />
-          <span className="text-[10px] font-black text-gold w-8 text-right">{Math.round(fontSize * 100)}%</span>
+         <div className="flex items-center gap-3 px-4 flex-1 max-w-[150px]">
+            <input 
+              type="range" min="0.8" max="2.5" step="0.1" value={fontSize} 
+              onChange={e => setFontSize(parseFloat(e.target.value))}
+              className="w-full h-1 bg-stone-200 dark:bg-stone-800 rounded-lg appearance-none cursor-pointer accent-gold"
+            />
+         </div>
+
+         <div className="flex gap-2">
+            <button onClick={playAudio} className={`p-3 md:p-4 rounded-full shadow-lg transition-all ${isPlaying ? 'bg-sacred text-white' : 'bg-gold text-stone-900'}`}>
+                {isPlaying ? <Icons.Stop className="w-4 h-4 md:w-5 md:h-5" /> : <Icons.Audio className="w-4 h-4 md:w-5 md:h-5" />}
+            </button>
+         </div>
+      </nav>
+
+      {/* HEADER DE ESTADO LITÚRGICO */}
+      <header className={`bg-white dark:bg-stone-900 p-8 md:p-12 rounded-[3rem] md:rounded-[4rem] shadow-xl border-t-[10px] md:border-t-[16px] ${getLiturgicalColorClass(calendar?.color)} text-center md:text-left`}>
+        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-sacred mb-2 block">{calendar?.rank}</span>
+        <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight leading-none">{calendar?.dayName}</h2>
+        <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4 text-stone-400 font-serif italic text-lg md:text-xl">
+           <span>{calendar?.season}</span>
+           <span className="opacity-30">|</span>
+           <span>Ciclo {calendar?.cycle}</span>
         </div>
       </header>
 
-      {/* SANTO DO DIA - Redimensionado para mobile */}
-      {data?.saint && (
-        <section className="relative h-[300px] md:h-[450px] rounded-[2.5rem] md:rounded-[4rem] overflow-hidden group shadow-2xl">
-           <SacredImage 
-             src={data.saint.image} 
-             alt={data.saint.name} 
-             liturgicalColor={calendar?.color}
-             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[15s]" 
-           />
-           <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-transparent to-transparent" />
-           <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12 space-y-1">
-              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.5em] text-gold">Memória de Hoje</span>
-              <h3 className="text-3xl md:text-6xl font-serif font-bold text-white tracking-tighter">{data.saint.name}</h3>
-           </div>
-        </section>
-      )}
-
-      {/* LECTIONARIUM BODY - Otimizado para leitura contínua */}
-      <div 
-        className="space-y-16 md:space-y-24 parchment dark:bg-stone-900/50 p-6 md:p-20 rounded-[3rem] md:rounded-[5rem] shadow-inner border border-stone-100 dark:border-stone-800 relative overflow-hidden"
+      {/* TEXTO LITÚRGICO COM SUPORTE A RUBRICAS */}
+      <article 
+        className="parchment dark:bg-stone-900/50 p-6 md:p-20 rounded-[3rem] md:rounded-[5rem] shadow-inner border border-stone-100 dark:border-stone-800 relative overflow-hidden space-y-12 md:space-y-20"
         style={{ fontSize: `${fontSize}rem`, lineHeight: '1.8' }}
       >
-        <Icons.Cross className="absolute top-10 right-10 w-16 h-16 md:w-24 md:h-24 opacity-[0.03] pointer-events-none" />
+        <Icons.Cross className="absolute top-10 right-10 w-20 h-20 opacity-[0.03] pointer-events-none" />
 
-        {/* 1. ORATIO COLLECTA */}
-        <article className="space-y-6 text-center max-w-2xl mx-auto">
-           <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] text-sacred">Oratio Collecta</h4>
-           <div className="p-6 md:p-10 bg-stone-50/50 dark:bg-stone-800/30 rounded-[2rem] md:rounded-[3rem] border border-stone-100 dark:border-stone-800">
-              <p className="font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed break-words">
-                "{data?.collect}"
-              </p>
-           </div>
-        </article>
-
-        {/* 2. LECTIO PRIMA */}
-        <article className="space-y-6 md:space-y-8">
-           <header className="flex justify-between items-center border-b border-sacred/10 pb-4">
-              <div>
-                 <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] text-sacred">Lectio Prima</h4>
-                 <p className="text-[10px] md:text-xs font-serif italic text-stone-400">{data?.firstReading.reference}</p>
-              </div>
-              <ActionButtons itemId={`lit_1_${date}`} type="liturgy" title="I Leitura" content={data?.firstReading.text} />
-           </header>
-           <p className="font-serif text-stone-800 dark:text-stone-200 leading-relaxed tracking-tight break-words">
-             {data?.firstReading.text}
-           </p>
-        </article>
-
-        {/* 3. GRADUALE (PSALMUS) - Visual de Destaque */}
-        <article className="bg-[#fcf8e8] dark:bg-stone-950 p-8 md:p-20 rounded-[2.5rem] md:rounded-[4rem] border-l-[12px] md:border-l-[16px] border-sacred space-y-8 md:space-y-10 shadow-xl mx-[-8px] md:mx-0">
-           <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] text-sacred text-center">Graduale (Psalmus)</h4>
-           <div className="space-y-6 md:space-y-8 text-center">
-              <p className="text-2xl md:text-4xl font-serif italic text-sacred font-bold leading-tight break-words">
-                R/. {data?.psalm.title}
-              </p>
-              <div className="h-px w-16 md:w-24 bg-sacred/20 mx-auto" />
-              <p className="font-serif text-stone-900 dark:text-stone-100 leading-relaxed whitespace-pre-wrap italic break-words">
-                {data?.psalm.text}
-              </p>
-           </div>
-        </article>
-
-        {/* 4. EPISTOLA */}
-        {data?.secondReading && (
-          <article className="space-y-6 md:space-y-8">
-            <header className="flex justify-between items-center border-b border-sacred/10 pb-4">
-                <div>
-                   <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] text-sacred">Epistola</h4>
-                   <p className="text-[10px] md:text-xs font-serif italic text-stone-400">{data.secondReading.reference}</p>
-                </div>
-                <ActionButtons itemId={`lit_2_${date}`} type="liturgy" title="Epístola" content={data.secondReading.text} />
-             </header>
-             <p className="font-serif text-stone-800 dark:text-stone-200 leading-relaxed tracking-tight break-words">
-               {data.secondReading.text}
-             </p>
-          </article>
+        {viewMode === 'missal' && (
+          <section className="space-y-6">
+            <span className="block text-[0.6em] font-black uppercase text-sacred italic border-b border-sacred/10 pb-2">Ritos Iniciais</span>
+            <p className="text-[0.8em] text-stone-400 italic mb-4 leading-snug">O sacerdote aproxima-se do altar, faz a devida reverência e inicia:</p>
+            <p className="font-serif">"Em nome do Pai, e do Filho, e do Espírito Santo. Amém."</p>
+          </section>
         )}
 
-        {/* 5. EVANGELIUM */}
-        <article className="space-y-8 md:space-y-10 relative">
-           <div className="absolute -left-6 md:-left-12 top-0 bottom-0 w-1 bg-sacred/20 hidden xs:block" />
-           <header className="flex justify-between items-center border-b border-sacred/10 pb-4">
-              <div>
-                 <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.5em] text-sacred">Evangelium Sanctum</h4>
-                 <p className="text-[10px] md:text-xs font-serif italic text-stone-400">{data?.gospel.reference}</p>
-              </div>
-              <ActionButtons itemId={`lit_g_${date}`} type="liturgy" title="Evangelho" content={data?.gospel.text} />
-           </header>
-           <p className="font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight first-letter:text-7xl md:first-letter:text-9xl first-letter:font-bold first-letter:text-sacred first-letter:float-left first-letter:mr-4 md:first-letter:mr-6 first-letter:mt-2 md:first-letter:mt-4 break-words">
-             {data?.gospel.text}
-           </p>
-        </article>
+        {/* ORATIO COLLECTA */}
+        <div className="space-y-6">
+           <h4 className="text-[0.6em] font-black uppercase tracking-widest text-sacred">Oração Coleta</h4>
+           <p className="font-serif italic text-stone-700 dark:text-stone-300">"{data?.collect}"</p>
+        </div>
 
-        {/* 6. MYSTAGOGIA (REFLEXÃO) */}
-        <section className="bg-stone-900 p-8 md:p-24 rounded-[3rem] md:rounded-[6rem] text-white shadow-3xl relative overflow-hidden group mx-[-8px] md:mx-0">
-           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-10" />
-           <div className="absolute -bottom-20 -right-20 w-64 h-64 md:w-96 md:h-96 bg-gold/5 blur-[100px] md:blur-[150px]" />
-           <div className="relative z-10 space-y-6 md:space-y-10">
-              <div className="flex items-center gap-4 md:gap-6">
-                 <div className="p-3 md:p-4 bg-gold text-stone-900 rounded-2xl md:rounded-3xl shadow-2xl rotate-3 group-hover:rotate-0 transition-transform">
-                    <Icons.Feather className="w-6 h-6 md:w-8 md:h-8" />
-                 </div>
-                 <h4 className="text-2xl md:text-3xl font-serif font-bold text-gold">Mystagogia</h4>
+        {/* LECTIO PRIMA */}
+        <section className="space-y-8">
+           <header className="flex justify-between items-end border-b border-sacred/10 pb-4">
+              <div>
+                 <span className="text-[0.5em] font-black uppercase text-stone-400 block mb-1">Leitura I</span>
+                 <h4 className="text-[0.8em] font-serif font-bold text-stone-900 dark:text-white leading-tight">{data?.firstReading.reference}</h4>
               </div>
-              <p className="text-xl md:text-4xl font-serif italic text-white/90 leading-relaxed break-words">
-                {data?.gospel.homily || data?.gospel.reflection}
-              </p>
+              <ActionButtons itemId={`lit1_${date}`} type="liturgy" title="I Leitura" content={data?.firstReading.text} />
+           </header>
+           <p className="font-serif text-stone-800 dark:text-stone-200">{data?.firstReading.text}</p>
+        </section>
+
+        {/* PSALMUS */}
+        <section className="bg-stone-50 dark:bg-stone-950 p-8 md:p-14 rounded-[3rem] border-l-8 border-sacred shadow-xl">
+           <span className="text-[0.5em] font-black uppercase text-sacred block mb-6 text-center">Salmo Responsorial</span>
+           <div className="text-center space-y-8">
+              <p className="text-2xl md:text-3xl font-serif italic text-sacred font-bold leading-tight">R/. {data?.psalm.title}</p>
+              <div className="h-px w-12 bg-sacred/20 mx-auto" />
+              <p className="font-serif whitespace-pre-wrap italic">{data?.psalm.text}</p>
            </div>
         </section>
-      </div>
 
-      <footer className="text-center opacity-30 pt-16 md:pt-20">
-         <Icons.Cross className="w-8 h-8 md:w-10 md:h-10 mx-auto" />
-         <p className="text-[10px] md:text-[11px] font-black uppercase tracking-[1em] mt-6">Verbum Domini • Deo Gratias</p>
+        {/* EVANGELIUM */}
+        <section className="space-y-10 relative">
+           <div className="absolute -left-10 top-0 bottom-0 w-1 bg-sacred/10 hidden md:block" />
+           <header className="flex justify-between items-end border-b border-sacred/10 pb-4">
+              <div>
+                 <span className="text-[0.5em] font-black uppercase text-sacred block mb-1">Evangelho</span>
+                 <h4 className="text-[0.8em] font-serif font-bold text-stone-900 dark:text-white leading-tight">{data?.gospel.reference}</h4>
+              </div>
+              <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data?.gospel.text} />
+           </header>
+           <p className="font-serif font-bold text-stone-900 dark:text-stone-100 first-letter:text-8xl first-letter:text-sacred first-letter:float-left first-letter:mr-4 first-letter:mt-2">
+             {data?.gospel.text}
+           </p>
+        </section>
+
+        {/* HOMILIA / REFLEXÃO ESTRUTURADA */}
+        <section className="bg-stone-900 p-8 md:p-20 rounded-[4rem] text-white shadow-3xl relative overflow-hidden group">
+           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-5" />
+           <div className="relative z-10 space-y-10">
+              <div className="flex items-center gap-6">
+                 <div className="p-4 bg-gold text-stone-900 rounded-3xl shadow-2xl rotate-3 group-hover:rotate-0 transition-transform">
+                    <Icons.Feather className="w-8 h-8" />
+                 </div>
+                 <h4 className="text-3xl font-serif font-bold text-gold">Mystagogia (Homilia)</h4>
+              </div>
+              <div className="prose prose-invert max-w-none font-serif text-xl md:text-2xl leading-relaxed italic text-white/90">
+                {data?.gospel.homily || data?.gospel.reflection}
+              </div>
+           </div>
+        </section>
+
+        {viewMode === 'missal' && (
+          <section className="space-y-8 pt-10 border-t border-stone-100 dark:border-stone-800">
+            <span className="block text-[0.6em] font-black uppercase text-sacred italic border-b border-sacred/10 pb-2">Ritos Finais</span>
+            <p className="text-[0.8em] text-stone-400 italic">O sacerdote abençoa o povo:</p>
+            <p className="font-serif">"O Senhor esteja convosco. Abençoe-vos Deus Todo-Poderoso..."</p>
+            <div className="text-center py-10 opacity-20">
+              <Icons.Cross className="w-8 h-8 mx-auto" />
+              <p className="text-[0.5em] font-black uppercase mt-4">Ite, Missa est</p>
+            </div>
+          </section>
+        )}
+      </article>
+
+      <footer className="text-center opacity-30 pt-20">
+         <p className="text-[10px] font-black uppercase tracking-[1em]">Verbum Domini • Deo Gratias</p>
       </footer>
     </div>
   );

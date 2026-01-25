@@ -41,19 +41,6 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
       config: { 
         systemInstruction: "Você é um arquivista bíblico. Forneça o texto completo do capítulo solicitado sem omissões.",
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              book: { type: Type.STRING },
-              chapter: { type: Type.INTEGER },
-              verse: { type: Type.INTEGER },
-              text: { type: Type.STRING }
-            },
-            required: ["book", "chapter", "verse", "text"]
-          }
-        },
         temperature: 0.1
       }
     });
@@ -61,6 +48,19 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
   } catch (e) { return []; }
 };
 
+export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): Promise<DailyLiturgyContent> => {
+  const response = await generateWithRetry({
+    model: 'gemini-3-flash-preview',
+    contents: `Providencie o Missal e Liturgia completa para ${date}. Retorne uma homilia estruturada em exegese e vida. JSON: { "date": "${date}", "collect": "oração coleta completa", "firstReading": {"reference": "Ref", "text": "texto integral"}, "psalm": {"title": "refrão", "text": "versos"}, "gospel": {"reference": "Ref", "text": "texto integral", "homily": "homilia profunda e teológica em 3 parágrafos", "calendar": {"dayName": "Nome do Dia", "rank": "Solenidade/Festa/Memória", "color": "green/red/white/purple", "cycle": "Ano B"}}, "saint": {"name": "Santo do Dia", "image": "unsplash_url"} }`,
+    config: { 
+      systemInstruction: "Você é um mestre de cerimônias do Vaticano e teólogo. Forneça textos litúrgicos com rigor e beleza.",
+      responseMimeType: "application/json" 
+    }
+  });
+  return safeJsonParse(response.text || "", {});
+};
+
+// ... Restante das funções de serviço ...
 export const getCatechismSearch = async (query: string, options: any = {}, lang: Language = 'pt'): Promise<CatechismParagraph[]> => {
   try {
     const response = await generateWithRetry({
@@ -68,19 +68,7 @@ export const getCatechismSearch = async (query: string, options: any = {}, lang:
       contents: `Extraia INTEGRALMENTE os parágrafos do Catecismo da Igreja Católica (CIC) referentes a: "${query}". Idioma: ${lang}. JSON array: [{ "number": 1, "content": "...", "context": "..." }]`,
       config: { 
         systemInstruction: "Você é um bibliotecário do Vaticano especializado no Catecismo (CIC). Transcreva os números solicitados com exatidão máxima.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              number: { type: Type.INTEGER },
-              content: { type: Type.STRING },
-              context: { type: Type.STRING }
-            },
-            required: ["number", "content"]
-          }
-        }
+        responseMimeType: "application/json"
       }
     });
     return safeJsonParse(response.text || "", []);
@@ -92,27 +80,12 @@ export const getCatechismHierarchy = async (parentId?: string, lang: Language = 
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
       contents: `Liste a sub-estrutura (Capítulos ou Artigos) da parte do CIC: ${parentId || 'Início'}. Idioma: ${lang}. JSON array: [{ "id": "...", "title": "...", "level": "article" }]`,
-      config: { 
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              id: { type: Type.STRING },
-              title: { type: Type.STRING },
-              level: { type: Type.STRING }
-            },
-            required: ["id", "title", "level"]
-          }
-        }
-      }
+      config: { responseMimeType: "application/json" }
     });
     return safeJsonParse(response.text || "", []);
   } catch (e) { return []; }
 };
 
-// ... Restante das funções de serviço mantidas conforme original ...
 export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   try {
     const response = await generateWithRetry({
@@ -160,7 +133,7 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Leia com solenidade: ${text}` }] }],
+      contents: [{ parts: [{ text: `Leia com solenidade e reverência: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
@@ -169,15 +142,6 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
     const partWithAudio = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData && p.inlineData.mimeType.includes('audio'));
     return partWithAudio?.inlineData?.data;
   } catch (e) { return undefined; }
-};
-
-export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): Promise<DailyLiturgyContent> => {
-  const response = await generateWithRetry({
-    model: 'gemini-3-flash-preview',
-    contents: `Liturgia para ${date}. JSON: { "date": "${date}", "collect": "...", "firstReading": {"reference": "...", "text": "..."}, "psalm": {"title": "...", "text": "..."}, "gospel": {"reference": "...", "text": "...", "calendar": {"dayName": "...", "rank": "...", "color": "...", "cycle": "..."}}, "saint": {"name": "...", "image": "..."} }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text || "", {});
 };
 
 export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language = 'pt'): Promise<QuizQuestion[]> => {
