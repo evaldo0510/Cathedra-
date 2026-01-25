@@ -41,11 +41,11 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Transcreva todos os versículos de ${book}, capítulo ${chapter}, seguindo a tradução católica oficial em ${lang}. 
-                 Você deve retornar o texto sacro integral sem omissões. 
-                 Seja preciso e reverente.`,
+      contents: `Transcreva INTEGRALMENTE todos os versículos de ${book}, capítulo ${chapter}, seguindo a tradução católica oficial (como Ave Maria ou CNBB) em ${lang}. 
+                 Você deve retornar o texto sacro exatamente como consta nos manuscritos oficiais, sem resumos ou paráfrases. 
+                 Retorne obrigatoriamente em formato JSON array de versículos.`,
       config: { 
-        systemInstruction: "Você é um arquivista bíblico erudito e fiel. Seu objetivo é fornecer transcrições exatas de textos das Sagradas Escrituras para fins de estudo teológico e oração.",
+        systemInstruction: "Você é um arquivista bíblico erudito e fiel do Vaticano. Seu objetivo é fornecer transcrições exatas e completas de textos das Sagradas Escrituras para fins de oração e estudo teológico. Não omita versículos.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -60,14 +60,12 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
             required: ["book", "chapter", "verse", "text"]
           }
         },
-        temperature: 0.1,
-        thinkingConfig: { thinkingBudget: 0 } // Flash não precisa de pensamento profundo para transcrição
+        temperature: 0.1
       }
     });
     
     const parsed = safeJsonParse(response.text || "", []);
-    // Validação mínima para garantir que recebemos dados úteis
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].text) {
+    if (Array.isArray(parsed) && parsed.length > 0) {
       return parsed;
     }
     return [];

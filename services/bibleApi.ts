@@ -19,38 +19,42 @@ const BOOK_MAP: Record<string, string> = {
   "Romanos": "ROM", "1 Coríntios": "1CO", "2 Coríntios": "2CO", "Gálatas": "GAL",
   "Efésios": "EPH", "Filipenses": "PHP", "Colossenses": "COL", "1 Tessalonicenses": "1TH",
   "2 Tessalonicenses": "2TH", "1 Timóteo": "1TI", "2 Timóteo": "2TI", "Tito": "TIT",
-  "Filémon": "PHM", "Hebreus": "HEB", "Tiago": "JAS", "1 Pedro": "1PE", "2 Pedro": "2PE",
+  "Filêmon": "PHM", "Hebreus": "HEB", "Tiago": "JAS", "1 Pedro": "1PE", "2 Pedro": "2PE",
   "1 João": "1JN", "2 João": "2JN", "3 João": "3JN", "Judas": "JUD", "Apocalipse": "REV"
 };
 
-export const fetchExternalBibleText = async (book: string, chapter: number, versionSlug: string): Promise<Verse[] | null> => {
-  if (versionSlug.startsWith('ai_')) return null;
-
-  // Proteção do Cânon Católico: bible-api.com só tem Deuterocanônicos em Clementine e DRB
-  const isDeutero = DEUTEROCANONICAL_BOOKS.includes(book);
-  const supportedCatholic = ['clementine', 'drb'].includes(versionSlug);
-  
-  if (isDeutero && !supportedCatholic) return null;
-
+export const fetchExternalBibleText = async (book: string, chapter: number, versionSlug: string = 'almeida'): Promise<Verse[] | null> => {
   const slug = BOOK_MAP[book] || book;
+  
+  // O endpoint da bible-api.com usa o formato: /book+chapter?translation=slug
+  // Para português, usaremos 'almeida' como padrão estável na API.
   const url = `${BASE_URL}/${slug}+${chapter}?translation=${versionSlug}`;
 
   try {
     const response = await fetch(url);
-    if (!response.ok) return null;
-    const data = await response.json();
-    
-    if (data.verses && Array.isArray(data.verses)) {
-      return data.verses.map((v: any) => ({
-        book: book,
-        chapter: v.chapter,
-        verse: v.verse,
-        text: v.text.trim()
-      }));
+    if (!response.ok) {
+        // Tenta um fallback sem tradução específica se falhar
+        const fallbackRes = await fetch(`${BASE_URL}/${slug}+${chapter}`);
+        if (!fallbackRes.ok) return null;
+        const fallbackData = await fallbackRes.json();
+        return mapApiToVerses(book, fallbackData);
     }
-    return null;
+    const data = await response.json();
+    return mapApiToVerses(book, data);
   } catch (e) {
-    console.error("Erro na busca API Codex:", e);
+    console.error("Erro na busca API Scriptura:", e);
     return null;
   }
+};
+
+const mapApiToVerses = (book: string, data: any): Verse[] => {
+    if (data.verses && Array.isArray(data.verses)) {
+        return data.verses.map((v: any) => ({
+          book: book,
+          chapter: v.chapter,
+          verse: v.verse,
+          text: v.text.trim()
+        }));
+      }
+      return [];
 };
