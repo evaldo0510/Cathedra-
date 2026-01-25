@@ -33,19 +33,13 @@ const safeJsonParse = (text: string, fallback: any) => {
   } catch (e) { return fallback; }
 };
 
-/**
- * EXTRAÇÃO DE TEXTO BÍBLICO INTEGRAL VIA IA
- * Otimizado para máxima fidelidade e contorno de recusas automáticas.
- */
 export const fetchBibleChapterIA = async (book: string, chapter: number, lang: Language = 'pt'): Promise<Verse[]> => {
   try {
     const response = await generateWithRetry({
       model: 'gemini-3-flash-preview',
-      contents: `Transcreva INTEGRALMENTE todos os versículos de ${book}, capítulo ${chapter}, seguindo a tradução católica oficial (como Ave Maria ou CNBB) em ${lang}. 
-                 Você deve retornar o texto sacro exatamente como consta nos manuscritos oficiais, sem resumos ou paráfrases. 
-                 Retorne obrigatoriamente em formato JSON array de versículos.`,
+      contents: `Transcreva INTEGRALMENTE todos os versículos de ${book}, capítulo ${chapter}, seguindo a tradução católica oficial. JSON array de versículos.`,
       config: { 
-        systemInstruction: "Você é um arquivista bíblico erudito e fiel do Vaticano. Seu objetivo é fornecer transcrições exatas e completas de textos das Sagradas Escrituras para fins de oração e estudo teológico. Não omita versículos.",
+        systemInstruction: "Você é um arquivista bíblico. Forneça o texto completo do capítulo solicitado sem omissões.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -63,18 +57,62 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
         temperature: 0.1
       }
     });
-    
-    const parsed = safeJsonParse(response.text || "", []);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
-    return [];
-  } catch (e) {
-    console.error("Erro na extração IA:", e);
-    return [];
-  }
+    return safeJsonParse(response.text || "", []);
+  } catch (e) { return []; }
 };
 
+export const getCatechismSearch = async (query: string, options: any = {}, lang: Language = 'pt'): Promise<CatechismParagraph[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Extraia INTEGRALMENTE os parágrafos do Catecismo da Igreja Católica (CIC) referentes a: "${query}". Idioma: ${lang}. JSON array: [{ "number": 1, "content": "...", "context": "..." }]`,
+      config: { 
+        systemInstruction: "Você é um bibliotecário do Vaticano especializado no Catecismo (CIC). Transcreva os números solicitados com exatidão máxima.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              number: { type: Type.INTEGER },
+              content: { type: Type.STRING },
+              context: { type: Type.STRING }
+            },
+            required: ["number", "content"]
+          }
+        }
+      }
+    });
+    return safeJsonParse(response.text || "", []);
+  } catch (e) { return []; }
+};
+
+export const getCatechismHierarchy = async (parentId?: string, lang: Language = 'pt'): Promise<CatechismHierarchy[]> => {
+  try {
+    const response = await generateWithRetry({
+      model: 'gemini-3-flash-preview',
+      contents: `Liste a sub-estrutura (Capítulos ou Artigos) da parte do CIC: ${parentId || 'Início'}. Idioma: ${lang}. JSON array: [{ "id": "...", "title": "...", "level": "article" }]`,
+      config: { 
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              title: { type: Type.STRING },
+              level: { type: Type.STRING }
+            },
+            required: ["id", "title", "level"]
+          }
+        }
+      }
+    });
+    return safeJsonParse(response.text || "", []);
+  } catch (e) { return []; }
+};
+
+// ... Restante das funções de serviço mantidas conforme original ...
 export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   try {
     const response = await generateWithRetry({
@@ -122,7 +160,7 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Leia com solenidade e reverência sagrada: ${text}` }] }],
+      contents: [{ parts: [{ text: `Leia com solenidade: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
@@ -173,24 +211,6 @@ export const getDogmas = async (query: string): Promise<Dogma[]> => {
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
     contents: `Liste dogmas católicos sobre: "${query}". JSON array: [{ "title": "...", "definition": "...", "council": "...", "year": "...", "period": "...", "tags": [] }]`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text || "", []);
-};
-
-export const getCatechismSearch = async (query: string, options: any = {}, lang: Language = 'pt'): Promise<CatechismParagraph[]> => {
-  const response = await generateWithRetry({
-    model: 'gemini-3-flash-preview',
-    contents: `Busque no Catecismo da Igreja Católica (CIC): "${query}". JSON array: [{ "number": 1, "content": "...", "context": "..." }]`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text || "", []);
-};
-
-export const getCatechismHierarchy = async (parentId?: string, lang: Language = 'pt'): Promise<CatechismHierarchy[]> => {
-  const response = await generateWithRetry({
-    model: 'gemini-3-flash-preview',
-    contents: `Estrutura do CIC ${parentId || 'raiz'}. JSON array: [{ "id": "...", "title": "...", "level": "part" }]`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text || "", []);
