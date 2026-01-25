@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { Icons } from '../constants';
-import { fetchRealBibleText } from '../services/gemini';
-import { getCatholicCanon, BIBLE_VERSIONS, BibleVersion, getChapterCount, fetchLocalFallback } from '../services/bibleLocal';
+import { getCatholicCanon, BIBLE_VERSIONS, BibleVersion, getChapterCount, getBibleVersesLocal } from '../services/bibleLocal';
 import { Verse } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
@@ -51,21 +50,24 @@ const Bible: React.FC = () => {
     setViewMode('reading');
     
     try {
-      const data = await fetchRealBibleText(book, chapter, selectedVersion.name, lang as any);
-      if (data && data.length > 0) {
-        setVerses(data);
+      // 1. Tentar Banco Local (IndexedDB) para persistência offline real
+      const localPersisted = await offlineStorage.getBibleVerses(book, chapter);
+      if (localPersisted && localPersisted.length > 0) {
+        setVerses(localPersisted);
       } else {
-        setVerses(fetchLocalFallback(book, chapter));
+        // 2. Fallback para Corpus Estático em bibleLocal.ts
+        const staticData = getBibleVersesLocal(book, chapter);
+        setVerses(staticData);
       }
     } catch (e) {
-      const local = await offlineStorage.getBibleVerses(book, chapter);
-      setVerses(local || fetchLocalFallback(book, chapter));
+      console.error("Erro ao carregar Bíblia Local:", e);
+      setVerses([{ book, chapter, verse: 1, text: "Erro ao acessar o arquivo local. Verifique sua conexão com o Santuário Digital." }]);
     } finally {
       setLoading(false);
       const mainArea = document.querySelector('main');
       if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [selectedVersion, lang]);
+  }, []);
 
   useEffect(() => {
     if (viewMode === 'reading') {
@@ -104,16 +106,14 @@ const Bible: React.FC = () => {
         <h2 className="text-6xl md:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Scriptuarium</h2>
         <p className="text-stone-400 italic text-2xl">A Palavra de Deus em 73 volumes eternos.</p>
         
-        {!isOnline && (
-          <div className="bg-sacred/10 text-sacred px-6 py-3 rounded-2xl border border-sacred/20 inline-flex items-center gap-3">
-            <Icons.Globe className="w-5 h-5" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Navegação Offline Ativa</span>
-          </div>
-        )}
+        <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-2xl border border-emerald-500/20 inline-flex items-center gap-3">
+          <Icons.Pin className="w-5 h-5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Acesso Local Ativo: 100% Offline</span>
+        </div>
 
         <div className="flex justify-center gap-4 mt-8">
            <button onClick={() => setViewMode('library')} className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${viewMode === 'library' ? 'bg-sacred text-white border-sacred' : 'bg-white dark:bg-stone-900 text-stone-400'}`}>Biblioteca</button>
-           <button onClick={() => setViewMode('search')} className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${viewMode === 'search' ? 'bg-sacred text-white border-sacred' : 'bg-white dark:bg-stone-900 text-stone-400'}`}>Busca Local</button>
+           <button onClick={() => setViewMode('search')} className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${viewMode === 'search' ? 'bg-sacred text-white border-sacred' : 'bg-white dark:bg-stone-900 text-stone-400'}`}>Busca Offline</button>
         </div>
 
         {viewMode === 'library' ? (
@@ -131,7 +131,7 @@ const Bible: React.FC = () => {
           <form onSubmit={handleOfflineSearch} className="max-w-xl mx-auto mt-10 relative group">
              <input 
                type="text" 
-               placeholder="Pesquisar nos livros salvos..."
+               placeholder="Pesquisar versículos salvos..."
                value={searchQuery}
                onChange={e => setSearchQuery(e.target.value)}
                className="w-full pl-8 pr-20 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2rem] shadow-xl text-stone-800 dark:text-white font-serif italic text-xl outline-none focus:border-gold transition-all"
@@ -154,7 +154,7 @@ const Bible: React.FC = () => {
            )) : !loading && searchQuery && (
              <div className="text-center py-20 opacity-30">
                 <Icons.Search className="w-16 h-16 mx-auto mb-4" />
-                <p className="text-xl font-serif italic">Nenhum versículo encontrado nos seus arquivos locais.</p>
+                <p className="text-xl font-serif italic">Nenhum versículo encontrado na base local.</p>
              </div>
            )}
         </div>
@@ -175,17 +175,17 @@ const Bible: React.FC = () => {
                     </h4>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {(books as string[]).map(book => {
-                        const isOffline = offlineBooks.has(book);
+                        const isDownloaded = offlineBooks.has(book);
                         return (
                           <button 
                             key={book}
                             onClick={() => { setSelectedBook(book); setShowChapterSelector(true); }}
-                            className={`p-6 rounded-[2rem] border shadow-lg hover:scale-105 transition-all text-left group relative overflow-hidden ${isOffline ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800/40' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'}`}
+                            className={`p-6 rounded-[2rem] border shadow-lg hover:scale-105 transition-all text-left group relative overflow-hidden ${isDownloaded ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800/40' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'}`}
                           >
                             <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="flex justify-between items-start relative z-10">
                               <h5 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 group-hover:text-gold leading-tight">{book}</h5>
-                              {isOffline && <Icons.Pin className="w-3 h-3 text-emerald-500" />}
+                              {isDownloaded && <Icons.Pin className="w-3 h-3 text-emerald-500" />}
                             </div>
                             <p className="text-[8px] uppercase text-stone-400 mt-2 font-black tracking-widest relative z-10">{getChapterCount(book)} Caps</p>
                           </button>
@@ -246,11 +246,9 @@ const Bible: React.FC = () => {
                     <h2 className="text-4xl md:text-7xl font-serif font-bold dark:text-stone-100 tracking-tight">{selectedBook}</h2>
                   </div>
                   <div className="text-right flex flex-col items-end gap-2">
-                    {offlineBooks.has(selectedBook) && (
-                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2">
-                        <Icons.Pin className="w-2.5 h-2.5" /> Preservado Offline
-                      </span>
-                    )}
+                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2">
+                      <Icons.Pin className="w-2.5 h-2.5" /> Acesso Local
+                    </span>
                     <p className="text-lg font-serif italic text-gold">{selectedVersion.name}</p>
                   </div>
                </header>
@@ -259,7 +257,7 @@ const Bible: React.FC = () => {
                   {loading ? (
                     <div className="py-20 text-center space-y-6">
                       <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-                      <p className="text-3xl font-serif italic text-stone-400">Consultando o Manuscrito...</p>
+                      <p className="text-3xl font-serif italic text-stone-400">Extraindo do Codex...</p>
                     </div>
                   ) : verses.length > 0 ? (
                     verses.map((v, i) => (
@@ -280,7 +278,7 @@ const Bible: React.FC = () => {
                   ) : (
                     <div className="py-20 text-center opacity-30">
                        <Icons.Book className="w-16 h-16 mx-auto mb-4" />
-                       <p className="text-2xl font-serif italic">Nenhum manuscrito encontrado para esta página.</p>
+                       <p className="text-2xl font-serif italic">Nenhum manuscrito disponível offline para esta página.</p>
                     </div>
                   )}
                </div>

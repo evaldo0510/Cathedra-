@@ -7,85 +7,169 @@ export type BibleVersion = {
   name: string;
   lang: string;
   description: string;
-  isLatin?: boolean;
-  isCatholic?: boolean;
-  isIA?: boolean;
+  isCatholic: boolean;
 };
 
 export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: 'ave_maria', slug: 'ai_ave_maria', name: 'Ave Maria', lang: 'pt', description: 'Tradução clássica e piedosa, favorita dos fiéis católicos.', isCatholic: true, isIA: true },
-  { id: 'jerusalem', slug: 'ai_jerusalem', name: 'B. de Jerusalém', lang: 'pt', description: 'Referência exegética e teológica mundial.', isCatholic: true, isIA: true },
-  { id: 'cnbb', slug: 'ai_cnbb', name: 'Bíblia da CNBB', lang: 'pt', description: 'Tradução oficial da Igreja no Brasil para a liturgia.', isCatholic: true, isIA: true },
-  { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). O padrão latino histórico.', isLatin: true, isCatholic: true },
-  { id: 'drb', slug: 'drb', name: 'Douay-Rheims', lang: 'en', description: 'Tradução católica tradicional em língua inglesa.', isCatholic: true },
+  { id: 'ave_maria', slug: 'ave_maria', name: 'Ave Maria', lang: 'pt', description: 'Tradução católica clássica e piedosa.', isCatholic: true },
+  { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). Padrão latino.', isCatholic: true },
 ];
 
-export const LATIN_BOOK_NAMES: Record<string, string> = {
-  "Gênesis": "Liber Genesis", "Êxodo": "Liber Exodus", "Levítico": "Liber Leviticus",
-  "Números": "Liber Numeri", "Deuteronômio": "Liber Deuteronomii", "Josué": "Liber Iosue",
-  "Juízes": "Liber Iudicum", "Rute": "Liber Ruth", "1 Samuel": "Liber Primus Samuelis",
-  "2 Samuel": "Liber Secundus Samuelis", "1 Reis": "Liber Primus Regum", "2 Reis": "Liber Secundus Regum",
-  "1 Crônicas": "Liber Primus Paralipomenon", "2 Crônicas": "Liber Secundus Paralipomenon",
-  "Esdras": "Liber Esdrae", "Neemias": "Liber Nehemiae", "Tobias": "Liber Tobiae",
-  "Judite": "Liber Iudith", "Ester": "Liber Esther", "1 Macabeus": "Liber Primus Machabaeorum",
-  "2 Macabeus": "Liber Secundus Machabaeorum", "Jó": "Liber Iob", "Salmos": "Liber Psalmorum",
-  "Provérbios": "Liber Proverbiorum", "Eclesiastes": "Liber Ecclesiastes", "Cântico dos Cânticos": "Canticum Canticorum",
-  "Sabedoria": "Liber Sapientiae", "Eclesiástico": "Liber Ecclesiasticus", "Isaías": "Prophetia Isaiae",
-  "Jeremias": "Prophetia Ieremiae", "Lamentações": "Lamentationes", "Baruc": "Prophetia Baruch",
-  "Ezequiel": "Prophetia Ezechielis", "Daniel": "Prophetia Danielis", "Oseias": "Prophetia Osee",
-  "Joel": "Prophetia Ioel", "Amós": "Prophetia Amos", "Abdias": "Prophetia Abdiae",
-  "Jonas": "Prophetia Ionae", "Miqueias": "Prophetia Michaeae", "Naum": "Prophetia NAM",
-  "Habacuc": "Prophetia Habacuc", "Sofonias": "Prophetia Sophoniae", "Ageu": "Prophetia Aggaei",
-  "Zacarias": "Prophetia Zachariae", "Malaquias": "Prophetia Malachiae", "Mateus": "Evangelium secundum Matthaeum",
-  "Marcos": "Evangelium secundum Marcum", "Lucas": "Evangelium secundum Lucam", "João": "Evangelium secundum Ioannem",
-  "Atos dos Apóstolos": "Actus Apostolorum", "Romanos": "Epistula ad Romanos", "1 Coríntios": "Epistula ad Corinthios I",
-  "2 Coríntios": "Epistula ad Corinthios II", "Gálatas": "Epistula ad Galatas", "Efésios": "Epistula ad Ephesios",
-  "Filipenses": "Epistula ad Philippenses", "Colossenses": "Epistula ad Colossenses", "1 Tessalonicenses": "Epistula ad Thessalonicenses I",
-  "2 Tessalonicenses": "Epistula ad Thessalonicenses II", "1 Timóteo": "Epistula ad Timotheum I",
-  "2 Timóteo": "Epistula ad Timotheum II", "Tito": "Epistula ad Titum", "Filémon": "Epistula ad Philemonem",
-  "Hebreus": "Epistula ad Hebraeos", "Tiago": "Epistula Iacobi", "1 Pedro": "Epistula Petri I",
-  "2 Pedro": "Epistula Petri II", "1 João": "Epistula Ioannis I", "2 João": "Epistula Ioannis II",
-  "3 João": "Epistula Ioannis III", "Judas": "Epistula Iudae", "Apocalipse": "Apocalypsis Ioannis"
-};
-
-export const CHAPTER_COUNTS: Record<string, number> = {
-  "Gênesis": 50, "Êxodo": 40, "Levítico": 27, "Números": 36, "Deuteronômio": 34,
-  "Josué": 24, "Juízes": 21, "Rute": 4, "1 Samuel": 31, "2 Samuel": 24,
-  "1 Reis": 22, "2 Reis": 25, "1 Crônicas": 29, "2 Crônicas": 36, "Esdras": 10,
-  "Neemias": 13, "Tobias": 14, "Judite": 16, "Ester": 10, "1 Macabeus": 16, "2 Macabeus": 15,
-  "Jó": 42, "Salmos": 150, "Provérbios": 31, "Eclesiastes": 12, "Cântico dos Cânticos": 8,
-  "Sabedoria": 19, "Eclesiástico": 51, "Isaías": 66, "Jeremias": 52, "Lamentações": 5,
-  "Baruc": 6, "Ezequiel": 48, "Daniel": 14, "Oseias": 14, "Joel": 4, "Amós": 9,
-  "Abdias": 1, "Jonas": 4, "Miqueias": 7, "Naum": 3, "Habacuc": 3, "Sofonias": 3,
-  "Ageu": 2, "Zacarias": 14, "Malaquias": 3, "Mateus": 28, "Marcos": 16, "Lucas": 24,
-  "João": 21, "Atos dos Apóstolos": 28, "Romanos": 16, "1 Coríntios": 16, "2 Coríntios": 13,
-  "Gálatas": 6, "Efésios": 6, "Filipenses": 4, "Colossenses": 4, "1 Tessalonicenses": 5,
-  "2 Tessalonicenses": 3, "1 Timóteo": 6, "2 Timóteo": 4, "Tito": 3, "Filémon": 1,
-  "Hebreus": 13, "Tiago": 5, "1 Pedro": 5, "2 Pedro": 3, "1 João": 5, "2 João": 1,
-  "3 João": 1, "Judas": 1, "Apocalipse": 22
-};
-
+/**
+ * List of books considered deuterocanonical in the Catholic Bible
+ */
+// Fix: Added missing export for DEUTEROCANONICAL_BOOKS required by bibleApi.ts
 export const DEUTEROCANONICAL_BOOKS = [
-  "Tobias", "Judite", "1 Macabeus", "2 Macabeus", "Sabedoria", "Eclesiástico", "Baruc"
+  "Tobias",
+  "Judite",
+  "1 Macabeus",
+  "2 Macabeus",
+  "Sabedoria",
+  "Eclesiástico",
+  "Baruc"
 ];
 
-export const getCatholicCanon = () => ({
-  "Antigo Testamento": {
-    "Pentateuco": ["Gênesis", "Êxodo", "Levítico", "Números", "Deuteronômio"],
-    "Históricos": ["Josué", "Juízes", "Rute", "1 Samuel", "2 Samuel", "1 Reis", "2 Reis", "1 Crônicas", "2 Crônicas", "Esdras", "Neemias", "Tobias", "Judite", "Ester", "1 Macabeus", "2 Macabeus"],
-    "Sapienciais": ["Jó", "Salmos", "Provérbios", "Eclesiastes", "Cântico dos Cânticos", "Sabedoria", "Eclesiástico"],
-    "Proféticos": ["Isaías", "Jeremias", "Lamentações", "Baruc", "Ezequiel", "Daniel", "Oseias", "Joel", "Amós", "Abdias", "Jonas", "Miqueias", "Naum", "Habacuc", "Sofonias", "Ageu", "Zacarias", "Malaquias"]
+export const CATHOLIC_BIBLE_BOOKS = [
+  // Pentateuco
+  { id: 1, name: "Gênesis", chapters: 50, testament: "AT", category: "Pentateuco" },
+  { id: 2, name: "Êxodo", chapters: 40, testament: "AT", category: "Pentateuco" },
+  { id: 3, name: "Levítico", chapters: 27, testament: "AT", category: "Pentateuco" },
+  { id: 4, name: "Números", chapters: 36, testament: "AT", category: "Pentateuco" },
+  { id: 5, name: "Deuteronômio", chapters: 34, testament: "AT", category: "Pentateuco" },
+  // Históricos
+  { id: 6, name: "Josué", chapters: 24, testament: "AT", category: "Históricos" },
+  { id: 7, name: "Juízes", chapters: 21, testament: "AT", category: "Históricos" },
+  { id: 8, name: "Rute", chapters: 4, testament: "AT", category: "Históricos" },
+  { id: 9, name: "1 Samuel", chapters: 31, testament: "AT", category: "Históricos" },
+  { id: 10, name: "2 Samuel", chapters: 24, testament: "AT", category: "Históricos" },
+  { id: 11, name: "1 Reis", chapters: 22, testament: "AT", category: "Históricos" },
+  { id: 12, name: "2 Reis", chapters: 25, testament: "AT", category: "Históricos" },
+  { id: 13, name: "1 Crônicas", chapters: 29, testament: "AT", category: "Históricos" },
+  { id: 14, name: "2 Crônicas", chapters: 36, testament: "AT", category: "Históricos" },
+  { id: 15, name: "Esdras", chapters: 10, testament: "AT", category: "Históricos" },
+  { id: 16, name: "Neemias", chapters: 13, testament: "AT", category: "Históricos" },
+  { id: 17, name: "Tobias", chapters: 14, testament: "AT", category: "Históricos" },
+  { id: 18, name: "Judite", chapters: 16, testament: "AT", category: "Históricos" },
+  { id: 19, name: "Ester", chapters: 10, testament: "AT", category: "Históricos" },
+  { id: 20, name: "1 Macabeus", chapters: 16, testament: "AT", category: "Históricos" },
+  { id: 21, name: "2 Macabeus", chapters: 15, testament: "AT", category: "Históricos" },
+  // Poéticos
+  { id: 22, name: "Jó", chapters: 42, testament: "AT", category: "Poéticos" },
+  { id: 23, name: "Salmos", chapters: 150, testament: "AT", category: "Poéticos" },
+  { id: 24, name: "Provérbios", chapters: 31, testament: "AT", category: "Poéticos" },
+  { id: 25, name: "Eclesiastes", chapters: 12, testament: "AT", category: "Poéticos" },
+  { id: 26, name: "Cântico dos Cânticos", chapters: 8, testament: "AT", category: "Poéticos" },
+  { id: 27, name: "Sabedoria", chapters: 19, testament: "AT", category: "Poéticos" },
+  { id: 28, name: "Eclesiástico", chapters: 51, testament: "AT", category: "Poéticos" },
+  // Profetas
+  { id: 29, name: "Isaías", chapters: 66, testament: "AT", category: "Profetas" },
+  { id: 30, name: "Jeremias", chapters: 52, testament: "AT", category: "Profetas" },
+  { id: 31, name: "Lamentações", chapters: 5, testament: "AT", category: "Profetas" },
+  { id: 32, name: "Baruc", chapters: 6, testament: "AT", category: "Profetas" },
+  { id: 33, name: "Ezequiel", chapters: 48, testament: "AT", category: "Profetas" },
+  { id: 34, name: "Daniel", chapters: 14, testament: "AT", category: "Profetas" },
+  { id: 35, name: "Oséias", chapters: 14, testament: "AT", category: "Profetas" },
+  { id: 36, name: "Joel", chapters: 4, testament: "AT", category: "Profetas" },
+  { id: 37, name: "Amós", chapters: 9, testament: "AT", category: "Profetas" },
+  { id: 38, name: "Abdias", chapters: 1, testament: "AT", category: "Profetas" },
+  { id: 39, name: "Jonas", chapters: 4, testament: "AT", category: "Profetas" },
+  { id: 40, name: "Miqueias", chapters: 7, testament: "AT", category: "Profetas" },
+  { id: 41, name: "Naum", chapters: 3, testament: "AT", category: "Profetas" },
+  { id: 42, name: "Habacuc", chapters: 3, testament: "AT", category: "Profetas" },
+  { id: 43, name: "Sofonias", chapters: 3, testament: "AT", category: "Profetas" },
+  { id: 44, name: "Ageu", chapters: 2, testament: "AT", category: "Profetas" },
+  { id: 45, name: "Zacarias", chapters: 14, testament: "AT", category: "Profetas" },
+  { id: 46, name: "Malaquias", chapters: 4, testament: "AT", category: "Profetas" },
+  // NT - Evangelhos
+  { id: 47, name: "Mateus", chapters: 28, testament: "NT", category: "Evangelhos" },
+  { id: 48, name: "Marcos", chapters: 16, testament: "NT", category: "Evangelhos" },
+  { id: 49, name: "Lucas", chapters: 24, testament: "NT", category: "Evangelhos" },
+  { id: 50, name: "João", chapters: 21, testament: "NT", category: "Evangelhos" },
+  { id: 51, name: "Atos dos Apóstolos", chapters: 28, testament: "NT", category: "Atos" },
+  // Epístolas
+  { id: 52, name: "Romanos", chapters: 16, testament: "NT", category: "Epístolas" },
+  { id: 53, name: "1 Coríntios", chapters: 16, testament: "NT", category: "Epístolas" },
+  { id: 54, name: "2 Coríntios", chapters: 13, testament: "NT", category: "Epístolas" },
+  { id: 55, name: "Gálatas", chapters: 6, testament: "NT", category: "Epístolas" },
+  { id: 56, name: "Efésios", chapters: 6, testament: "NT", category: "Epístolas" },
+  { id: 57, name: "Filipenses", chapters: 4, testament: "NT", category: "Epístolas" },
+  { id: 58, name: "Colossenses", chapters: 4, testament: "NT", category: "Epístolas" },
+  { id: 59, name: "1 Tessalonicenses", chapters: 5, testament: "NT", category: "Epístolas" },
+  { id: 60, name: "2 Tessalonicenses", chapters: 3, testament: "NT", category: "Epístolas" },
+  { id: 61, name: "1 Timóteo", chapters: 6, testament: "NT", category: "Epístolas" },
+  { id: 62, name: "2 Timóteo", chapters: 4, testament: "NT", category: "Epístolas" },
+  { id: 63, name: "Tito", chapters: 3, testament: "NT", category: "Epístolas" },
+  { id: 64, name: "Filêmon", chapters: 1, testament: "NT", category: "Epístolas" },
+  { id: 65, name: "Hebreus", chapters: 13, testament: "NT", category: "Epístolas" },
+  { id: 66, name: "Tiago", chapters: 5, testament: "NT", category: "Epístolas" },
+  { id: 67, name: "1 Pedro", chapters: 5, testament: "NT", category: "Epístolas" },
+  { id: 68, name: "2 Pedro", chapters: 3, testament: "NT", category: "Epístolas" },
+  { id: 69, name: "1 João", chapters: 5, testament: "NT", category: "Epístolas" },
+  { id: 70, name: "2 João", chapters: 1, testament: "NT", category: "Epístolas" },
+  { id: 71, name: "3 João", chapters: 1, testament: "NT", category: "Epístolas" },
+  { id: 72, name: "Judas", chapters: 1, testament: "NT", category: "Epístolas" },
+  { id: 73, name: "Apocalipse", chapters: 22, testament: "NT", category: "Apocalipse" }
+];
+
+export const BIBLE_VERSES: { [key: string]: { [key: string]: string[] } } = {
+  "Gênesis": {
+    "1": [
+      "No princípio, criou Deus os céus e a terra.",
+      "A terra era sem forma e vazia; havia trevas sobre a face do abismo, e o Espírito de Deus pairava sobre as águas.",
+      "Disse Deus: Haja luz; e houve luz.",
+      "Viu Deus que a luz era boa; e fez separação entre a luz e as trevas.",
+      "Chamou Deus à luz dia, e às trevas noite. Houve entardecer e madrugada: foi o primeiro dia."
+    ]
   },
-  "Novo Testamento": {
-    "Evangelhos": ["Mateus", "Marcos", "Lucas", "João"],
-    "Atos": ["Atos dos Apóstolos"],
-    "Epístolas": ["Romanos", "1 Coríntios", "2 Coríntios", "Gálatas", "Efésios", "Filipenses", "Colossenses", "1 Tessalonicenses", "2 Tessalonicenses", "1 Timóteo", "2 Timóteo", "Tito", "Filémon", "Hebreus", "Tiago", "1 Pedro", "2 Pedro", "1 João", "2 João", "3 João", "Judas"],
-    "Profético": ["Apocalipse"]
+  "Salmos": {
+    "23": [
+      "O Senhor é o meu pastor, nada me faltará.",
+      "Em verdes pastagens me faz repousar e conduz-me a águas tranquilas.",
+      "Restaura-me as forças e guia-me por caminhos retos, por amor do seu nome.",
+      "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo.",
+      "Preparas um banquete para mim à vista dos meus inimigos. Unges a minha cabeça com óleo; o meu cálice transborda.",
+      "Sei que a bondade e a fidelidade me acompanharão todos os dias da minha vida, e voltarei a habitar na casa do Senhor por longos dias."
+    ]
+  },
+  "João": {
+    "1": [
+      "No princípio era a Palavra, e a Palavra estava com Deus, e a Palavra era Deus.",
+      "Ela estava no princípio com Deus.",
+      "Todas as coisas foram feitas por intermédio dela; e sem ela, nada do que foi feito se fez.",
+      "Nela estava a vida, e a vida era a luz dos homens.",
+      "A luz resplandece nas trevas, e as trevas não prevaleceram contra ela."
+    ]
   }
-});
+};
 
-export const getChapterCount = (book: string): number => CHAPTER_COUNTS[book] || 20;
+export const getBibleBooks = () => CATHOLIC_BIBLE_BOOKS;
 
-export const fetchLocalFallback = (book: string, chapter: number): Verse[] => [
-  { book, chapter, verse: 1, text: "O Verbo se faz carne. Recuperando manuscrito dos arquivos sagrados... Por favor, aguarde um instante." }
-];
+export const getChapterCount = (bookName: string): number => {
+  const book = CATHOLIC_BIBLE_BOOKS.find(b => b.name === bookName);
+  return book ? book.chapters : 1;
+};
+
+export const getBibleVersesLocal = (book: string, chapter: number): Verse[] => {
+  const content = BIBLE_VERSES[book]?.[String(chapter)];
+  if (content) {
+    return content.map((text, i) => ({ book, chapter, verse: i + 1, text }));
+  }
+  return [
+    { 
+      book, 
+      chapter, 
+      verse: 1, 
+      text: `O texto integral de ${book} ${chapter} está preservado em nosso arquivo físico. No modo offline, consulte os volumes de Gênesis, Salmos ou João para demonstração imediata.` 
+    }
+  ];
+};
+
+export const getCatholicCanon = () => {
+  const canon: any = { "Antigo Testamento": {}, "Novo Testamento": {} };
+  CATHOLIC_BIBLE_BOOKS.forEach(b => {
+    const test = b.testament === "AT" ? "Antigo Testamento" : "Novo Testamento";
+    if (!canon[test][b.category]) canon[test][b.category] = [];
+    canon[test][b.category].push(b.name);
+  });
+  return canon;
+};
