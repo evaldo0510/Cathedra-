@@ -35,8 +35,9 @@ const Bible: React.FC = () => {
   useEffect(() => { refreshOfflineStatus(); }, [refreshOfflineStatus]);
 
   const loadContent = useCallback(async (bookName: string, chapter: number) => {
-    setLoading(true);
+    // Descarrega conteúdo anterior imediatamente para poupar memória
     setVerses([]);
+    setLoading(true);
     
     try {
       const localPersisted = await offlineStorage.getBibleVerses(bookName, chapter);
@@ -119,6 +120,16 @@ const Bible: React.FC = () => {
     });
     return result;
   }, [searchQuery]);
+
+  // Memoriza a lista de versículos para evitar re-renderizações pesadas do DOM
+  const renderedVerses = useMemo(() => (
+    verses.map((v, i) => (
+      <span key={`${v.book}-${v.chapter}-${v.verse}`} className="inline group break-words">
+        <sup className="text-[0.6em] font-black text-sacred dark:text-gold mr-1.5 opacity-60 group-hover:opacity-100 select-none">{v.verse}</sup>
+        <span className="font-serif tracking-tight leading-relaxed">{v.text} </span>
+      </span>
+    ))
+  ), [verses]);
 
   const LibraryView = () => (
     <div className="space-y-8 md:space-y-16 animate-in fade-in duration-700 pb-20 px-2">
@@ -222,14 +233,15 @@ const Bible: React.FC = () => {
               <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-90" />
             </button>
             <div className="flex items-center bg-stone-100 dark:bg-stone-900 rounded-full md:rounded-2xl border border-stone-200 dark:border-stone-800 p-1">
-               <button onClick={() => setViewMode('library')} className="px-3 md:px-6 py-1 md:py-2 hover:bg-white dark:hover:bg-stone-800 rounded-full md:rounded-xl text-stone-900 dark:text-white font-serif font-bold text-sm md:text-lg truncate max-w-[80px] md:max-w-none">{selectedBook.name}</button>
+               <button onClick={() => setViewMode('library')} className="px-3 md:px-6 py-1 md:py-2 hover:bg-white dark:hover:bg-stone-800 rounded-full md:rounded-xl text-stone-900 dark:text-white font-serif font-bold text-xs md:text-lg truncate max-w-[80px] md:max-w-none">{selectedBook.name}</button>
                <div className="w-px h-4 md:h-6 bg-stone-200 dark:bg-stone-700 mx-1" />
                <button onClick={() => setViewMode('chapters')} className="px-3 md:px-6 py-1 md:py-2 hover:bg-white dark:hover:bg-stone-800 rounded-full md:rounded-xl text-gold font-serif font-bold text-lg md:text-2xl">{selectedChapter}</button>
             </div>
          </div>
          
-         <div className="hidden sm:flex items-center gap-6 px-6 flex-1 max-w-xs">
-            <Icons.Audio className="w-4 h-4 text-stone-300" />
+         {/* Slider de Fonte Universal - Otimizado para Mobile */}
+         <div className="flex items-center gap-3 md:gap-6 px-2 md:px-6 flex-1 max-w-[120px] md:max-w-xs">
+            <Icons.Search className="w-3 h-3 md:w-4 md:h-4 text-stone-300 hidden xs:block" />
             <input 
               type="range" 
               min="0.8" 
@@ -239,16 +251,13 @@ const Bible: React.FC = () => {
               onChange={e => setFontSize(parseFloat(e.target.value))}
               className="w-full h-1 bg-stone-200 dark:bg-stone-800 rounded-lg appearance-none cursor-pointer accent-gold"
             />
-            <span className="text-[10px] font-black text-stone-400 w-8">{Math.round(fontSize * 100)}%</span>
+            <span className="text-[8px] md:text-[10px] font-black text-stone-400 w-6 md:w-8">{Math.round(fontSize * 100)}%</span>
          </div>
 
          <div className="flex gap-2 pr-2">
             <span className={`px-4 py-2 rounded-full text-[8px] font-black uppercase tracking-widest hidden lg:flex items-center gap-2 ${sourceType === 'local' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gold/10 text-gold'}`}>
                <Icons.Pin className="w-3 h-3" /> {sourceType === 'local' ? 'Preservado' : 'Sincronizado'}
             </span>
-            <button onClick={() => setFontSize(Math.min(fontSize + 0.1, 2.5))} className="p-3 bg-stone-50 dark:bg-stone-800 rounded-full text-stone-400 sm:hidden">
-              A+
-            </button>
          </div>
       </nav>
 
@@ -263,13 +272,8 @@ const Bible: React.FC = () => {
                 <p className="text-xl font-serif italic text-stone-400">Consultando o Scriptuarium...</p>
               </div>
            ) : (
-             <div className="relative z-10 text-stone-800 dark:text-stone-200 break-words">
-                {verses.map((v, i) => (
-                  <span key={i} className="inline group">
-                    <sup className="text-[0.6em] font-black text-sacred dark:text-gold mr-1.5 opacity-60 group-hover:opacity-100 select-none">{v.verse}</sup>
-                    <span className="font-serif tracking-tight leading-relaxed">{v.text} </span>
-                  </span>
-                ))}
+             <div className="relative z-10 text-stone-800 dark:text-stone-200 break-words transition-opacity duration-300">
+                {renderedVerses}
              </div>
            )}
            
