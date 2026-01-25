@@ -1,20 +1,14 @@
 
 export interface BibleVerse {
+  id: string;
   book: string;
   chapter: number;
   verse: number;
   text: string;
 }
 
-export interface CatechismEntry {
-  id: string;
-  number: number;
-  text: string;
-  section: string;
-}
-
 const DB_NAME = 'CathedraDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export class OfflineStorage {
   private db: IDBDatabase | null = null;
@@ -36,6 +30,7 @@ export class OfflineStorage {
         if (!db.objectStoreNames.contains('bible_verses')) {
           const bibleStore = db.createObjectStore('bible_verses', { keyPath: 'id' });
           bibleStore.createIndex('book_chapter', ['book', 'chapter'], { unique: false });
+          bibleStore.createIndex('text_search', 'text', { unique: false });
         }
 
         if (!db.objectStoreNames.contains('catechism')) {
@@ -43,8 +38,8 @@ export class OfflineStorage {
           catechismStore.createIndex('number', 'number', { unique: true });
         }
 
-        if (!db.objectStoreNames.contains('sync_status')) {
-          db.createObjectStore('sync_status', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('sync_queue')) {
+          db.createObjectStore('sync_queue', { keyPath: 'id', autoIncrement: true });
         }
       };
     });
@@ -56,7 +51,13 @@ export class OfflineStorage {
       const transaction = this.db!.transaction(['bible_verses'], 'readwrite');
       const store = transaction.objectStore('bible_verses');
       verses.forEach(v => {
-        store.put({ id: `${book}-${chapter}-${v.verse}`, book, chapter, verse: v.verse, text: v.text });
+        store.put({ 
+          id: `${book}-${chapter}-${v.verse}`, 
+          book, 
+          chapter, 
+          verse: v.verse, 
+          text: v.text 
+        });
       });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
@@ -75,12 +76,33 @@ export class OfflineStorage {
     });
   }
 
-  async clearAll(): Promise<void> {
+  async getDownloadedBooks(): Promise<Set<string>> {
     await this.init();
-    const transaction = this.db!.transaction(['bible_verses', 'catechism', 'sync_status'], 'readwrite');
-    transaction.objectStore('bible_verses').clear();
-    transaction.objectStore('catechism').clear();
-    transaction.objectStore('sync_status').clear();
+    return new Promise((resolve) => {
+      const transaction = this.db!.transaction(['bible_verses'], 'readonly');
+      const store = transaction.objectStore('bible_verses');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const books = new Set<string>(request.result.map(v => v.book));
+        resolve(books);
+      };
+      request.onerror = () => resolve(new Set());
+    });
+  }
+
+  async searchOfflineText(query: string): Promise<BibleVerse[]> {
+    await this.init();
+    return new Promise((resolve) => {
+      const transaction = this.db!.transaction(['bible_verses'], 'readonly');
+      const store = transaction.objectStore('bible_verses');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const q = query.toLowerCase();
+        const results = request.result.filter(v => v.text.toLowerCase().includes(q));
+        resolve(results.slice(0, 50));
+      };
+      request.onerror = () => resolve([]);
+    });
   }
 }
 

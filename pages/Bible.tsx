@@ -1,19 +1,23 @@
 
-import React, { useState, useEffect, useCallback, useContext, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { Icons } from '../constants';
 import { fetchRealBibleText } from '../services/gemini';
 import { getCatholicCanon, BIBLE_VERSIONS, BibleVersion, getChapterCount, fetchLocalFallback } from '../services/bibleLocal';
-import { Verse, Language } from '../types';
+import { Verse } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
+import { useOfflineMode } from '../hooks/useOfflineMode';
+import { offlineStorage } from '../services/offlineStorage';
 
 const CANON = getCatholicCanon();
 
 const Bible: React.FC = () => {
   const { lang } = useContext(LangContext);
+  const { isOnline } = useOfflineMode();
   const [viewMode, setViewMode] = useState<'library' | 'reading'>('library');
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [offlineBooks, setOfflineBooks] = useState<Set<string>>(new Set());
   
   const [selectedBook, setSelectedBook] = useState<string>("Gênesis");
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
@@ -35,12 +39,18 @@ const Bible: React.FC = () => {
     return list;
   }, []);
 
+  // Verifica quais livros estão offline
+  useEffect(() => {
+    offlineStorage.getDownloadedBooks().then(setOfflineBooks);
+  }, [viewMode]);
+
   const loadContent = useCallback(async (book: string, chapter: number) => {
     setLoading(true);
     setVerses([]);
     setViewMode('reading');
     
     try {
+      // Estratégia: Sempre tenta fetchRealBibleText (que já gerencia IndexedDB internamente)
       const data = await fetchRealBibleText(book, chapter, selectedVersion.name, lang as any);
       if (data && data.length > 0) {
         setVerses(data);
@@ -48,10 +58,12 @@ const Bible: React.FC = () => {
         setVerses(fetchLocalFallback(book, chapter));
       }
     } catch (e) {
-      setVerses(fetchLocalFallback(book, chapter));
+      const local = await offlineStorage.getBibleVerses(book, chapter);
+      setVerses(local || fetchLocalFallback(book, chapter));
     } finally {
       setLoading(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const mainArea = document.querySelector('main');
+      if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [selectedVersion, lang]);
 
@@ -83,6 +95,13 @@ const Bible: React.FC = () => {
         <h2 className="text-6xl md:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Scriptuarium</h2>
         <p className="text-stone-400 italic text-2xl">A Palavra de Deus em 73 volumes eternos.</p>
         
+        {!isOnline && (
+          <div className="bg-sacred/10 text-sacred px-6 py-3 rounded-2xl border border-sacred/20 inline-flex items-center gap-3">
+            <Icons.Globe className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-widest">Navegação Offline Ativa</span>
+          </div>
+        )}
+
         <form onSubmit={handleQuickJump} className="max-w-xl mx-auto mt-10 relative group">
            <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gold/40 transition-colors group-focus-within:text-gold" />
            <input 
@@ -110,17 +129,23 @@ const Bible: React.FC = () => {
                     {category}
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {(books as string[]).map(book => (
-                      <button 
-                        key={book}
-                        onClick={() => { setSelectedBook(book); setShowChapterSelector(true); }}
-                        className="p-6 bg-white dark:bg-stone-900 rounded-[2rem] border border-stone-100 dark:border-stone-800 shadow-lg hover:border-gold hover:scale-105 transition-all text-left group relative overflow-hidden"
-                      >
-                        <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <h5 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 group-hover:text-gold leading-tight relative z-10">{book}</h5>
-                        <p className="text-[8px] uppercase text-stone-400 mt-2 font-black tracking-widest">{getChapterCount(book)} Caps</p>
-                      </button>
-                    ))}
+                    {(books as string[]).map(book => {
+                      const isOffline = offlineBooks.has(book);
+                      return (
+                        <button 
+                          key={book}
+                          onClick={() => { setSelectedBook(book); setShowChapterSelector(true); }}
+                          className={`p-6 rounded-[2rem] border shadow-lg hover:scale-105 transition-all text-left group relative overflow-hidden ${isOffline ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800/40' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'}`}
+                        >
+                          <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="flex justify-between items-start relative z-10">
+                            <h5 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 group-hover:text-gold leading-tight">{book}</h5>
+                            {isOffline && <Icons.Pin className="w-3 h-3 text-emerald-500" />}
+                          </div>
+                          <p className="text-[8px] uppercase text-stone-400 mt-2 font-black tracking-widest relative z-10">{getChapterCount(book)} Caps</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -146,8 +171,8 @@ const Bible: React.FC = () => {
               </div>
            </div>
            
-           <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-[40%] md:max-w-none">
-              {Array.from({ length: chapterCount }).map((_, i) => (
+           <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-[40%] md:max-w-none pr-4">
+              {Array.from({ length: Math.min(10, chapterCount) }).map((_, i) => (
                 <button 
                   key={i} 
                   onClick={() => setSelectedChapter(i + 1)}
@@ -156,6 +181,7 @@ const Bible: React.FC = () => {
                   {i + 1}
                 </button>
               ))}
+              {chapterCount > 10 && <span className="text-stone-700 flex items-center px-2">...</span>}
            </div>
         </nav>
       )}
@@ -179,24 +205,34 @@ const Bible: React.FC = () => {
                   </div>
                </header>
 
-               <div className="space-y-12">
+               <div className="space-y-12 pb-20">
                   {loading ? (
                     <div className="py-20 text-center space-y-6">
                       <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
                       <p className="text-3xl font-serif italic text-stone-400">Consultando o Arquivo Profético...</p>
                     </div>
-                  ) : verses.map((v, i) => (
-                    <div key={i} className="group relative transition-all duration-300 pb-10 border-b border-stone-50 dark:border-white/5 last:border-0 hover:pl-4">
-                      <div className="flex gap-6 items-start">
-                        <span className="text-xs font-serif font-black mt-2 text-sacred opacity-40 group-hover:opacity-100 transition-opacity w-8 text-right">{v.verse}</span>
-                        <div className="flex-1">
-                          <p className="font-serif leading-relaxed text-2xl md:text-4xl text-stone-800 dark:text-stone-300 transition-colors group-hover:text-stone-900 dark:group-hover:text-white">
-                            {v.text}
-                          </p>
+                  ) : verses.length > 0 ? (
+                    verses.map((v, i) => (
+                      <div key={i} className="group relative transition-all duration-300 pb-10 border-b border-stone-50 dark:border-white/5 last:border-0 hover:pl-4">
+                        <div className="flex gap-6 items-start">
+                          <span className="text-xs font-serif font-black mt-2 text-sacred opacity-40 group-hover:opacity-100 transition-opacity w-8 text-right">{v.verse}</span>
+                          <div className="flex-1">
+                            <p className="font-serif leading-relaxed text-2xl md:text-4xl text-stone-800 dark:text-stone-300 transition-colors group-hover:text-stone-900 dark:group-hover:text-white">
+                              {v.text}
+                            </p>
+                          </div>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                             <ActionButtons itemId={`v_${v.book}_${v.chapter}_${v.verse}`} type="verse" title={`${v.book} ${v.chapter}:${v.verse}`} content={v.text} />
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="py-20 text-center opacity-30">
+                       <Icons.Book className="w-16 h-16 mx-auto mb-4" />
+                       <p className="text-2xl font-serif italic">Nenhum manuscrito encontrado para esta página.</p>
                     </div>
-                  ))}
+                  )}
                </div>
             </section>
 
@@ -210,7 +246,7 @@ const Bible: React.FC = () => {
                </button>
                <button 
                  onClick={() => setSelectedChapter(selectedChapter + 1)}
-                 className="flex-1 max-w-sm px-12 py-10 bg-gold rounded-[3rem] text-left group hover:bg-yellow-400 transition-all shadow-2xl"
+                 className="flex-1 max-w-sm px-12 py-10 bg-gold text-stone-900 rounded-[3rem] text-left group hover:bg-yellow-400 transition-all shadow-2xl"
                >
                  <span className="text-[10px] font-black uppercase text-stone-900/60 mb-2 block">Avançar Leitura</span>
                  <p className="font-serif font-bold text-3xl text-stone-900">Seguir Fluxo</p>
@@ -220,10 +256,10 @@ const Bible: React.FC = () => {
         )}
       </main>
 
-      {/* MODAIS DE SELEÇÃO PRESERVADOS... */}
+      {/* MODAL DE CAPÍTULOS */}
       {showChapterSelector && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-4" onClick={() => setShowChapterSelector(false)}>
-           <div className="bg-[#0c0a09] w-full max-w-4xl max-h-[85vh] rounded-[4rem] shadow-4xl overflow-hidden flex flex-col border border-white/10" onClick={e => e.stopPropagation()}>
+           <div className="bg-[#0c0a09] w-full max-w-4xl max-h-[85vh] rounded-[4rem] shadow-4xl overflow-hidden flex flex-col border border-white/10 animate-modal-zoom" onClick={e => e.stopPropagation()}>
               <header className="p-12 border-b border-white/5 bg-stone-900/50 flex justify-between items-center">
                  <div>
                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gold/50">Librum</span>
@@ -236,7 +272,7 @@ const Bible: React.FC = () => {
                    <button 
                     key={i} 
                     onClick={() => { setSelectedChapter(i + 1); setViewMode('reading'); setShowChapterSelector(false); }}
-                    className="aspect-square rounded-2xl font-serif font-bold text-xl flex items-center justify-center transition-all bg-stone-900/50 border border-white/5 text-stone-400 hover:bg-gold hover:text-stone-900 hover:scale-110"
+                    className={`aspect-square rounded-2xl font-serif font-bold text-xl flex items-center justify-center transition-all bg-stone-900/50 border border-white/5 text-stone-400 hover:bg-gold hover:text-stone-900 hover:scale-110 ${selectedChapter === i+1 ? 'bg-gold text-stone-900' : ''}`}
                    >
                      {i + 1}
                    </button>
@@ -246,11 +282,22 @@ const Bible: React.FC = () => {
         </div>
       )}
       
+      {/* MODAL DE LIVROS */}
       {showBookSelector && (
         <div className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-8" onClick={() => setShowBookSelector(false)}>
-           <div className="bg-[#0c0a09] w-full max-w-7xl h-[90vh] rounded-[5rem] shadow-4xl border border-white/10 overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+           <div className="bg-[#0c0a09] w-full max-w-7xl h-[90vh] rounded-[5rem] shadow-4xl border border-white/10 overflow-hidden flex flex-col animate-modal-zoom" onClick={e => e.stopPropagation()}>
               <header className="p-12 border-b border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 bg-stone-900/50">
-                 <h2 className="text-4xl md:text-6xl font-serif font-bold text-gold tracking-tight">Bibliotheca</h2>
+                 <h2 className="text-4xl md:text-6xl font-serif font-bold text-gold tracking-tight">Scriptuarium</h2>
+                 <form onSubmit={handleQuickJump} className="flex-1 max-w-2xl relative">
+                    <input 
+                      type="text" 
+                      placeholder="Ir para livro ou sigla (João 3, Salmos 23)..." 
+                      value={quickJump} 
+                      autoFocus
+                      onChange={e => setQuickJump(e.target.value)} 
+                      className="w-full px-10 py-6 bg-white/5 border border-white/10 rounded-[3rem] outline-none text-white text-2xl font-serif italic focus:border-gold transition-all"
+                    />
+                 </form>
                  <button onClick={() => setShowBookSelector(false)} className="p-4 bg-white/5 rounded-full text-stone-500"><Icons.Cross className="w-8 h-8 rotate-45" /></button>
               </header>
               <div className="flex-1 overflow-y-auto p-12 custom-scrollbar space-y-16">
@@ -268,9 +315,12 @@ const Bible: React.FC = () => {
                                    <button 
                                     key={b} 
                                     onClick={() => { setSelectedBook(b); setShowBookSelector(false); setShowChapterSelector(true); }}
-                                    className="p-5 bg-stone-900/50 border border-white/5 rounded-2xl text-left hover:border-gold transition-all"
+                                    className={`p-5 border rounded-2xl text-left transition-all ${offlineBooks.has(b) ? 'bg-emerald-950/20 border-emerald-800/40' : 'bg-stone-900/50 border-white/5 hover:border-gold'}`}
                                    >
-                                      <span className="font-serif font-bold text-lg text-stone-300">{b}</span>
+                                      <div className="flex justify-between items-center">
+                                         <span className="font-serif font-bold text-lg text-stone-300">{b}</span>
+                                         {offlineBooks.has(b) && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
+                                      </div>
                                    </button>
                                  ))}
                               </div>
