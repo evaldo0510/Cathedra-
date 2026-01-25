@@ -33,6 +33,7 @@ import { Icons, MobileLogo } from './constants';
 import { UI_TRANSLATIONS } from './services/translations';
 import { notificationService } from './services/notifications';
 import { decodeBase64, decodeAudioData } from './utils/audio';
+import { useOfflineMode } from './hooks/useOfflineMode';
 
 interface LanguageContextType {
   lang: Language;
@@ -59,6 +60,8 @@ const App: React.FC = () => {
   });
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
 
+  const { isOnline, isSyncing, wasOffline } = useOfflineMode();
+
   // TTS States
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isTTSSearching, setIsTTSSearching] = useState(false);
@@ -78,111 +81,14 @@ const App: React.FC = () => {
   }, [isDark]);
 
   const stopSpeech = useCallback(() => {
-    // Para o áudio da Web Audio API (Gemini)
     if (audioSourceRef.current) {
       try { audioSourceRef.current.stop(); } catch (e) {}
       audioSourceRef.current = null;
     }
-    // Para o áudio do browser (SpeechSynthesis Fallback)
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsTTSSearching(false);
   }, []);
-
-  const handleToggleSpeech = async () => {
-    if (isSpeaking || isTTSSearching) {
-      stopSpeech();
-      return;
-    }
-
-    // 1. Extração de texto do conteúdo atual de forma limpa
-    const mainContent = document.querySelector('main article, main section, .page-enter');
-    if (!mainContent) return;
-
-    const elements = mainContent.querySelectorAll('h1, h2, h3, p, li');
-    let textToRead = "";
-    elements.forEach(el => {
-      if (!el.closest('button') && !el.closest('nav') && !el.closest('footer')) {
-        const text = el.textContent?.trim();
-        if (text) textToRead += text + ". ";
-      }
-    });
-
-    // Sanitização básica: remove quebras de linha excessivas e espaços duplos
-    textToRead = textToRead.replace(/\s+/g, ' ').trim();
-
-    if (!textToRead) return;
-
-    setIsTTSSearching(true);
-
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-
-      // IMPORTANTE: Resume o contexto de áudio (obrigatório em muitos browsers após interação)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-      }
-
-      // Tenta o TTS Profissional do Gemini (limite seguro de 2000 caracteres para evitar timeout)
-      const base64Data = await generateSpeech(textToRead.slice(0, 2000)); 
-      
-      if (base64Data) {
-        const audioBuffer = await decodeAudioData(
-          decodeBase64(base64Data),
-          audioContextRef.current,
-          24000,
-          1
-        );
-
-        const source = audioContextRef.current.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContextRef.current.destination);
-        
-        source.onended = () => {
-          setIsSpeaking(false);
-          audioSourceRef.current = null;
-        };
-
-        audioSourceRef.current = source;
-        setIsTTSSearching(false);
-        setIsSpeaking(true);
-        source.start(0);
-      } else {
-        // Se base64Data for nulo, lança erro para cair no fallback
-        throw new Error("Gemini TTS failed");
-      }
-    } catch (err) {
-      console.warn("Gemini TTS falhou. Acionando Fallback Lectorium nativo...", err);
-      
-      // Fallback: Web Speech API (Browser Nativo)
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(textToRead.slice(0, 3000));
-        utterance.lang = lang === 'pt' ? 'pt-BR' : lang === 'la' ? 'it-IT' : lang; // Latim soa melhor com motor italiano
-        utterance.rate = 0.9; // Um pouco mais lento para ser solene
-        
-        utterance.onstart = () => {
-          setIsTTSSearching(false);
-          setIsSpeaking(true);
-        };
-        utterance.onend = () => {
-          setIsSpeaking(false);
-        };
-        utterance.onerror = () => {
-          setIsTTSSearching(false);
-          setIsSpeaking(false);
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setIsTTSSearching(false);
-        setIsSpeaking(false);
-      }
-    }
-  };
 
   const handleSearch = useCallback(async (topic: string) => {
     setRoute(AppRoute.STUDY_MODE);
@@ -249,7 +155,29 @@ const App: React.FC = () => {
   return (
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
-        {/* Sidebar adaptativo */}
+        
+        {/* Offline & Sync Indicators */}
+        <div className="fixed top-0 left-0 right-0 z-[1000] pointer-events-none">
+          {!isOnline && (
+            <div className="bg-sacred text-white py-2 px-6 flex items-center justify-center gap-3 animate-in slide-in-from-top-full duration-500 shadow-2xl pointer-events-auto">
+               <Icons.Globe className="w-4 h-4 animate-pulse" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Modo Offline: Navegando no Scriptuarium Local</span>
+            </div>
+          )}
+          {isSyncing && isOnline && (
+            <div className="bg-gold text-stone-900 py-2 px-6 flex items-center justify-center gap-3 animate-in slide-in-from-top-full duration-500 shadow-2xl pointer-events-auto">
+               <div className="w-3 h-3 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sincronizando Depósito da Fé...</span>
+            </div>
+          )}
+          {isOnline && wasOffline && !isSyncing && (
+            <div className="bg-emerald-600 text-white py-2 px-6 flex items-center justify-center gap-3 animate-out fade-out slide-out-to-top duration-1000 pointer-events-auto">
+               <Icons.Star className="w-4 h-4 fill-current" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Conexão Restabelecida</span>
+            </div>
+          )}
+        </div>
+
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
           <div className={`relative h-full w-80 shadow-3xl transition-transform duration-500 ease-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
@@ -258,49 +186,17 @@ const App: React.FC = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
-          {/* Header Mobile Otimizado */}
           <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
              <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
                <Icons.Menu className="w-6 h-6" />
              </button>
              <div className="flex flex-col items-center" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
                 <MobileLogo className="w-9 h-9" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-gold mt-1">Cathedra</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-gold">Cathedra</span>
              </div>
              <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
-               {isDark ? <Icons.Globe className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
+               {isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
              </button>
-          </div>
-
-          {/* Lectorium (Floating TTS Controls) */}
-          <div className="fixed bottom-24 right-8 z-[200] md:bottom-12 md:right-12 group">
-             <div className={`absolute -top-12 right-0 bg-stone-900 text-gold text-[8px] font-black uppercase px-4 py-2 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity tracking-widest border border-gold/20 shadow-2xl`}>
-                {isTTSSearching ? 'Preparando Voz Magisterial...' : isSpeaking ? 'Silenciar Áudio' : 'Ouvir Conteúdo'}
-             </div>
-             <button 
-               onClick={handleToggleSpeech}
-               className={`w-16 h-16 rounded-full shadow-3xl flex items-center justify-center transition-all active:scale-90 border-2 ${
-                 isTTSSearching ? 'bg-gold border-gold' : 
-                 isSpeaking ? 'bg-sacred border-sacred animate-pulse' : 
-                 'bg-white dark:bg-stone-800 border-stone-100 dark:border-white/10 hover:border-gold'
-               }`}
-             >
-                {isTTSSearching ? (
-                  <div className="w-6 h-6 border-2 border-stone-900 border-t-transparent rounded-full animate-spin" />
-                ) : isSpeaking ? (
-                  <Icons.Stop className="w-6 h-6 text-white" />
-                ) : (
-                  <Icons.Audio className={`w-6 h-6 ${isSpeaking ? 'text-white' : 'text-gold'}`} />
-                )}
-             </button>
-             
-             {isSpeaking && (
-               <div className="absolute top-1/2 -left-12 -translate-y-1/2 flex items-center gap-1">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className={`w-1 bg-white/40 rounded-full animate-bounce`} style={{ height: `${i * 6}px`, animationDelay: `${i * 0.2}s` }} />
-                  ))}
-               </div>
-             )}
           </div>
 
           <div className="flex-1 p-4 md:p-12 lg:p-16 pb-24 max-w-[1400px] mx-auto w-full">

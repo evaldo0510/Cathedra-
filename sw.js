@@ -1,107 +1,116 @@
 
 /**
- * Cathedra Digital - Service Worker Pro
- * Versão: 5.2.0 - Market Ready Edition (Deep Linking & Actions)
+ * Cathedra Digital - Service Worker Pro (Codex Edition)
+ * Version: 6.0.0
  */
 
-const CACHE_NAME = 'cathedra-v5.2';
+const CACHE_VERSION = 'cathedra-v6-2024';
+const STATIC_CACHE = `static-${CACHE_VERSION}`;
+const IMAGE_CACHE = `images-${CACHE_VERSION}`;
+const FONT_CACHE = `fonts-${CACHE_VERSION}`;
+
 const STATIC_ASSETS = [
   './',
   './index.html',
   './index.tsx',
   './metadata.json',
-  './sw.js',
-  'https://img.icons8.com/ios-filled/512/d4af37/throne.png'
+  'https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio',
+  'https://www.transparenttextures.com/patterns/natural-paper.png'
 ];
 
+// Instalação: Cacheia o "App Shell"
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(STATIC_CACHE).then((cache) => {
+      console.log('[SW] Caching App Shell');
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
 });
 
+// Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
+          if (![STATIC_CACHE, IMAGE_CACHE, FONT_CACHE].includes(key)) {
+            return caches.delete(key);
+          }
         })
       );
     }).then(() => self.clients.claim())
   );
 });
 
+// Interceptação de Requisições
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // 1. Não interferir com a API do Google Gemini
   if (url.origin.includes('generativelanguage.googleapis.com')) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200) {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return networkResponse;
-      }).catch(() => cachedResponse);
+  // 2. Navegação SPA: Retorna index.html para qualquer rota não encontrada
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
 
-      return cachedResponse || fetchPromise;
-    })
-  );
+  // 3. Estratégia Cache-First para Fontes
+  if (url.origin.includes('fonts.gstatic.com') || url.origin.includes('fonts.googleapis.com')) {
+    event.respondWith(cacheFirst(event.request, FONT_CACHE));
+    return;
+  }
+
+  // 4. Estratégia Cache-First para Imagens (Unsplash e Icons)
+  if (event.request.destination === 'image' || url.origin.includes('images.unsplash.com') || url.origin.includes('icons8.com')) {
+    event.respondWith(cacheFirst(event.request, IMAGE_CACHE));
+    return;
+  }
+
+  // 5. Stale-While-Revalidate para o restante (JS/CSS/Assets Locais)
+  event.respondWith(staleWhileRevalidate(event.request, STATIC_CACHE));
 });
 
-// Listener para cliques em notificações com suporte a ações
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const fresh = await fetch(request);
+    if (fresh.status === 200) cache.put(request, fresh.clone());
+    return fresh;
+  } catch (e) {
+    return caches.match(request);
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  
+  const fresh = fetch(request).then(response => {
+    if (response.status === 200) cache.put(request, response.clone());
+    return response;
+  }).catch(() => cached);
+
+  return cached || fresh;
+}
+
+// Notificações e Background Sync (Placeholder para expansão)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
-  let targetUrl = event.notification.data?.url || '/';
-
-  // Lógica de ações rápidas
-  if (event.action === 'read-liturgy') {
-    targetUrl = '/liturgia-diaria';
-  } else if (event.action === 'see-saint') {
-    targetUrl = '/santos';
-  }
-  
+  const urlToOpen = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Procura se já existe uma aba do app aberta para focar nela
-      for (const client of clientList) {
-        if (client.url.includes(location.origin) && 'focus' in client) {
-          client.navigate(targetUrl);
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url === urlToOpen && 'focus' in client) return client.focus();
       }
-      // Se não, abre uma nova janela
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
+      if (clients.openWindow) return clients.openWindow(urlToOpen);
     })
-  );
-});
-
-self.addEventListener('push', (event) => {
-  let data = { title: 'Cathedra Digital', body: 'O Santuário tem novas mensagens para você.' };
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = { title: 'Cathedra Digital', body: event.data.text() };
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png',
-    badge: 'https://img.icons8.com/ios-filled/96/d4af37/throne.png',
-    data: { url: data.url || '/' },
-    vibrate: [200, 100, 200],
-    actions: data.actions || []
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
   );
 });
