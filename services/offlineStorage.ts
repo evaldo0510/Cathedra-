@@ -71,7 +71,10 @@ export class OfflineStorage {
       const store = transaction.objectStore('bible_verses');
       const index = store.index('book_chapter');
       const request = index.getAll(IDBKeyRange.only([book, chapter]));
-      request.onsuccess = () => resolve(request.result.length > 0 ? request.result.sort((a,b) => a.verse - b.verse) : null);
+      request.onsuccess = () => {
+        const results = request.result;
+        resolve(results.length > 0 ? results.sort((a,b) => a.verse - b.verse) : null);
+      };
       request.onerror = () => resolve(null);
     });
   }

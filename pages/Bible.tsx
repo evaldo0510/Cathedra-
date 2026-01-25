@@ -14,7 +14,7 @@ const CANON = getCatholicCanon();
 const Bible: React.FC = () => {
   const { lang } = useContext(LangContext);
   const { isOnline } = useOfflineMode();
-  const [viewMode, setViewMode] = useState<'library' | 'reading'>('library');
+  const [viewMode, setViewMode] = useState<'library' | 'reading' | 'search'>('library');
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(false);
   const [offlineBooks, setOfflineBooks] = useState<Set<string>>(new Set());
@@ -26,6 +26,8 @@ const Bible: React.FC = () => {
   const [showBookSelector, setShowBookSelector] = useState(false);
   const [showChapterSelector, setShowChapterSelector] = useState(false);
   const [quickJump, setQuickJump] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   const chapterCount = useMemo(() => getChapterCount(selectedBook), [selectedBook]);
 
@@ -39,7 +41,6 @@ const Bible: React.FC = () => {
     return list;
   }, []);
 
-  // Verifica quais livros estão offline
   useEffect(() => {
     offlineStorage.getDownloadedBooks().then(setOfflineBooks);
   }, [viewMode]);
@@ -50,7 +51,6 @@ const Bible: React.FC = () => {
     setViewMode('reading');
     
     try {
-      // Estratégia: Sempre tenta fetchRealBibleText (que já gerencia IndexedDB internamente)
       const data = await fetchRealBibleText(book, chapter, selectedVersion.name, lang as any);
       if (data && data.length > 0) {
         setVerses(data);
@@ -89,6 +89,15 @@ const Bible: React.FC = () => {
     }
   };
 
+  const handleOfflineSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setLoading(true);
+    const results = await offlineStorage.searchOfflineText(searchQuery);
+    setSearchResults(results);
+    setLoading(false);
+  };
+
   const LibraryView = () => (
     <div className="space-y-16 animate-in fade-in duration-700 pb-20">
       <header className="text-center space-y-6 max-w-4xl mx-auto pt-10">
@@ -98,61 +107,98 @@ const Bible: React.FC = () => {
         {!isOnline && (
           <div className="bg-sacred/10 text-sacred px-6 py-3 rounded-2xl border border-sacred/20 inline-flex items-center gap-3">
             <Icons.Globe className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-widest">Navegação Offline Ativa</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Navegação Offline Ativa</span>
           </div>
         )}
 
-        <form onSubmit={handleQuickJump} className="max-w-xl mx-auto mt-10 relative group">
-           <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gold/40 transition-colors group-focus-within:text-gold" />
-           <input 
-             type="text" 
-             placeholder="Salto Rápido (Ex: João 3, Salmos 23)"
-             value={quickJump}
-             onChange={e => setQuickJump(e.target.value)}
-             className="w-full pl-16 pr-6 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2rem] shadow-xl text-stone-800 dark:text-white font-serif italic text-xl outline-none focus:border-gold transition-all"
-           />
-        </form>
+        <div className="flex justify-center gap-4 mt-8">
+           <button onClick={() => setViewMode('library')} className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${viewMode === 'library' ? 'bg-sacred text-white border-sacred' : 'bg-white dark:bg-stone-900 text-stone-400'}`}>Biblioteca</button>
+           <button onClick={() => setViewMode('search')} className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${viewMode === 'search' ? 'bg-sacred text-white border-sacred' : 'bg-white dark:bg-stone-900 text-stone-400'}`}>Busca Local</button>
+        </div>
+
+        {viewMode === 'library' ? (
+          <form onSubmit={handleQuickJump} className="max-w-xl mx-auto mt-10 relative group">
+             <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gold/40 transition-colors group-focus-within:text-gold" />
+             <input 
+               type="text" 
+               placeholder="Salto Rápido (Ex: João 3, Salmos 23)"
+               value={quickJump}
+               onChange={e => setQuickJump(e.target.value)}
+               className="w-full pl-16 pr-6 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2rem] shadow-xl text-stone-800 dark:text-white font-serif italic text-xl outline-none focus:border-gold transition-all"
+             />
+          </form>
+        ) : (
+          <form onSubmit={handleOfflineSearch} className="max-w-xl mx-auto mt-10 relative group">
+             <input 
+               type="text" 
+               placeholder="Pesquisar nos livros salvos..."
+               value={searchQuery}
+               onChange={e => setSearchQuery(e.target.value)}
+               className="w-full pl-8 pr-20 py-6 bg-white dark:bg-stone-900 border-2 border-stone-100 dark:border-stone-800 rounded-[2rem] shadow-xl text-stone-800 dark:text-white font-serif italic text-xl outline-none focus:border-gold transition-all"
+             />
+             <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-gold text-stone-900 rounded-2xl"><Icons.Search className="w-5 h-5" /></button>
+          </form>
+        )}
       </header>
 
-      <div className="space-y-24">
-        {Object.entries(CANON).map(([testament, categories]) => (
-          <section key={testament} className="space-y-12">
-            <div className="flex items-center gap-6">
-              <h3 className="text-4xl font-serif font-bold text-stone-900 dark:text-stone-100">{testament}</h3>
-              <div className="h-px flex-1 bg-gold/20" />
-            </div>
-            <div className="grid gap-16">
-              {Object.entries(categories as any).map(([category, books]) => (
-                <div key={category} className="space-y-8">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-sacred flex items-center gap-4">
-                    <div className="w-2 h-2 rounded-full bg-sacred" />
-                    {category}
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {(books as string[]).map(book => {
-                      const isOffline = offlineBooks.has(book);
-                      return (
-                        <button 
-                          key={book}
-                          onClick={() => { setSelectedBook(book); setShowChapterSelector(true); }}
-                          className={`p-6 rounded-[2rem] border shadow-lg hover:scale-105 transition-all text-left group relative overflow-hidden ${isOffline ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800/40' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'}`}
-                        >
-                          <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          <div className="flex justify-between items-start relative z-10">
-                            <h5 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 group-hover:text-gold leading-tight">{book}</h5>
-                            {isOffline && <Icons.Pin className="w-3 h-3 text-emerald-500" />}
-                          </div>
-                          <p className="text-[8px] uppercase text-stone-400 mt-2 font-black tracking-widest relative z-10">{getChapterCount(book)} Caps</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+      {viewMode === 'search' ? (
+        <div className="grid gap-6 px-4">
+           {searchResults.length > 0 ? searchResults.map((r, i) => (
+             <button key={i} onClick={() => { setSelectedBook(r.book); setSelectedChapter(r.chapter); setViewMode('reading'); }} className="p-8 bg-white dark:bg-stone-900 rounded-[2.5rem] border border-stone-100 dark:border-stone-800 text-left hover:border-gold transition-all group">
+                <div className="flex justify-between items-center mb-2">
+                   <span className="text-[10px] font-black uppercase text-sacred">{r.book} {r.chapter}:{r.verse}</span>
+                   <Icons.Pin className="w-3 h-3 text-emerald-500" />
                 </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+                <p className="text-xl font-serif italic text-stone-700 dark:text-stone-300">"{r.text}"</p>
+             </button>
+           )) : !loading && searchQuery && (
+             <div className="text-center py-20 opacity-30">
+                <Icons.Search className="w-16 h-16 mx-auto mb-4" />
+                <p className="text-xl font-serif italic">Nenhum versículo encontrado nos seus arquivos locais.</p>
+             </div>
+           )}
+        </div>
+      ) : (
+        <div className="space-y-24 px-4">
+          {Object.entries(CANON).map(([testament, categories]) => (
+            <section key={testament} className="space-y-12">
+              <div className="flex items-center gap-6">
+                <h3 className="text-4xl font-serif font-bold text-stone-900 dark:text-stone-100">{testament}</h3>
+                <div className="h-px flex-1 bg-gold/20" />
+              </div>
+              <div className="grid gap-16">
+                {Object.entries(categories as any).map(([category, books]) => (
+                  <div key={category} className="space-y-8">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-sacred flex items-center gap-4">
+                      <div className="w-2 h-2 rounded-full bg-sacred" />
+                      {category}
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {(books as string[]).map(book => {
+                        const isOffline = offlineBooks.has(book);
+                        return (
+                          <button 
+                            key={book}
+                            onClick={() => { setSelectedBook(book); setShowChapterSelector(true); }}
+                            className={`p-6 rounded-[2rem] border shadow-lg hover:scale-105 transition-all text-left group relative overflow-hidden ${isOffline ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800/40' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'}`}
+                          >
+                            <div className="absolute inset-0 bg-gold/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="flex justify-between items-start relative z-10">
+                              <h5 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-100 group-hover:text-gold leading-tight">{book}</h5>
+                              {isOffline && <Icons.Pin className="w-3 h-3 text-emerald-500" />}
+                            </div>
+                            <p className="text-[8px] uppercase text-stone-400 mt-2 font-black tracking-widest relative z-10">{getChapterCount(book)} Caps</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -187,7 +233,7 @@ const Bible: React.FC = () => {
       )}
 
       <main>
-        {viewMode === 'library' ? <LibraryView /> : (
+        {viewMode !== 'reading' ? <LibraryView /> : (
           <div className="space-y-12 mt-8 px-4">
             <section className="bg-white dark:bg-[#1a1917] p-8 md:p-20 rounded-[4rem] shadow-3xl border border-stone-100 dark:border-white/5 relative overflow-hidden min-h-[60vh]">
                <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
@@ -199,8 +245,12 @@ const Bible: React.FC = () => {
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gold">Capitulum {selectedChapter}</span>
                     <h2 className="text-4xl md:text-7xl font-serif font-bold dark:text-stone-100 tracking-tight">{selectedBook}</h2>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Tradução Oficial</p>
+                  <div className="text-right flex flex-col items-end gap-2">
+                    {offlineBooks.has(selectedBook) && (
+                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2">
+                        <Icons.Pin className="w-2.5 h-2.5" /> Preservado Offline
+                      </span>
+                    )}
                     <p className="text-lg font-serif italic text-gold">{selectedVersion.name}</p>
                   </div>
                </header>
@@ -209,7 +259,7 @@ const Bible: React.FC = () => {
                   {loading ? (
                     <div className="py-20 text-center space-y-6">
                       <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-                      <p className="text-3xl font-serif italic text-stone-400">Consultando o Arquivo Profético...</p>
+                      <p className="text-3xl font-serif italic text-stone-400">Consultando o Manuscrito...</p>
                     </div>
                   ) : verses.length > 0 ? (
                     verses.map((v, i) => (

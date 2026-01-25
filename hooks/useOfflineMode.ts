@@ -22,7 +22,7 @@ export const useOfflineMode = (): ConnectivityState => {
         const registration = await navigator.serviceWorker.ready;
         await (registration as any).sync.register('sync-theological-data');
       } catch (e) {
-        console.debug('Background Sync falhou:', e);
+        console.debug('[Offline] Sync registration failed:', e);
       }
     }
   }, []);
@@ -32,6 +32,7 @@ export const useOfflineMode = (): ConnectivityState => {
     setIsSyncing(true);
     triggerBackgroundSync();
     
+    // Simula o tempo de re-estabilização e sincronização
     setTimeout(() => {
       setIsSyncing(false);
       setWasOffline(false);
@@ -47,21 +48,21 @@ export const useOfflineMode = (): ConnectivityState => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Monitorar mudanças na rede (2G, 3G, 4G, WiFi)
+    // Monitorar mudanças na qualidade da rede (4G, WiFi, etc)
     const conn = (navigator as any).connection;
     if (conn) {
       const updateConn = () => setConnectionType(conn.effectiveType);
       conn.addEventListener('change', updateConn);
     }
 
-    // Corrigir falso-positivo de navigator.onLine com ping periódico
+    // Ping sutil para evitar falsos positivos de conectividade
     const heartBeat = setInterval(() => {
       if (navigator.onLine) {
         fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', cache: 'no-store' })
           .then(() => { if (!isOnline) handleOnline(); })
           .catch(() => { if (isOnline) handleOffline(); });
       }
-    }, 45000);
+    }, 60000);
 
     return () => {
       window.removeEventListener('online', handleOnline);

@@ -157,7 +157,7 @@ const App: React.FC = () => {
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         
-        {/* Indicador de Conectividade e Sync */}
+        {/* Indicador de Conectividade Pro */}
         <OfflineIndicator state={connectivity} />
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all duration-500 ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
@@ -168,7 +168,6 @@ const App: React.FC = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
-          {/* Header Mobile Minimalista */}
           <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
              <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
                <Icons.Menu className="w-6 h-6" />

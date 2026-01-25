@@ -13,8 +13,8 @@ const OfflineIndicator: React.FC<{ state: ConnectivityState }> = ({ state }) => 
         <div className="bg-sacred text-white py-3 px-8 flex items-center justify-center gap-4 animate-in slide-in-from-top-full duration-500 shadow-4xl pointer-events-auto rounded-b-[2rem] border-x border-b border-white/10">
            <Icons.Globe className="w-5 h-5 animate-pulse" />
            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">Scriptuarium Local Ativado</span>
-              <span className="text-[8px] opacity-60 uppercase font-bold tracking-widest mt-1">Conexão Perdida • Navegando Offline</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">Modus Offline Ativado</span>
+              <span className="text-[8px] opacity-60 uppercase font-bold tracking-widest mt-1">Santuário Local • Navegando no Codex</span>
            </div>
         </div>
       )}
@@ -24,8 +24,8 @@ const OfflineIndicator: React.FC<{ state: ConnectivityState }> = ({ state }) => 
         <div className="bg-[#1a1a1a] text-gold py-3 px-8 flex items-center justify-center gap-4 animate-in slide-in-from-top-full duration-500 shadow-4xl pointer-events-auto rounded-b-[2rem] border-x border-b border-gold/20">
            <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none text-white">Sincronizando Codex</span>
-              <span className="text-[8px] text-gold/60 uppercase font-bold tracking-widest mt-1">Background Sync • Atualizando Depósito</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none text-white">Sincronizando Depósito</span>
+              <span className="text-[8px] text-gold/60 uppercase font-bold tracking-widest mt-1">Background Sync • Atualizando Memória</span>
            </div>
         </div>
       )}
