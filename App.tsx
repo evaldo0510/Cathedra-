@@ -50,14 +50,25 @@ export const LangContext = createContext<LanguageContextType>({
   t: (k) => k
 });
 
+const LANGUAGES: { code: Language; name: string; flag: string }[] = [
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'la', name: 'Latine', flag: '🇻🇦' },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' }
+];
+
 const App: React.FC = () => {
-  const [lang, setLang] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
+  const [lang, setLangState] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
   const [loading, setLoading] = useState(true);
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [dogmaSearch, setDogmaSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('cathedra_user');
     return saved ? JSON.parse(saved) : null;
@@ -66,10 +77,11 @@ const App: React.FC = () => {
 
   const connectivity = useOfflineMode();
 
-  // TTS States
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const setLang = (l: Language) => {
+    setLangState(l);
+    localStorage.setItem('cathedra_lang', l);
+    setIsLangMenuOpen(false);
+  };
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 800);
@@ -78,7 +90,6 @@ const App: React.FC = () => {
     const openOmni = () => setIsOmnisearchOpen(true);
     window.addEventListener('open-omnisearch', openOmni);
     return () => {
-      stopSpeech();
       window.removeEventListener('open-omnisearch', openOmni);
     };
   }, [lang]);
@@ -89,18 +100,8 @@ const App: React.FC = () => {
     localStorage.setItem('cathedra_dark', String(isDark));
   }, [isDark]);
 
-  const stopSpeech = useCallback(() => {
-    if (audioSourceRef.current) {
-      try { audioSourceRef.current.stop(); } catch (e) {}
-      audioSourceRef.current = null;
-    }
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  }, []);
-
   const handleSearch = useCallback(async (topic: string) => {
     setRoute(AppRoute.STUDY_MODE);
-    stopSpeech();
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
@@ -108,17 +109,18 @@ const App: React.FC = () => {
       const filtered = history.filter((h: any) => h.topic !== result.topic);
       localStorage.setItem('cathedra_history', JSON.stringify([result, ...filtered].slice(0, 10)));
     } catch (e) { console.error(e); } 
-  }, [lang, stopSpeech]);
+  }, [lang]);
 
   const navigateTo = useCallback((r: AppRoute) => {
     setRoute(r);
     setIsSidebarOpen(false);
-    stopSpeech();
     const mainArea = document.querySelector('main');
     if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [stopSpeech]);
+  }, []);
 
-  const t = useCallback((key: string) => UI_TRANSLATIONS[lang][key] || key, [lang]);
+  const t = useCallback((key: string) => {
+    return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS['en'][key] || key;
+  }, [lang]);
 
   const content = useMemo(() => {
     switch (route) {
@@ -146,7 +148,7 @@ const App: React.FC = () => {
       case AppRoute.DIAGNOSTICS: return <Diagnostics />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
-  }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch]);
+  }, [route, handleSearch, navigateTo, user, studyData, dogmaSearch, lang]);
 
   if (loading) {
     return (
@@ -167,10 +169,8 @@ const App: React.FC = () => {
     <LangContext.Provider value={{ lang, setLang, t }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         
-        {/* Indicador de Conectividade Pro */}
         <OfflineIndicator state={connectivity} />
         
-        {/* Omnisearch Global Modal */}
         <CommandCenter 
           isOpen={isOmnisearchOpen} 
           onClose={() => setIsOmnisearchOpen(false)} 
@@ -186,21 +186,74 @@ const App: React.FC = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative">
-          <div className="lg:hidden p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
-             <button onClick={() => setIsSidebarOpen(true)} className="p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
-               <Icons.Menu className="w-6 h-6" />
-             </button>
-             <div className="flex flex-col items-center" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
-                <MobileLogo className="w-9 h-9" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-gold leading-none mt-1">Cathedra</span>
-             </div>
+          <div className="p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
              <div className="flex items-center gap-1">
-                <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-gold active:scale-90 transition-transform">
-                  <Icons.Search className="w-5 h-5" />
+                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 text-stone-900 dark:text-gold active:scale-90 transition-transform">
+                  <Icons.Menu className="w-6 h-6" />
                 </button>
-                <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
+                    <MobileLogo className="w-9 h-9" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gold leading-none">Cathedra</span>
+                      <span className="text-[7px] uppercase text-stone-400 font-bold hidden sm:block">Sanctuarium Digitale</span>
+                    </div>
+                </div>
+             </div>
+
+             <div className="hidden lg:flex flex-1 max-w-xl mx-8">
+                <button 
+                  onClick={() => setIsOmnisearchOpen(true)}
+                  className="w-full flex items-center gap-3 px-6 py-3 bg-stone-100 dark:bg-stone-800/50 border border-stone-200 dark:border-white/10 rounded-full hover:border-gold/50 transition-all group text-left"
+                >
+                  <Icons.Search className="w-4 h-4 text-stone-400 group-hover:text-gold" />
+                  <span className="text-xs font-serif italic text-stone-400 flex-1">{t('search_placeholder')}</span>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/10 rounded border border-white/10 text-[8px] font-black text-stone-400">
+                    <span className="opacity-50">CMD</span>
+                    <span>K</span>
+                  </div>
+                </button>
+             </div>
+
+             <div className="flex items-center gap-1 md:gap-3">
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                    className="p-3 text-stone-400 dark:text-gold active:scale-90 transition-all flex items-center gap-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-2xl"
+                    title={t('language')}
+                  >
+                    <Icons.Globe className="w-5 h-5" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">{lang}</span>
+                  </button>
+                  
+                  {isLangMenuOpen && (
+                    <div className="absolute top-full right-0 mt-4 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] shadow-4xl p-4 w-56 animate-in slide-in-from-top-4 duration-200">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.4em] text-stone-300 mb-3 px-3">{t('language')}</h4>
+                      <div className="space-y-1">
+                        {LANGUAGES.map(l => (
+                          <button 
+                            key={l.code}
+                            onClick={() => setLang(l.code)}
+                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-colors ${lang === l.code ? 'bg-gold text-stone-900' : 'hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300'}`}
+                          >
+                            <span>{l.flag} {l.name}</span>
+                            {lang === l.code && <div className="w-1.5 h-1.5 rounded-full bg-stone-900" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={() => setIsDark(!isDark)} className="p-3 text-stone-400 dark:text-white/20 active:scale-90 transition-transform" title="Alternar Modo Escuro">
                   {isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}
                 </button>
+                {user && (
+                  <button onClick={() => navigateTo(AppRoute.PROFILE)} className="p-1 hidden sm:block">
+                    <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center text-gold font-black text-xs">
+                      {user.name.charAt(0)}
+                    </div>
+                  </button>
+                )}
              </div>
           </div>
 

@@ -14,41 +14,41 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user, onLogout, onOpenSearch }) => {
-  const { lang, t } = useContext(LangContext);
+  const { t } = useContext(LangContext);
 
   const menuGroups = [
     {
-      title: 'Santuário (Hodie)',
+      title: 'Hodie',
       items: [
-        { name: 'Nártex (Início)', icon: Icons.Home, path: AppRoute.DASHBOARD, subtitle: 'Onde o silêncio começa' },
-        { name: 'Scriptuarium (Bíblia)', icon: Icons.Book, path: AppRoute.BIBLE, subtitle: 'A voz de Deus na história' },
-        { name: 'Lecionário (Liturgia)', icon: Icons.History, path: AppRoute.DAILY_LITURGY, subtitle: 'O alimento espiritual cotidiano' },
-        { name: 'Cronos (Calendário)', icon: Icons.Globe, path: AppRoute.LITURGICAL_CALENDAR, subtitle: 'O ritmo da eternidade no tempo' },
+        { name: t('home'), icon: Icons.Home, path: AppRoute.DASHBOARD, subtitle: t('home_sub') },
+        { name: t('bible'), icon: Icons.Book, path: AppRoute.BIBLE, subtitle: t('bible_sub') },
+        { name: t('liturgy'), icon: Icons.History, path: AppRoute.DAILY_LITURGY, subtitle: t('home_sub') },
+        { name: t('calendar'), icon: Icons.Globe, path: AppRoute.LITURGICAL_CALENDAR, subtitle: t('calendar_sub') },
       ]
     },
     {
       title: 'Sacra Doctrina',
       items: [
-        { name: 'Codex Fidei (Catecismo)', icon: Icons.Cross, path: AppRoute.CATECHISM, subtitle: 'O mapa seguro da fé católica' },
-        { name: 'Magistério da Igreja', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'O Ensino Oficial' },
-        { name: 'Verdades (Dogmas)', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'A rocha imutável da verdade' },
-        { name: 'Sanctorum (Santos)', icon: Icons.Users, path: AppRoute.SAINTS, subtitle: 'Aqueles que viram a Luz' },
+        { name: t('catechism'), icon: Icons.Cross, path: AppRoute.CATECHISM, subtitle: t('catechism_sub') },
+        { name: 'Magisterium', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'Teaching Authority' },
+        { name: 'Dogmas', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'Immutabilis Veritas' },
+        { name: t('saints'), icon: Icons.Users, path: AppRoute.SAINTS, subtitle: t('saints_sub') },
       ]
     },
     {
-      title: 'Academia (Estudo)',
+      title: 'Academia',
       items: [
-        { name: 'Symphonia (Estudo)', icon: Icons.Search, path: AppRoute.STUDY_MODE, subtitle: 'Bíblia + Tradição via Inteligência IA' },
-        { name: 'Aula Magna (Comunidade)', icon: Icons.Users, path: AppRoute.COMMUNITY, subtitle: 'Lições profundas e mistério' },
-        { name: 'Opera Omnia', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'A sabedoria de S. Tomás de Aquino' },
-        { name: 'Certamen (Quiz)', icon: Icons.Layout, path: AppRoute.CERTAMEN, subtitle: 'Duelo intelectual sacro' },
+        { name: t('study'), icon: Icons.Search, path: AppRoute.STUDY_MODE, subtitle: t('study_sub') },
+        { name: t('community'), icon: Icons.Users, path: AppRoute.COMMUNITY, subtitle: t('community_sub') },
+        { name: 'Opera Omnia', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'Aquinas Angelicus' },
+        { name: 'Certamen', icon: Icons.Layout, path: AppRoute.CERTAMEN, subtitle: 'Duelo Sacro' },
       ]
     },
     {
-      title: 'Sistema (Admin)',
+      title: 'Spiritus',
       items: [
-        { name: 'Diagnóstico PWA', icon: Icons.Layout, path: AppRoute.DIAGNOSTICS, subtitle: 'Verificar integridade offline' },
-        { name: 'Preces (Orações)', icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: 'O tesouro universal de orações' },
+        { name: t('prayers'), icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: t('prayers_sub') },
+        { name: 'Lectio Divina', icon: Icons.Book, path: AppRoute.LECTIO_DIVINA, subtitle: 'Orare cum Scriptura' },
       ]
     }
   ];
@@ -82,11 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       >
         <div className="flex items-center gap-3">
           <Icons.Search className="w-4 h-4 text-gold/60 group-hover:text-gold" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 group-hover:text-white/60">Busca Rápida</span>
-        </div>
-        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white/5 rounded border border-white/10 text-[8px] font-black text-white/20">
-           <span className="opacity-50">CMD</span>
-           <span>K</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/30 group-hover:text-white/60">{t('search_placeholder')}</span>
         </div>
       </button>
       
@@ -117,9 +113,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
                       <p className={`text-xs font-bold tracking-wide transition-colors ${isActive ? 'text-white' : 'text-stone-300 group-hover:text-white'}`}>{item.name}</p>
                       <p className="text-[9px] text-stone-500 font-serif italic truncate">{item.subtitle}</p>
                     </div>
-                    {isActive && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                    )}
                   </button>
                 );
               })}
@@ -128,7 +121,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         ))}
       </nav>
 
-      {/* User Section - Professional Footer */}
       <div className="relative z-10 pt-6 border-t border-white/10 mt-4 space-y-4">
         {user ? (
           <div className="flex items-center justify-between group">
@@ -147,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
             <button 
               onClick={onLogout}
               className="p-3 text-stone-500 hover:text-sacred transition-colors active:scale-90"
-              title="Sair"
+              title={t('logout')}
             >
               <Icons.Cross className="w-4 h-4" />
             </button>
@@ -157,12 +149,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
             onClick={() => handleNavigation(AppRoute.LOGIN)}
             className="w-full py-4 bg-gold text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
           >
-            Acessar Santuário
+            {t('login')}
           </button>
         )}
-        <div className="text-center">
-          <p className="text-[8px] text-stone-600 font-black uppercase tracking-[0.3em]">Ex Umbris In Veritatem</p>
-        </div>
       </div>
     </aside>
   );

@@ -11,9 +11,11 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
   const [dailyVerse, setDailyVerse] = useState<any>(null);
   const [dailyBundle, setDailyBundle] = useState<any>(null);
   const [recentStudies, setRecentStudies] = useState<StudyResult[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [verse, bundle] = await Promise.all([
           fetchDailyVerse(lang),
@@ -25,11 +27,22 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
         setRecentStudies(history.slice(0, 3));
       } catch (e) {
-        console.error("Erro ao carregar dados do nártex:", e);
+        console.warn("Nártex operando em modo offline/estático.");
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
   }, [lang]);
+
+  if (loading && !dailyVerse) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-pulse space-y-8">
+        <div className="w-20 h-20 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+        <p className="text-2xl font-serif italic text-stone-400">Cruzando o Nártex...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-24 pb-32 animate-in fade-in duration-1000 -mt-10">
