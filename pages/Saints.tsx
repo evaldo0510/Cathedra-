@@ -41,7 +41,10 @@ const Saints: React.FC = () => {
   }, [refreshPreserved]);
 
   const handleSaintClick = async (saint: Saint) => {
+    // Primeiro, abrimos o que temos (o card básico)
+    setSelectedSaint(saint);
     setLoadingDetails(true);
+
     try {
       const storageId = `saint_${saint.name.replace(/\s+/g, '_')}`;
       const local = await offlineStorage.getContent(storageId);
@@ -53,11 +56,9 @@ const Saints: React.FC = () => {
         setSelectedSaint(detailed);
         await offlineStorage.saveContent(storageId, 'saint', saint.name, detailed);
         await refreshPreserved();
-      } else {
-        setSelectedSaint(saint);
       }
     } catch (e) { 
-      setSelectedSaint(saint);
+      console.warn("Usando dados básicos do santo.");
     } finally {
       setLoadingDetails(false);
     }
@@ -67,15 +68,34 @@ const Saints: React.FC = () => {
     return (saints || []).filter(s => {
       const textMatch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           s.patronage.toLowerCase().includes(searchTerm.toLowerCase());
-      const catMatch = activeCategory === 'Todos' || s.patronage.toLowerCase().includes(activeCategory.toLowerCase());
-      return textMatch && catMatch;
+      
+      if (activeCategory === 'Todos') return textMatch;
+      
+      // Lógica de filtragem por categoria nas strings de patrocínio ou biografia
+      const categoryKeywords: Record<string, string[]> = {
+        'Apóstolos': ['apóstolo', 'apostolo'],
+        'Mártires': ['mártir', 'martir', 'martírio'],
+        'Doutores': ['doutor', 'doctor'],
+        'Virgens': ['virgem', 'virgo'],
+        'Papas': ['papa', 'pontífice'],
+        'Místicos': ['místico', 'mística', 'visões'],
+        'Fundadores': ['fundador', 'fundou']
+      };
+
+      const keywords = categoryKeywords[activeCategory] || [activeCategory.toLowerCase()];
+      const categoryMatch = keywords.some(k => 
+        s.patronage.toLowerCase().includes(k) || 
+        s.biography.toLowerCase().includes(k)
+      );
+
+      return textMatch && categoryMatch;
     });
   }, [saints, searchTerm, activeCategory]);
 
   return (
     <div className="space-y-10 page-enter pb-40">
       <header className="text-center space-y-6 pt-6">
-        <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Sanctorum</h2>
+        <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Santos (Sanctorum)</h2>
         <p className="text-stone-400 italic text-xl font-serif">"Eis a nuvem de testemunhas que nos cerca."</p>
 
         <div className="max-w-2xl mx-auto px-4 space-y-6">
@@ -83,7 +103,7 @@ const Saints: React.FC = () => {
             <Icons.Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-gold transition-colors" />
             <input 
               type="text"
-              placeholder="Buscar santo ou causa..."
+              placeholder="Buscar santo ou causa (ex: Santa Rita, causas impossíveis)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl shadow-xl outline-none focus:border-gold transition-all text-lg font-serif italic"
@@ -133,6 +153,12 @@ const Saints: React.FC = () => {
               </article>
             );
           })}
+          {filteredSaints.length === 0 && (
+            <div className="col-span-full py-20 text-center space-y-4 opacity-40">
+               <Icons.Users className="w-12 h-12 mx-auto text-stone-300" />
+               <p className="font-serif italic text-xl">Nenhum santo encontrado para esta categoria ou busca.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -150,7 +176,10 @@ const Saints: React.FC = () => {
 
             <div className="p-8 md:p-12 flex-1 overflow-y-auto custom-scrollbar space-y-8 -mt-12 relative z-10">
               <header className="space-y-4 text-center md:text-left">
-                 <span className="px-5 py-1.5 bg-gold text-stone-900 rounded-full text-[9px] font-black uppercase tracking-[0.3em] shadow-lg inline-block">{selectedSaint.feastDay}</span>
+                 <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start">
+                    <span className="px-5 py-1.5 bg-gold text-stone-900 rounded-full text-[9px] font-black uppercase tracking-[0.3em] shadow-lg inline-block">{selectedSaint.feastDay}</span>
+                    {loadingDetails && <span className="text-[8px] font-black uppercase text-gold animate-pulse">Carregando detalhes profundos...</span>}
+                 </div>
                  <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-none">{selectedSaint.name}</h2>
                  <p className="text-sacred dark:text-gold text-lg md:text-2xl font-serif italic border-l-4 border-gold/30 pl-4">{selectedSaint.patronage}</p>
               </header>

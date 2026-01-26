@@ -25,6 +25,7 @@ import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import Diagnostics from './pages/Diagnostics';
+import Favorites from './pages/Favorites';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
@@ -91,14 +92,30 @@ const App: React.FC = () => {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
       case AppRoute.BIBLE: return <Bible />;
       case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
+      case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
+      case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
-      case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
+      case AppRoute.MAGISTERIUM: return <Magisterium />;
+      case AppRoute.DOGMAS: return <Dogmas />;
       case AppRoute.SAINTS: return <Saints />;
+      case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
+      case AppRoute.PRAYERS: return <Prayers />;
+      case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
+      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
+      case AppRoute.CERTAMEN: return <Certamen />;
+      case AppRoute.POENITENTIA: return <Poenitentia />;
+      case AppRoute.ORDO_MISSAE: return <OrdoMissae />;
+      case AppRoute.ROSARY: return <Rosary />;
+      case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
+      case AppRoute.LITANIES: return <Litanies />;
+      case AppRoute.FAVORITES: return <Favorites />;
+      case AppRoute.DIAGNOSTICS: return <Diagnostics />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
+      case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
-  }, [route, user, lang, handleSearch, navigateTo]);
+  }, [route, user, lang, handleSearch, navigateTo, studyData]);
 
   if (loading) return null;
 
@@ -132,7 +149,6 @@ const App: React.FC = () => {
           <Footer onNavigate={navigateTo} />
         </main>
 
-        {/* BOTTOM NAVIGATION MOBILE */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
           {[
             { id: AppRoute.DASHBOARD, icon: Icons.Home, label: 'Início' },

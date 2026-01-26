@@ -16,9 +16,9 @@ const WORKS: AquinasWork[] = [
   },
   { 
     id: 'qd', 
-    title: 'Quaestiones Disputatae', 
+    title: 'Questões Disputadas (Quaestiones Disputatae)', 
     category: 'disputed', 
-    description: 'Investigações dialéticas fundamentais sobre a Verdade e o Mal.', 
+    description: 'Investigações dialéticas fundamentais sobre a Verdade, o Mal e a Potência.', 
     parts: ['De Veritate', 'De Potentia', 'De Malo'] 
   },
   { 
@@ -34,7 +34,7 @@ const AquinasOpera: React.FC = () => {
   const { lang } = useContext(LangContext);
   const [selectedWork, setSelectedWork] = useState<AquinasWork | null>(WORKS[0]);
   const [selectedPart, setSelectedPart] = useState<string>(WORKS[0].parts[0]);
-  const [refInput, setRefInput] = useState('q. 2 a. 3'); 
+  const [refInput, setRefInput] = useState('q. 1 a. 1'); 
   const [article, setArticle] = useState<ThomisticArticle | null>(null);
   const [loading, setLoading] = useState(false);
   const [fontSize, setFontSize] = useState(1.2); 
@@ -62,13 +62,13 @@ const AquinasOpera: React.FC = () => {
               <Icons.Feather className="w-10 h-10 text-gold" />
            </div>
         </div>
-        <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter leading-none">Opera Omnia</h2>
-        <p className="text-stone-400 italic text-xl md:text-2xl font-serif">S. Thomae Aquinatis • Doctoris Angelici</p>
+        <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter leading-none">Obras Completas (Opera Omnia)</h2>
+        <p className="text-stone-400 italic text-xl md:text-2xl font-serif">S. Thomae Aquinatis • Doutor Angélico</p>
       </header>
 
       <div className="grid lg:grid-cols-4 gap-8">
         <aside className="space-y-6">
-           <h3 className="text-[10px] font-black uppercase tracking-widest text-sacred ml-4 mb-4">Bibliotheca</h3>
+           <h3 className="text-[10px] font-black uppercase tracking-widest text-sacred ml-4 mb-4">Biblioteca (Bibliotheca)</h3>
            <div className="grid gap-3">
               {WORKS.map(work => (
                 <button 
@@ -124,7 +124,7 @@ const AquinasOpera: React.FC = () => {
            {article ? (
              <article className="parchment dark:bg-[#151310] p-10 md:p-20 rounded-[4rem] shadow-4xl border border-gold/10 space-y-16 animate-in slide-in-from-bottom-6" style={{ fontSize: `${fontSize}rem` }}>
                 <header className="text-center space-y-6 border-b border-gold/10 pb-12">
-                   <span className="text-[12px] font-black uppercase tracking-[1em] text-sacred">Articulus</span>
+                   <span className="text-[12px] font-black uppercase tracking-[1em] text-sacred">Artigo (Articulus)</span>
                    <h3 className="text-3xl md:text-5xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">
                      {article.articleTitle}
                    </h3>
@@ -135,7 +135,7 @@ const AquinasOpera: React.FC = () => {
 
                 <div className="space-y-12">
                    <section className="space-y-6">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-sacred">Videtur Quod (Objeções)</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-sacred">Objeções (Videtur Quod)</h4>
                       {article.objections.map(obj => (
                         <div key={obj.id} className="p-8 rounded-[2rem] bg-white/50 dark:bg-stone-900/50 border border-stone-100 dark:border-stone-800 flex gap-6">
                            <span className="text-gold font-bold">{obj.id}.</span>
@@ -145,7 +145,7 @@ const AquinasOpera: React.FC = () => {
                    </section>
 
                    <section className="bg-[#fcf8e8] dark:bg-stone-950 p-10 rounded-[3rem] border-l-[16px] border-gold shadow-inner">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-sacred mb-4">Respondeo</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-sacred mb-4">Resposta (Respondeo)</h4>
                       <p className="font-serif text-stone-900 dark:text-stone-100 leading-relaxed text-justify">{article.respondeo}</p>
                    </section>
                 </div>
