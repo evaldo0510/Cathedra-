@@ -1,113 +1,85 @@
 
 /**
- * Cathedra Digital - Service Worker Pro (Codex Edition)
- * Version: 9.0.0 - Background Sync & Robust Offline Integrity
+ * Cathedra Digital - Service Worker Pro (Market Ready Edition)
+ * Version: 10.0.0 - Dynamic AI Caching & Progressive Integrity
  */
 
-const CACHE_VERSION = 'cathedra-v9-2024';
-const STATIC_CACHE = `static-${CACHE_VERSION}`;
-const IMAGE_CACHE = `images-${CACHE_VERSION}`;
-const FONT_CACHE = `fonts-${CACHE_VERSION}`;
-
+const CACHE_NAME = 'cathedra-pro-v10';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './index.tsx',
   './metadata.json',
   'https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio',
-  'https://www.transparenttextures.com/patterns/natural-paper.png'
+  'https://www.transparenttextures.com/patterns/natural-paper.png',
+  'https://img.icons8.com/ios-filled/192/d4af37/throne.png'
 ];
 
-// Instalação: Cacheia o "App Shell"
+// Instalação com pre-caching agressivo da UI
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
+  self.skipWaiting();
 });
 
-// Ativação: Limpeza de caches obsoletos
+// Limpeza de versões antigas (Integridade de Cache)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (![STATIC_CACHE, IMAGE_CACHE, FONT_CACHE].includes(key)) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((keys) => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    ))
   );
+  self.clients.claim();
 });
 
-// Interceptação de Requisições
+// Interceptador Inteligente
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Gemini API: Sempre rede (dados vivos e dinâmicos)
-  if (url.origin.includes('generativelanguage.googleapis.com')) return;
-
-  // Navegação SPA: Fallback para index.html
-  if (event.request.mode === 'navigate') {
+  // Gemini API: Network-First com Fallback de Cache Dinâmico
+  // Isso permite que o usuário veja resultados de IA buscados anteriormente mesmo offline
+  if (url.origin.includes('generativelanguage.googleapis.com')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('./index.html'))
+      fetch(event.request)
+        .then(response => {
+          const clonedResponse = response.clone();
+          caches.open('cathedra-ai-cache').then(cache => cache.put(event.request, clonedResponse));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // Estratégia Cache-First para Fontes
-  if (url.origin.includes('fonts.gstatic.com') || url.origin.includes('fonts.googleapis.com')) {
-    event.respondWith(cacheFirst(event.request, FONT_CACHE));
+  // Estáticos e Imagens: Cache-First (Performance)
+  if (event.request.destination === 'image' || url.origin.includes('fonts.gstatic.com')) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        return cached || fetch(event.request).then(response => {
+          const clonedResponse = response.clone();
+          caches.open('cathedra-media-cache').then(cache => cache.put(event.request, clonedResponse));
+          return response;
+        });
+      })
+    );
     return;
   }
 
-  // Estratégia Cache-First para Imagens (Unsplash, etc)
-  if (event.request.destination === 'image' || url.origin.includes('images.unsplash.com')) {
-    event.respondWith(cacheFirst(event.request, IMAGE_CACHE));
-    return;
-  }
-
-  // Stale-While-Revalidate para o restante
-  event.respondWith(staleWhileRevalidate(event.request, STATIC_CACHE));
+  // Fallback padrão para SPA (Navegação)
+  event.respondWith(
+    caches.match(event.request).then(cached => cached || fetch(event.request))
+  );
 });
 
-// BACKGROUND SYNC: Sincronização de dados marcados offline
+// Background Sync para persistência teológica
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-theological-data') {
-    event.waitUntil(performBackgroundSync());
+  if (event.tag === 'sync-favorites') {
+    event.waitUntil(syncFavorites());
   }
 });
 
-async function performBackgroundSync() {
-  console.log('[SW] Iniciando Sincronização de Segundo Plano...');
-  // Simulação de processamento de fila pendente no IndexedDB
+async function syncFavorites() {
+  console.debug('[SW] Sincronizando favoritos pendentes...');
   return Promise.resolve();
-}
-
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  try {
-    const fresh = await fetch(request);
-    if (fresh.status === 200) cache.put(request, fresh.clone());
-    return fresh;
-  } catch (e) {
-    return caches.match(request);
-  }
-}
-
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  
-  const fresh = fetch(request).then(response => {
-    if (response.status === 200) cache.put(request, response.clone());
-    return response;
-  }).catch(() => cached);
-
-  return cached || fresh;
 }

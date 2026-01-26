@@ -1,11 +1,11 @@
 {
   "name": "Cathedra Digital: Sanctum Teologicum",
   "short_name": "Cathedra",
-  "description": "A plataforma definitiva de estudos teológicos católicos com inteligência artificial, acesso offline integral e bibliotecas sacras.",
+  "description": "A inteligência teológica definitiva. Acesse o depósito da fé católica, Bíblia, Catecismo e Magistério com IA exegética e acesso offline total.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0c0a09",
-  "theme_color": "#0c0a09",
+  "theme_color": "#d4af37",
   "orientation": "portrait",
   "scope": "/",
   "id": "com.cathedra.app.v1.prod",
@@ -13,6 +13,30 @@
     "education",
     "books",
     "religious"
+  ],
+  "shortcuts": [
+    {
+      "name": "Bíblia Sagrada",
+      "short_name": "Bíblia",
+      "url": "/bible",
+      "icons": [
+        {
+          "src": "https://img.icons8.com/ios-filled/96/d4af37/book.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Liturgia Diária",
+      "short_name": "Liturgia",
+      "url": "/daily-liturgy",
+      "icons": [
+        {
+          "src": "https://img.icons8.com/ios-filled/96/d4af37/holy-bible.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
   ],
   "icons": [
     {
@@ -28,7 +52,14 @@
       "purpose": "any"
     }
   ],
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=1080&h=1920&fit=crop",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Interface Imersiva de Estudo"
+    }
+  ],
+  "requestFramePermissions": []
 }
