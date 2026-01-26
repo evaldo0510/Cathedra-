@@ -68,30 +68,38 @@ const App: React.FC = () => {
   const connectivity = useOfflineMode();
 
   useEffect(() => {
-    // Reduzido para 200ms para uma sensação de "instant app"
     const timer = setTimeout(() => setLoading(false), 200);
     notificationService.initNotifications(lang);
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const handleBeforeInstall = (e: any) => {
       e.preventDefault();
+      console.log('Evento beforeinstallprompt capturado');
       setDeferredPrompt(e);
-    });
+    };
 
-    return () => clearTimeout(timer);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, [lang, isDark]);
 
   const handleInstall = useCallback(async () => {
     if (!deferredPrompt) {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isIOS) {
-        alert("Para baixar no iPhone:\n1. Toque no ícone de Compartilhar\n2. Toque em 'Adicionar à Tela de Início'.");
+        alert("Para baixar no iPhone:\n1. Toque no botão de 'Compartilhar' (ícone quadrado com seta)\n2. Role para baixo e selecione 'Adicionar à Tela de Início'.");
+      } else {
+        alert("A opção de instalação ainda não está disponível. Tente atualizar a página ou verifique se já possui o app instalado no menu do navegador.");
       }
       return;
     }
+    
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Usuário respondeu à instalação: ${outcome}`);
     if (outcome === 'accepted') setDeferredPrompt(null);
   }, [deferredPrompt]);
 

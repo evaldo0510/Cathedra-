@@ -27,39 +27,30 @@ if (document.readyState === 'loading') {
   startApp();
 }
 
-// Registro defensivo do Service Worker
+// Registro otimizado do Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Apenas tenta registrar se as origens forem compatíveis ou se estiver em prod
-    try {
-      navigator.serviceWorker.register('./sw.js', { scope: './' })
-        .then(reg => {
-          console.debug('SW registrado:', reg.scope);
-          
-          setInterval(() => { reg.update(); }, 1000 * 60 * 5);
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('Cathedra SW ativo:', reg.scope);
+        
+        // Verifica atualizações a cada 5 minutos
+        setInterval(() => { reg.update(); }, 1000 * 60 * 5);
 
-          reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  window.dispatchEvent(new CustomEvent('pwa-update-available'));
-                }
-              };
-            }
-          };
-        })
-        .catch(err => {
-          // Ignora erros de origem mismatch em ambientes de sandbox/preview
-          if (err.message.includes('origin')) {
-            console.debug('ServiceWorker desativado: Conflito de origem em ambiente de sandbox.');
-          } else {
-            console.debug('SW falhou:', err.message);
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                window.dispatchEvent(new CustomEvent('pwa-update-available'));
+              }
+            };
           }
-        });
-    } catch (e) {
-      console.debug('ServiceWorker não suportado nesta origem.');
-    }
+        };
+      })
+      .catch(err => {
+        console.warn('Falha ao registrar SW. O modo offline pode estar limitado:', err);
+      });
   });
 
   let refreshing = false;

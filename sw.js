@@ -1,85 +1,79 @@
 
 /**
- * Cathedra Digital - Service Worker Pro (Market Ready Edition)
- * Version: 10.0.0 - Dynamic AI Caching & Progressive Integrity
+ * Cathedra Digital - Service Worker Pro
+ * Version: 11.0.0 - Enhanced PWA Stability
  */
 
-const CACHE_NAME = 'cathedra-pro-v10';
+const CACHE_NAME = 'cathedra-v11';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './index.tsx',
   './metadata.json',
   'https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio',
   'https://www.transparenttextures.com/patterns/natural-paper.png',
   'https://img.icons8.com/ios-filled/192/d4af37/throne.png'
 ];
 
-// Instalação com pre-caching agressivo da UI
+// Instalação: Pre-cache de ativos essenciais
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Pre-caching ativos estáticos');
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
   self.skipWaiting();
 });
 
-// Limpeza de versões antigas (Integridade de Cache)
+// Ativação: Limpeza de caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      keys.map(key => {
+        if (key !== CACHE_NAME && key !== 'cathedra-ai-cache' && key !== 'cathedra-media-cache') {
+          return caches.delete(key);
+        }
+      })
     ))
   );
   self.clients.claim();
 });
 
-// Interceptador Inteligente
+// Estratégia de Fetch: Network with Cache Fallback
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Gemini API: Network-First com Fallback de Cache Dinâmico
-  // Isso permite que o usuário veja resultados de IA buscados anteriormente mesmo offline
-  if (url.origin.includes('generativelanguage.googleapis.com')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const clonedResponse = response.clone();
-          caches.open('cathedra-ai-cache').then(cache => cache.put(event.request, clonedResponse));
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
+  // Ignorar requisições de extensões ou esquemas não suportados
+  if (!event.request.url.startsWith('http')) return;
 
-  // Estáticos e Imagens: Cache-First (Performance)
-  if (event.request.destination === 'image' || url.origin.includes('fonts.gstatic.com')) {
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        return cached || fetch(event.request).then(response => {
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        // Se a resposta for válida, clonamos e guardamos no cache dinâmico
+        if (response.status === 200) {
           const clonedResponse = response.clone();
-          caches.open('cathedra-media-cache').then(cache => cache.put(event.request, clonedResponse));
-          return response;
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clonedResponse));
+        }
+        return response;
+      })
+      .catch(() => {
+        // Se falhar a rede, tentamos o cache
+        return caches.match(event.request).then(cachedResponse => {
+          if (cachedResponse) return cachedResponse;
+          
+          // Se for navegação de página e não houver cache, retorna o index.html
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+          return new Response('Offline content not available', { status: 503 });
         });
       })
-    );
-    return;
-  }
-
-  // Fallback padrão para SPA (Navegação)
-  event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
   );
 });
 
-// Background Sync para persistência teológica
+// Background Sync para favoritos
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-favorites') {
-    event.waitUntil(syncFavorites());
+    console.log('[SW] Sincronizando favoritos pendentes...');
   }
 });
-
-async function syncFavorites() {
-  console.debug('[SW] Sincronizando favoritos pendentes...');
-  return Promise.resolve();
-}
