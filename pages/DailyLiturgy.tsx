@@ -62,7 +62,7 @@ const DailyLiturgy: React.FC = () => {
     try {
       const textToRead = activeTab === 'readings' 
         ? `Primeira Leitura. ${data.firstReading?.text || ''}. Salmo Responsorial. ${data.psalm?.text || ''}. Evangelho. ${data.gospel?.text || ''}`
-        : `Reflexão teológica. ${data.gospel?.reflection || data.gospel?.homily || 'Reflexão não disponível.'}`;
+        : `Reflexão teológica para o dia de hoje. ${data.gospel?.reflection || data.gospel?.homily || 'Reflexão não disponível.'}`;
       
       if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const base64 = await generateSpeech(textToRead);
@@ -83,18 +83,19 @@ const DailyLiturgy: React.FC = () => {
   const navigateDate = (days: number) => {
     const current = new Date(date + 'T12:00:00');
     current.setDate(current.getDate() + days);
-    setDate(current.toISOString().split('T')[0]);
+    const nextDate = current.toISOString().split('T')[0];
+    setDate(nextDate);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const theme = useMemo(() => {
     const color = data?.gospel?.calendar?.color || 'white';
-    const map: Record<string, { border: string, text: string, bg: string, rubric: string, accent: string }> = {
-      red: { border: 'border-red-600', text: 'text-red-700', bg: 'bg-red-50/40', rubric: 'text-red-600', accent: 'bg-red-600' },
-      green: { border: 'border-emerald-600', text: 'text-emerald-700', bg: 'bg-emerald-50/40', rubric: 'text-emerald-600', accent: 'bg-emerald-600' },
-      purple: { border: 'border-purple-600', text: 'text-purple-700', bg: 'bg-purple-50/40', rubric: 'text-purple-600', accent: 'bg-purple-600' },
-      white: { border: 'border-gold', text: 'text-stone-700', bg: 'bg-stone-50/40', rubric: 'text-gold', accent: 'bg-gold' },
-      rose: { border: 'border-pink-600', text: 'text-pink-700', bg: 'bg-pink-50/40', rubric: 'text-pink-600', accent: 'bg-pink-600' }
+    const map: Record<string, { border: string, text: string, bg: string, rubric: string, accent: string, glow: string }> = {
+      red: { border: 'border-red-600', text: 'text-red-700', bg: 'bg-red-50/40', rubric: 'text-red-600', accent: 'bg-red-600', glow: 'shadow-red-600/10' },
+      green: { border: 'border-emerald-600', text: 'text-emerald-700', bg: 'bg-emerald-50/40', rubric: 'text-emerald-600', accent: 'bg-emerald-600', glow: 'shadow-emerald-600/10' },
+      purple: { border: 'border-purple-600', text: 'text-purple-700', bg: 'bg-purple-50/40', rubric: 'text-purple-600', accent: 'bg-purple-600', glow: 'shadow-purple-600/10' },
+      white: { border: 'border-gold', text: 'text-stone-700', bg: 'bg-stone-50/40', rubric: 'text-gold', accent: 'bg-gold', glow: 'shadow-gold/10' },
+      rose: { border: 'border-pink-600', text: 'text-pink-700', bg: 'bg-pink-50/40', rubric: 'text-pink-600', accent: 'bg-pink-600', glow: 'shadow-pink-600/10' }
     };
     return map[color.toLowerCase()] || map.white;
   }, [data]);
@@ -110,167 +111,147 @@ const DailyLiturgy: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto pb-40 px-4 animate-in fade-in duration-700 relative">
-      {/* BOTÕES DE NAVEGAÇÃO LATERAL (SIDE GUTTERS) - ESTILO BÍBLIA */}
-      <div className="fixed inset-y-0 left-0 z-[100] flex items-center px-2 md:px-8 pointer-events-none">
+      {/* NAVEGAÇÃO LATERAL (ESTILO BÍBLIA) */}
+      <div className="fixed inset-y-0 left-0 z-[100] flex items-center px-4 md:px-8 pointer-events-none hidden lg:flex">
          <button 
             onClick={() => navigateDate(-1)}
-            className="p-5 md:p-7 bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-full text-gold pointer-events-auto transition-all shadow-2xl border border-gold/10 opacity-30 hover:opacity-100 hover:scale-110 active:scale-90 shadow-sacred/10"
+            className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full text-stone-400 hover:text-gold pointer-events-auto transition-all shadow-2xl border border-white/10 hover:scale-110 active:scale-90"
             aria-label="Dia Anterior"
          >
-            <Icons.ArrowDown className="w-6 h-6 md:w-8 md:h-8 rotate-90" />
+            <Icons.ArrowDown className="w-8 h-8 rotate-90" />
          </button>
       </div>
 
-      <div className="fixed inset-y-0 right-0 z-[100] flex items-center px-2 md:px-8 pointer-events-none">
+      <div className="fixed inset-y-0 right-0 z-[100] flex items-center px-4 md:px-8 pointer-events-none hidden lg:flex">
          <button 
             onClick={() => navigateDate(1)}
-            className="p-5 md:p-7 bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-full text-gold pointer-events-auto transition-all shadow-2xl border border-gold/10 opacity-30 hover:opacity-100 hover:scale-110 active:scale-90 shadow-sacred/10"
+            className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-full text-stone-400 hover:text-gold pointer-events-auto transition-all shadow-2xl border border-white/10 hover:scale-110 active:scale-90"
             aria-label="Próximo Dia"
          >
-            <Icons.ArrowDown className="w-6 h-6 md:w-8 md:h-8 -rotate-90" />
+            <Icons.ArrowDown className="w-8 h-8 -rotate-90" />
          </button>
       </div>
 
-      {/* NAVEGAÇÃO SUPERIOR */}
-      <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-2 flex items-center justify-between mx-auto w-full max-w-3xl">
+      {/* BARRA DE CONTROLE SUPERIOR */}
+      <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-2 flex items-center justify-between mx-auto w-full max-w-3xl">
         <button 
           onClick={() => navigateDate(-1)} 
-          className="flex items-center gap-3 px-4 md:px-6 py-3 bg-stone-50 dark:bg-stone-800 text-stone-400 hover:text-sacred hover:bg-white dark:hover:bg-stone-700 rounded-full transition-all active:scale-95 group"
+          className="p-3 md:px-6 md:py-3 bg-stone-50 dark:bg-stone-800 text-stone-400 hover:text-gold rounded-full transition-all flex items-center gap-2 group"
         >
-          <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-90 group-hover:-translate-x-1 transition-transform" />
-          <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">Anterior</span>
+          <Icons.ArrowDown className="w-4 h-4 rotate-90 group-hover:-translate-x-1 transition-transform" />
+          <span className="hidden md:block text-[10px] font-black uppercase">Anterior</span>
         </button>
 
-        <div className="flex-1 flex flex-col items-center px-4">
-           <div className="relative group cursor-pointer">
-              <input 
-                type="date" 
-                value={date} 
-                onChange={e => setDate(e.target.value)} 
-                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-              />
-              <div className="flex flex-col items-center">
-                 <p className="text-xs md:text-sm font-serif font-black text-stone-800 dark:text-gold tracking-tight border-b border-gold/20 group-hover:border-gold transition-colors leading-none pb-1">
-                   {formattedDate}
-                 </p>
-                 <span className="text-[7px] font-black uppercase tracking-[0.3em] text-stone-400 mt-1.5 opacity-60">Lecionarium Romanum</span>
-              </div>
-           </div>
+        <div className="flex flex-col items-center">
+           <input 
+             type="date" 
+             value={date} 
+             onChange={e => setDate(e.target.value)} 
+             className="absolute opacity-0 w-24 h-8 cursor-pointer"
+           />
+           <p className="text-xs md:text-sm font-serif font-black text-stone-800 dark:text-gold tracking-tight leading-none">
+             {formattedDate}
+           </p>
+           <span className="text-[7px] font-black uppercase text-stone-400 mt-1 opacity-60">Alterar Data</span>
         </div>
 
         <button 
           onClick={() => navigateDate(1)} 
-          className="flex items-center gap-3 px-4 md:px-6 py-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-full hover:scale-105 transition-all active:scale-95 group shadow-lg"
+          className="p-3 md:px-6 md:py-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-full hover:scale-105 transition-all flex items-center gap-2 group"
         >
-          <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">Próximo</span>
-          <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 -rotate-90 group-hover:translate-x-1 transition-transform" />
+          <span className="hidden md:block text-[10px] font-black uppercase">Próximo</span>
+          <Icons.ArrowDown className="w-4 h-4 -rotate-90 group-hover:translate-x-1 transition-transform" />
         </button>
       </nav>
 
-      {/* CARREGAMENTO / ERRO / CONTEÚDO */}
+      {/* CARREGAMENTO / CONTEÚDO */}
       {loading || rendering ? (
-        <div className="py-60 text-center space-y-12">
+        <div className="py-40 text-center space-y-12">
           <div className="relative inline-block">
-             <div className="w-24 h-24 border-8 border-gold/10 border-t-gold rounded-full animate-spin mx-auto" />
-             <Icons.Cross className="absolute inset-0 m-auto w-8 h-8 text-sacred animate-pulse" />
+             <div className="w-20 h-20 border-8 border-gold/10 border-t-gold rounded-full animate-spin mx-auto" />
+             <Icons.Cross className="absolute inset-0 m-auto w-6 h-6 text-sacred animate-pulse" />
           </div>
-          <div className="space-y-4">
-            <p className="text-3xl font-serif italic text-stone-900 dark:text-stone-100">Consultando o Nártex...</p>
-            <p className="text-stone-400 font-serif italic animate-pulse">Buscando o Alimento da Palavra nos arquivos sagrados</p>
-          </div>
-        </div>
-      ) : error ? (
-        <div className="py-40 text-center space-y-8 animate-in zoom-in-95">
-           <div className="p-10 bg-white dark:bg-stone-900 rounded-[3rem] border-2 border-dashed border-stone-200 dark:border-stone-800 max-w-md mx-auto space-y-6">
-              <Icons.History className="w-16 h-16 text-stone-300 mx-auto" />
-              <div className="space-y-2">
-                 <h3 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">Ops! Ocorreu um erro</h3>
-                 <p className="text-stone-400 font-serif italic text-lg">Não conseguimos conectar com a inteligência litúrgica no momento.</p>
-              </div>
-              <button 
-                onClick={() => loadLiturgy(date)}
-                className="w-full py-4 bg-gold text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:scale-105 active:scale-95 transition-all"
-              >
-                Tentar Novamente
-              </button>
-           </div>
+          <p className="text-2xl font-serif italic text-stone-400">Preparando o Alimento do Dia...</p>
         </div>
       ) : data && (
         <div className="space-y-12 animate-in fade-in duration-1000">
+          {/* TABS DE MODO */}
           <div className="flex justify-center">
-             <div className="flex bg-stone-100 dark:bg-stone-800 p-1.5 rounded-3xl border border-stone-200 dark:border-stone-700 shadow-inner">
+             <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-full border border-stone-200 dark:border-stone-700 shadow-inner">
                 <button 
                   onClick={() => setActiveTab('readings')}
-                  className={`px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'readings' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
+                  className={`px-10 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'readings' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
                 >
-                  Palavra
+                  Leituras
                 </button>
                 <button 
                   onClick={() => setActiveTab('reflection')}
-                  className={`px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'reflection' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
+                  className={`px-10 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'reflection' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
                 >
-                  Reflexão
+                  Reflexão IA
                 </button>
              </div>
           </div>
 
-          {/* HEADER LITÚRGICO */}
-          <header className={`bg-white dark:bg-stone-900 p-10 md:p-20 rounded-[4rem] border-t-[20px] ${theme.border} shadow-2xl text-center relative overflow-hidden`}>
+          {/* CABEÇALHO DO DIA */}
+          <header className={`bg-white dark:bg-stone-900 p-10 md:p-20 rounded-[4rem] border-t-[16px] ${theme.border} shadow-2xl text-center relative overflow-hidden`}>
             <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none group-hover:rotate-12 transition-transform duration-[10s]">
               <Icons.Cross className="w-64 h-64" />
             </div>
-            <div className="relative z-10 space-y-6">
-              <span className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>
+            <div className="relative z-10 space-y-4">
+              <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>
                 {data.gospel?.calendar?.rank || "Féria"} • {data.gospel?.calendar?.season || "Tempo Comum"}
               </span>
-              <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-[0.85]">
-                {data.gospel?.calendar?.dayName || "Dia da Liturgia"}
+              <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-[0.9]">
+                {data.gospel?.calendar?.dayName || "Dia Litúrgico"}
               </h2>
-              <p className="text-stone-400 text-xl font-serif italic py-4">{formattedDate}</p>
             </div>
           </header>
 
           {activeTab === 'readings' ? (
-            <article className="parchment dark:bg-stone-900/40 p-10 md:p-24 rounded-[3.5rem] md:rounded-[5rem] shadow-xl border border-stone-100 dark:border-stone-800 space-y-24" style={{ fontSize: `${fontSize}rem` }}>
+            <article className="parchment dark:bg-stone-900/40 p-10 md:p-24 rounded-[4rem] md:rounded-[5rem] shadow-xl border border-stone-100 dark:border-stone-800 space-y-24" style={{ fontSize: `${fontSize}rem` }}>
+              {/* PRIMEIRA LEITURA */}
               <section className="space-y-8">
                  <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-6">
                    <div className="flex flex-col">
-                     <h3 className={`text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Lectio Prima</h3>
-                     <span className="text-[10px] text-stone-400 italic font-serif">Primeira Leitura</span>
+                     <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Lectio Prima</h3>
+                     <span className="text-[9px] text-stone-400 italic font-serif">Primeira Leitura</span>
                    </div>
                    <ActionButtons itemId={`lit1_${date}`} type="liturgy" title="Leitura I" content={data.firstReading?.text} />
                  </div>
-                 <h4 className="font-serif font-bold text-3xl md:text-4xl text-stone-900 dark:text-gold tracking-tight">{data.firstReading?.reference}</h4>
+                 <h4 className="font-serif font-bold text-3xl text-stone-900 dark:text-gold tracking-tight">{data.firstReading?.reference}</h4>
                  <p className="font-serif text-stone-800 dark:text-stone-200 text-justify leading-relaxed tracking-tight first-letter:text-5xl first-letter:text-sacred first-letter:mr-2 first-letter:float-left first-letter:leading-none">
                    {data.firstReading?.text}
                  </p>
               </section>
 
-              <section className={`${theme.bg} p-12 md:p-20 rounded-[3.5rem] border-l-[16px] ${theme.border} space-y-10 shadow-inner`}>
-                 <div className="text-center space-y-2">
-                    <h3 className={`text-[11px] font-black uppercase tracking-[0.6em] ${theme.rubric}`}>Psalmus</h3>
+              {/* SALMO */}
+              <section className={`${theme.bg} p-10 md:p-16 rounded-[3.5rem] border-l-[12px] ${theme.border} space-y-8 shadow-inner`}>
+                 <div className="text-center space-y-1">
+                    <h3 className={`text-[10px] font-black uppercase tracking-[0.6em] ${theme.rubric}`}>Psalmus</h3>
                     <div className="h-px w-12 bg-stone-200 dark:bg-stone-700 mx-auto" />
                  </div>
-                 <div className="space-y-8 text-center">
-                    <p className="font-serif italic font-bold text-3xl md:text-5xl leading-tight text-stone-900 dark:text-stone-100">
+                 <div className="space-y-6 text-center">
+                    <p className="font-serif italic font-bold text-2xl md:text-4xl text-stone-900 dark:text-stone-100">
                       R/. {data.psalm?.title}
                     </p>
-                    <p className="font-serif text-stone-700 dark:text-stone-300 whitespace-pre-wrap italic text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto">
+                    <p className="font-serif text-stone-700 dark:text-stone-300 italic text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto whitespace-pre-wrap">
                       {data.psalm?.text}
                     </p>
                  </div>
               </section>
 
+              {/* EVANGELHO */}
               <section className="space-y-8 relative">
                  <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-6">
                    <div className="flex flex-col">
-                     <h3 className={`text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Evangelium</h3>
-                     <span className="text-[10px] text-stone-400 italic font-serif">Santo Evangelho</span>
+                     <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Evangelium</h3>
+                     <span className="text-[9px] text-stone-400 italic font-serif">Santo Evangelho</span>
                    </div>
                    <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data.gospel?.text} />
                  </div>
-                 <h4 className="font-serif font-bold text-4xl md:text-5xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel?.reference}</h4>
-                 <div className="bg-stone-50 dark:bg-stone-800/40 p-10 md:p-14 rounded-[3rem] border border-stone-200 dark:border-stone-700/50 shadow-2xl">
+                 <h4 className="font-serif font-bold text-4xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel?.reference}</h4>
+                 <div className="bg-stone-50 dark:bg-stone-800/40 p-8 md:p-12 rounded-[3rem] border border-stone-200 dark:border-stone-700/50">
                     <p className="font-serif text-stone-900 dark:text-stone-100 font-bold text-justify text-2xl md:text-3xl leading-relaxed">
                       {data.gospel?.text}
                     </p>
@@ -279,8 +260,8 @@ const DailyLiturgy: React.FC = () => {
             </article>
           ) : (
             <article className="animate-in fade-in slide-in-from-right-8 duration-700">
-               <div className="bg-white dark:bg-stone-900 p-12 md:p-24 rounded-[4rem] shadow-4xl border border-gold/10 space-y-10 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sacred via-gold to-sacred" />
+               <div className="bg-white dark:bg-stone-900 p-12 md:p-20 rounded-[4rem] shadow-4xl border border-gold/10 space-y-12 relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-full h-2 ${theme.accent}`} />
                   <header className="space-y-4">
                      <span className="text-[11px] font-black uppercase tracking-[0.6em] text-gold">Symphonia Fidei • Reflexão IA</span>
                      <h3 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight">O Mistério da Palavra</h3>
@@ -290,44 +271,42 @@ const DailyLiturgy: React.FC = () => {
                         {data.gospel?.reflection || data.gospel?.homily || "A liturgia deste dia nos convida à conversão profunda e ao encontro pessoal com o Cristo Ressuscitado."}
                      </p>
                   </div>
+                  <div className="pt-10 flex justify-center">
+                     <button onClick={() => window.dispatchEvent(new CustomEvent('cathedra-open-ai-study', { detail: { topic: `Reflexão teológica sobre ${data.gospel?.reference}` } }))} className="px-8 py-3 bg-stone-50 dark:bg-stone-800 text-[10px] font-black uppercase tracking-widest text-gold rounded-full hover:bg-gold hover:text-stone-900 transition-all border border-gold/20">Aprofundar Estudo</button>
+                  </div>
                </div>
             </article>
           )}
 
           {/* BOTÕES DE NAVEGAÇÃO DE RODAPÉ (ESTILO BÍBLIA) */}
-          <div className="flex flex-col md:flex-row justify-center gap-8 py-20">
+          <div className="flex flex-col md:flex-row justify-center gap-6 py-20 px-4 md:px-0">
             <button 
               onClick={() => navigateDate(-1)}
-              className="px-12 md:px-16 py-8 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] transition-all hover:border-gold shadow-2xl flex items-center justify-center gap-6 group"
+              className="px-10 py-6 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] transition-all hover:border-gold shadow-2xl flex items-center justify-center gap-4 group"
             >
-              <Icons.ArrowDown className="w-5 h-5 rotate-90 group-hover:-translate-x-3 transition-transform" /> Dia Anterior
+              <Icons.ArrowDown className="w-5 h-5 rotate-90 group-hover:-translate-x-2 transition-transform" /> Dia Anterior
             </button>
             <button 
               onClick={() => navigateDate(1)}
-              className="px-20 md:px-32 py-8 bg-gold text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] shadow-[0_30px_60px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-6 group"
+              className="px-16 py-6 bg-gold text-stone-900 rounded-[2.5rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 group"
             >
-              Dia Seguinte <Icons.ArrowDown className="w-5 h-5 -rotate-90 group-hover:translate-x-3 transition-transform" />
+              Próximo Dia <Icons.ArrowDown className="w-5 h-5 -rotate-90 group-hover:translate-x-2 transition-transform" />
             </button>
           </div>
         </div>
       )}
 
-      {/* CONTROLES FLUTUANTES RÁPIDOS */}
-      <div className="fixed bottom-24 right-6 md:right-12 flex flex-col gap-4 z-[300]">
-         <button 
-            onClick={() => setFontSize(prev => Math.min(prev + 0.1, 1.8))}
-            className="p-4 bg-white dark:bg-stone-800 text-stone-400 rounded-full shadow-xl border border-stone-100 dark:border-stone-700 hover:text-gold transition-all"
-         >
-            <span className="text-lg font-black">A+</span>
-         </button>
-         <button 
-            onClick={playAudio} 
-            disabled={loading || rendering || !data}
-            className={`p-6 md:p-8 rounded-full shadow-4xl transition-all active:scale-95 border-4 border-white dark:border-stone-900 disabled:opacity-0 ${isPlaying ? 'bg-sacred text-white animate-pulse scale-110' : 'bg-gold text-stone-900'}`}
-          >
-            {isPlaying ? <Icons.Stop className="w-7 h-7 md:w-8 md:h-8" /> : <Icons.Audio className="w-7 h-7 md:w-8 md:h-8" />}
-          </button>
-      </div>
+      {/* BOTÃO FLUTUANTE DE ÁUDIO */}
+      {!loading && !rendering && data && (
+        <div className="fixed bottom-32 right-8 z-[300]">
+           <button 
+              onClick={playAudio} 
+              className={`p-6 md:p-8 rounded-full shadow-4xl transition-all active:scale-95 border-4 border-white dark:border-stone-900 ${isPlaying ? 'bg-sacred text-white animate-pulse' : 'bg-gold text-stone-900'}`}
+            >
+              {isPlaying ? <Icons.Stop className="w-6 h-6 md:w-8 md:h-8" /> : <Icons.Audio className="w-6 h-6 md:w-8 md:h-8" />}
+            </button>
+        </div>
+      )}
     </div>
   );
 };
