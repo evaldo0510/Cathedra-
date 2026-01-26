@@ -19,13 +19,11 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
   return (
     <footer className="bg-[#0c0a09] text-stone-400 border-t border-white/5 pt-16 md:pt-24 pb-12 relative overflow-hidden">
-      {/* Aura de fundo sutil */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 bg-gold/5 blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16 mb-20">
           
-          {/* Coluna 1: Manifesto & Branding */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 group cursor-pointer" onClick={() => onNavigate(AppRoute.DASHBOARD)}>
               <MobileLogo className="w-12 h-12 bg-white/5 p-2 rounded-2xl border border-white/10 group-hover:border-gold/50 transition-all shadow-2xl" />
@@ -46,9 +44,8 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Coluna 2: Navigatio Sacra */}
           <div className="space-y-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white">Navigatio</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white">Navigatio Sacra</h4>
             <nav className="grid grid-cols-1 gap-4">
               {[
                 { name: 'Bíblia Sagrada', route: AppRoute.BIBLE },
@@ -69,30 +66,30 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </nav>
           </div>
 
-          {/* Coluna 3: Communio & Ref */}
           <div className="space-y-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white">Referências</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white">Fontes Autorizadas</h4>
             <nav className="grid grid-cols-1 gap-4">
               {[
-                { name: 'A Santa Sé (Vaticano)', url: 'https://vatican.va' },
-                { name: 'Vatican News', url: 'https://vaticannews.va' },
-                { name: 'Magistério IA', route: AppRoute.MAGISTERIUM },
-                { name: 'Certamen (Quiz)', route: AppRoute.CERTAMEN },
-                { name: 'Área do Membro', route: AppRoute.PROFILE }
+                { name: 'Vaticano (Santa Sé)', url: 'https://www.vatican.va' },
+                { name: 'Catecismo (CCC)', url: 'https://www.vatican.va/archive/ENG0015/_INDEX.HTM' },
+                { name: 'Código de Direito Canônico', url: 'https://www.vatican.va/archive/cod-iuris-canonici/cic_index_pt.html' },
+                { name: 'Doutrina Social (Compêndio)', url: 'https://www.vatican.va/roman_curia/pontifical_councils/justpeace/documents/rc_pc_justpeace_doc_20060526_compendio-dott-soc_po.html' },
+                { name: 'Portal Vatican News', url: 'https://www.vaticannews.va' }
               ].map(item => (
-                <button 
+                <a 
                   key={item.name}
-                  onClick={() => item.route ? onNavigate(item.route) : window.open(item.url, '_blank')}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-left text-sm hover:text-gold transition-colors flex items-center gap-3 group"
                 >
                   <Icons.ExternalLink className="w-3.5 h-3.5 text-stone-800 group-hover:text-gold/40" />
                   {item.name}
-                </button>
+                </a>
               ))}
             </nav>
           </div>
 
-          {/* Coluna 4: Gazofilácio (Apoio) */}
           <div className="space-y-8">
             <div className="bg-gradient-to-br from-white/[0.03] to-transparent p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
               <Icons.Cross className="absolute -bottom-6 -right-6 w-24 h-24 text-gold/5 group-hover:rotate-12 transition-transform duration-1000" />
@@ -116,14 +113,13 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   </div>
                </div>
                <div className="text-right">
-                  <span className="text-[8px] font-black uppercase tracking-widest">v5.3.0 Pro</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest">v5.4.0 Market Ready</span>
                   <p className="text-[7px]">PWA Architecture</p>
                </div>
             </div>
           </div>
         </div>
 
-        {/* Linha Final */}
         <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 text-stone-600">
           <div className="flex flex-col items-center md:items-start">
             <p className="text-[10px] font-black uppercase tracking-[0.8em] text-white/20 mb-2">Ad Maiorem Dei Gloriam</p>
