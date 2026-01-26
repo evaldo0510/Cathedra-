@@ -30,7 +30,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy } from './services/gemini';
-import { Icons, MobileLogo } from './constants';
+import { Icons, Logo } from './constants';
 import { UI_TRANSLATIONS } from './services/translations';
 import { notificationService } from './services/notifications';
 import { useOfflineMode } from './hooks/useOfflineMode';
@@ -133,13 +133,27 @@ const App: React.FC = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto flex flex-col relative pb-20 lg:pb-0">
-          <div className="p-4 border-b border-stone-100 dark:border-white/5 bg-white/80 dark:bg-stone-900/90 backdrop-blur-xl flex items-center justify-between sticky top-0 z-[140]">
-             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-900 dark:text-gold"><Icons.Menu className="w-6 h-6" /></button>
-             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
-                <MobileLogo className="w-8 h-8" />
-                <span className="text-xs font-black uppercase tracking-widest text-gold">Cathedra</span>
+          <div className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
+             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-xl transition-colors"><Icons.Menu className="w-6 h-6" /></button>
+             
+             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
+                <Logo className="w-10 h-10 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110 group-active:scale-95" />
+                <div className="flex flex-col">
+                  <span className="text-sm md:text-base font-serif font-black uppercase tracking-[0.25em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
+                  <span className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 leading-none mt-1">Digital Sanctuarium</span>
+                </div>
              </div>
-             <button onClick={() => setIsDark(!isDark)} className="p-2 text-stone-400">{isDark ? <Icons.Star className="w-5 h-5 text-gold" /> : <Icons.History className="w-5 h-5" />}</button>
+
+             <button 
+              onClick={() => {
+                const next = !isDark;
+                setIsDark(next);
+                localStorage.setItem('cathedra_dark', String(next));
+              }} 
+              className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700 transition-all active:scale-90"
+             >
+              {isDark ? <Icons.Star className="w-5 h-5 text-gold fill-current" /> : <Icons.History className="w-5 h-5" />}
+             </button>
           </div>
 
           <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto">
