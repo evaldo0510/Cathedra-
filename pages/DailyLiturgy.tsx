@@ -81,7 +81,7 @@ const DailyLiturgy: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-6 animate-pulse">
         <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin" />
-        <p className="text-stone-400 font-serif italic">Preparando o Lecionário...</p>
+        <p className="text-stone-400 font-serif italic text-center">Consultando o Lecionário Diário...</p>
       </div>
     );
   }
@@ -92,11 +92,17 @@ const DailyLiturgy: React.FC = () => {
     <div className="space-y-6 max-w-2xl mx-auto pb-24">
       {/* NAVEGAÇÃO MOBILE COMPACTA */}
       <nav className="flex items-center justify-between bg-white dark:bg-stone-900 p-2 rounded-2xl border border-stone-200 dark:border-white/5 shadow-xl sticky top-2 z-[150]">
-        <button onClick={() => navigateDate(-1)} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-600 dark:text-gold active:scale-90"><Icons.ArrowDown className="w-5 h-5 rotate-90" /></button>
+        <button onClick={() => navigateDate(-1)} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-600 dark:text-gold active:scale-90 flex items-center gap-2">
+          <Icons.ArrowDown className="w-5 h-5 rotate-90" />
+          <span className="hidden sm:inline text-[9px] font-black uppercase">Anterior</span>
+        </button>
         <div className="px-4 py-2 flex flex-col items-center">
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-transparent border-none text-sm font-serif font-bold text-stone-800 dark:text-gold outline-none text-center" />
         </div>
-        <button onClick={() => navigateDate(1)} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-600 dark:text-gold active:scale-90"><Icons.ArrowDown className="w-5 h-5 -rotate-90" /></button>
+        <button onClick={() => navigateDate(1)} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-600 dark:text-gold active:scale-90 flex items-center gap-2">
+          <span className="hidden sm:inline text-[9px] font-black uppercase">Próximo</span>
+          <Icons.ArrowDown className="w-5 h-5 -rotate-90" />
+        </button>
       </nav>
 
       <header className={`bg-white dark:bg-stone-900 p-8 rounded-[2.5rem] border-t-8 ${theme.border} shadow-lg text-center`}>
@@ -107,28 +113,29 @@ const DailyLiturgy: React.FC = () => {
 
       <article className="parchment dark:bg-stone-900/40 p-6 rounded-[2.5rem] shadow-inner border border-stone-100 dark:border-stone-800 space-y-12" style={{ fontSize: `${fontSize}rem` }}>
         <section className="space-y-4">
-           <div className="flex justify-between items-center">
-             <span className={`text-[10px] font-black uppercase ${theme.rubric}`}>Leitura I</span>
+           <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-2">
+             <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme.rubric}`}>Primeira Leitura <span className="opacity-40 italic ml-2">(Lectio Prima)</span></h3>
              <ActionButtons itemId={`lit1_${date}`} type="liturgy" title="Leitura I" content={data?.firstReading.text} />
            </div>
-           <h4 className="font-serif font-bold text-lg">{data?.firstReading.reference}</h4>
+           <h4 className="font-serif font-bold text-lg text-stone-900 dark:text-gold">{data?.firstReading.reference}</h4>
            <p className="font-serif text-stone-800 dark:text-stone-300 text-justify leading-relaxed">{data?.firstReading.text}</p>
         </section>
 
         {data?.psalm && (
           <section className={`${theme.bg} p-6 rounded-2xl border-l-4 ${theme.border} space-y-4`}>
-             <p className={`text-center font-serif italic font-bold ${theme.rubric}`}>R/. {data.psalm.title}</p>
-             <p className="font-serif text-stone-800 dark:text-stone-300 whitespace-pre-wrap italic text-sm text-center">{data.psalm.text}</p>
+             <h3 className={`text-center text-[9px] font-black uppercase tracking-[0.3em] ${theme.rubric}`}>Salmo Responsorial <span className="opacity-40 italic ml-1">(Psalmus)</span></h3>
+             <p className={`text-center font-serif italic font-bold text-xl leading-tight`}>R/. {data.psalm.title}</p>
+             <p className="font-serif text-stone-800 dark:text-stone-300 whitespace-pre-wrap italic text-sm text-center leading-relaxed">{data.psalm.text}</p>
           </section>
         )}
 
         <section className="space-y-4 relative">
-           <div className="flex justify-between items-center">
-             <span className={`text-[10px] font-black uppercase ${theme.rubric}`}>Evangelho</span>
+           <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-2">
+             <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme.rubric}`}>Santo Evangelho <span className="opacity-40 italic ml-2">(Evangelium)</span></h3>
              <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data?.gospel.text} />
            </div>
-           <h4 className="font-serif font-bold text-lg">{data?.gospel.reference}</h4>
-           <p className="font-serif text-stone-900 dark:text-stone-100 font-bold text-justify leading-relaxed">{data?.gospel.text}</p>
+           <h4 className="font-serif font-bold text-lg text-stone-900 dark:text-gold">{data?.gospel.reference}</h4>
+           <p className="font-serif text-stone-900 dark:text-stone-100 font-bold text-justify leading-relaxed first-letter:text-4xl first-letter:float-left first-letter:mr-2 first-letter:text-sacred">{data?.gospel.text}</p>
         </section>
       </article>
 
