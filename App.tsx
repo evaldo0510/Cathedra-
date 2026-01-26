@@ -39,12 +39,16 @@ interface LanguageContextType {
   lang: Language;
   setLang: (l: Language) => void;
   t: (key: string) => string;
+  installPrompt: any;
+  handleInstall: () => void;
 }
 
 export const LangContext = createContext<LanguageContextType>({
   lang: 'pt',
   setLang: () => {},
-  t: (k) => k
+  t: (k) => k,
+  installPrompt: null,
+  handleInstall: () => {}
 });
 
 const App: React.FC = () => {
@@ -54,6 +58,7 @@ const App: React.FC = () => {
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('cathedra_user');
     return saved ? JSON.parse(saved) : null;
@@ -67,7 +72,32 @@ const App: React.FC = () => {
     notificationService.initNotifications(lang);
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+
+    // Captura do evento de instalação PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      setDeferredPrompt(null);
+      console.log('Cathedra instalada com sucesso.');
+    });
   }, [lang, isDark]);
+
+  const handleInstall = useCallback(async () => {
+    if (!deferredPrompt) {
+      // Caso seja iOS, o prompt não existe, então apenas notificamos o usuário (ou mostramos manual)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        alert("Para baixar no iPhone:\n1. Toque no ícone de Compartilhar (quadrado com seta)\n2. Role para baixo e toque em 'Adicionar à Tela de Início'.");
+      }
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setDeferredPrompt(null);
+  }, [deferredPrompt]);
 
   const navigateTo = useCallback((r: AppRoute) => {
     setRoute(r);
@@ -120,7 +150,7 @@ const App: React.FC = () => {
   if (loading) return null;
 
   return (
-    <LangContext.Provider value={{ lang, setLang: setLangState, t }}>
+    <LangContext.Provider value={{ lang, setLang: setLangState, t, installPrompt: deferredPrompt, handleInstall }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         <OfflineIndicator state={connectivity} />
         <CommandCenter isOpen={isOmnisearchOpen} onClose={() => setIsOmnisearchOpen(false)} onNavigate={navigateTo} onSearchSelection={handleSearch} />

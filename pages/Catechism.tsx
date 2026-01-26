@@ -59,6 +59,16 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [fontSize, setFontSize] = useState(1.1);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['1.1'])); // Seção 1.1 aberta por padrão
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,30 +120,60 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
           </form>
        </header>
 
-       <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto px-4">
+       <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto px-4">
           {CIC_PARTS.map(part => (
-            <div key={part.id} className="bg-white dark:bg-stone-900 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden group">
-               <div className={`p-10 ${part.color} text-white space-y-2`}>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em]">Parte {part.id}</span>
-                  <h3 className="text-3xl font-serif font-bold">{part.title}</h3>
+            <div key={part.id} className="bg-white dark:bg-stone-900 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden flex flex-col">
+               <div className={`p-10 ${part.color} text-white space-y-2 relative overflow-hidden group/part`}>
+                  <Icons.Cross className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 group-hover/part:scale-110 transition-transform duration-700" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] relative z-10 opacity-70">Parte {part.id}</span>
+                  <h3 className="text-3xl font-serif font-bold relative z-10">{part.title}</h3>
+                  <p className="text-[10px] font-serif italic relative z-10 opacity-80">{part.subtitle}</p>
                </div>
-               <div className="p-8 space-y-6">
-                  {CIC_STRUCTURE[part.id]?.map((sec: any) => (
-                    <div key={sec.id} className="space-y-4">
-                       <h4 className="text-[11px] font-black uppercase tracking-widest text-stone-400 border-b border-stone-50 dark:border-stone-800 pb-2">{sec.title}</h4>
-                       <div className="flex flex-wrap gap-2">
-                          {sec.chapters.map((chap: string) => (
-                            <button 
-                              key={chap}
-                              onClick={() => loadChapter(part, sec, chap)}
-                              className="px-6 py-2 bg-stone-50 dark:bg-stone-800 hover:bg-gold hover:text-stone-900 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                            >
-                              Cap. {chap}
-                            </button>
-                          ))}
-                       </div>
+               
+               <div className="p-8 flex-1 space-y-4">
+                  {CIC_STRUCTURE[part.id]?.map((sec: any) => {
+                    const isOpen = expandedSections.has(sec.id);
+                    return (
+                      <div key={sec.id} className="border border-stone-50 dark:border-stone-800 rounded-[2.5rem] overflow-hidden transition-all duration-300">
+                        <button 
+                          onClick={() => toggleSection(sec.id)}
+                          className={`w-full flex items-center justify-between p-6 text-left transition-colors ${isOpen ? 'bg-stone-50 dark:bg-stone-800/50' : 'hover:bg-stone-50 dark:hover:bg-stone-800/30'}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2 rounded-lg ${isOpen ? 'bg-gold text-stone-900' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
+                              <Icons.Book className="w-4 h-4" />
+                            </div>
+                            <h4 className={`text-sm font-serif font-bold transition-colors ${isOpen ? 'text-stone-900 dark:text-gold' : 'text-stone-600 dark:text-stone-400'}`}>
+                              {sec.title}
+                            </h4>
+                          </div>
+                          <Icons.ArrowDown className={`w-5 h-5 text-stone-300 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isOpen && (
+                          <div className="p-6 bg-white dark:bg-stone-900/50 animate-in slide-in-from-top-2 duration-300">
+                            <div className="grid grid-cols-4 gap-3">
+                              {sec.chapters.map((chap: string) => (
+                                <button 
+                                  key={chap}
+                                  onClick={() => loadChapter(part, sec, chap)}
+                                  className="aspect-square flex items-center justify-center bg-stone-50 dark:bg-stone-800 hover:bg-gold hover:text-stone-900 rounded-2xl text-[11px] font-black transition-all shadow-sm active:scale-95 border border-stone-100 dark:border-stone-700 hover:border-gold"
+                                >
+                                  {chap}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {!CIC_STRUCTURE[part.id] && (
+                    <div className="py-20 text-center opacity-20">
+                      <Icons.History className="w-12 h-12 mx-auto mb-4" />
+                      <p className="text-xs uppercase font-black tracking-widest">Em Catalogação...</p>
                     </div>
-                  ))}
+                  )}
                </div>
             </div>
           ))}

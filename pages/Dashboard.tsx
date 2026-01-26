@@ -7,7 +7,7 @@ import SacredImage from '../components/SacredImage';
 import { LangContext } from '../App';
 
 const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (route: AppRoute) => void; user: User | null }> = ({ onSearch, onNavigate, user }) => {
-  const { lang, t } = useContext(LangContext);
+  const { lang, t, handleInstall, installPrompt } = useContext(LangContext);
   const [dailyVerse, setDailyVerse] = useState<any>(null);
   const [dailyBundle, setDailyBundle] = useState<any>(null);
   const [recentStudies, setRecentStudies] = useState<StudyResult[]>([]);
@@ -40,6 +40,8 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
       </div>
     );
   }
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
   return (
     <div className="space-y-24 pb-32 animate-in fade-in duration-1000 -mt-10">
@@ -78,6 +80,35 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
           </div>
         </div>
       </section>
+
+      {/* BANNER DE INSTALAÇÃO (DOWNLOAD APP) - APENAS SE NÃO ESTIVER INSTALADO */}
+      {!isStandalone && (
+        <section className="max-w-7xl mx-auto px-4">
+           <div className="bg-stone-900 rounded-[4rem] p-10 md:p-16 border border-gold/30 shadow-sacred relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-12 opacity-[0.05] group-hover:scale-110 transition-transform duration-[10s]">
+                 <Icons.Mobile className="w-64 h-64 text-gold" />
+              </div>
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+                 <div className="space-y-6 text-center md:text-left">
+                    <h3 className="text-4xl md:text-6xl font-serif font-bold text-white leading-none">Cathedra no seu Dispositivo</h3>
+                    <p className="text-white/60 font-serif italic text-xl max-w-2xl leading-relaxed">
+                      "Baixe o aplicativo para acesso instantâneo, modo offline total e notificações do Evangelho."
+                    </p>
+                    <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[9px] font-black uppercase tracking-widest text-gold/60">
+                       <span className="flex items-center gap-2"><Icons.Download className="w-4 h-4" /> Uso Offline</span>
+                       <span className="flex items-center gap-2"><Icons.History className="w-4 h-4" /> Acesso Rápido</span>
+                    </div>
+                 </div>
+                 <button 
+                  onClick={handleInstall}
+                  className="px-16 py-8 bg-gold text-stone-900 rounded-[2.5rem] font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-white transition-all active:scale-95 flex items-center gap-4 whitespace-nowrap"
+                 >
+                    <Icons.Download className="w-6 h-6" /> Baixar Aplicativo
+                 </button>
+              </div>
+           </div>
+        </section>
+      )}
 
       {/* EXPLORADOR DO DEPÓSITO */}
       <section className="max-w-7xl mx-auto px-4">

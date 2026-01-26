@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Icons } from '../constants';
 import { User, StudyResult } from '../types';
+import { LangContext } from '../App';
 
 interface ProfileProps {
   user: User;
@@ -11,6 +12,7 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavigateCheckout }) => {
+  const { handleInstall, installPrompt } = useContext(LangContext);
   const [history, setHistory] = useState<StudyResult[]>([]);
   const [notifEnabled, setNotifEnabled] = useState(Notification.permission === 'granted');
 
@@ -27,6 +29,8 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
     const permission = await Notification.requestPermission();
     setNotifEnabled(permission === 'granted');
   };
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
   return (
     <div className="max-w-6xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-32">
@@ -106,13 +110,25 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
           </div>
           
           <div className="space-y-6">
-             <p className="font-serif font-bold text-stone-900 dark:text-stone-100 text-xl">Integridade Offline</p>
-             <div className="flex items-center gap-4 text-green-500">
-               <div className="w-3 h-3 bg-current rounded-full animate-pulse" />
-               <span className="text-[10px] font-black uppercase tracking-widest">Santuário Cacheado (Offline Ativo)</span>
+             <p className="font-serif font-bold text-stone-900 dark:text-stone-100 text-xl">Acesso Nativo</p>
+             <div className="flex items-center justify-between gap-4">
+               <div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${isStandalone ? 'text-emerald-500' : 'text-stone-400'}`}>
+                    {isStandalone ? 'Aplicativo Instalado' : 'Acesse como App Nativo'}
+                  </span>
+                  <p className="text-[8px] text-stone-500 mt-1 uppercase">Melhor performance e modo offline</p>
+               </div>
+               {!isStandalone && (
+                 <button 
+                  onClick={handleInstall}
+                  className="px-6 py-2 bg-gold text-stone-900 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all"
+                 >
+                   Instalar
+                 </button>
+               )}
              </div>
              <p className="text-xs font-serif italic text-stone-500 leading-relaxed">
-               O Cathedra Digital está otimizado para funcionar mesmo sem internet. Seus estudos e marcações estão salvos localmente.
+               O Cathedra Digital está otimizado para funcionar mesmo sem internet. Ao instalar, o santuário fica guardado permanentemente em seu aparelho.
              </p>
           </div>
         </div>

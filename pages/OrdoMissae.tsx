@@ -179,7 +179,7 @@ const OrdoMissae: React.FC = () => {
               <span className="text-[8px] font-black uppercase text-stone-400">Tamanho</span>
               <input 
                 type="range" 
-                min="1" 
+                min="0.8" 
                 max="2.5" 
                 step="0.1" 
                 value={fontSize} 
@@ -271,6 +271,22 @@ const OrdoMissae: React.FC = () => {
         ))}
       </div>
       
+      {/* BOTÕES FLUTUANTES DE CONFIGURAÇÃO (ESTILO BÍBLIA) */}
+      <div className="fixed bottom-32 right-8 z-[300] flex flex-col gap-4">
+         <button 
+            onClick={() => setFontSize(f => Math.min(f + 0.1, 2.5))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"
+         >
+            <span className="text-xl font-bold">A+</span>
+         </button>
+         <button 
+            onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"
+         >
+            <span className="text-lg font-bold">A-</span>
+         </button>
+      </div>
+
       <footer className="text-center opacity-30 pt-32 pb-20 border-t border-gold/10">
          <div className="flex flex-col items-center gap-6">
             <Icons.Cross className="w-16 h-16 text-stone-200" />

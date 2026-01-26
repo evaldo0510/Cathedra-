@@ -46,7 +46,7 @@ const MISSAL_PARTS = [
       {
         name: 'Benedictio / Bênção',
         rubric: 'O sacerdote abençoa o povo:',
-        latin: 'S: Benedícat vos omnípotens Deus, Pater, et Fílius, et Spíritus Sanctus.\nP: Amen.\nS: Ite, missa est.\nP: Deo grátias.',
+        latin: 'S: Benedícat vos omnípotens Deus, Pater, et Fílius, et Spíritus Sancti.\nP: Amen.\nS: Ite, missa est.\nP: Deo grátias.',
         vernacular: 'S: Abençoe-vos Deus Todo-Poderoso, Pai e Filho e Espírito Santo.\nP: Amém.\nS: Ide em paz e o Senhor vos acompanhe.\nP: Graças a Deus.'
       }
     ]
@@ -81,7 +81,7 @@ const Missal: React.FC = () => {
            
            <div className="flex items-center gap-4 px-6 py-2 bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-100 dark:border-stone-700">
               <span className="text-[8px] font-black uppercase text-stone-400">Tamanho</span>
-              <input type="range" min="1" max="2" step="0.1" value={fontSize} onChange={e => setFontSize(parseFloat(e.target.value))} className="w-24 h-1 accent-sacred" />
+              <input type="range" min="0.8" max="2.5" step="0.1" value={fontSize} onChange={e => setFontSize(parseFloat(e.target.value))} className="w-24 h-1 accent-sacred" />
            </div>
         </div>
       </header>
@@ -129,6 +129,22 @@ const Missal: React.FC = () => {
             </div>
           </section>
         ))}
+      </div>
+
+      {/* BOTÕES FLUTUANTES DE CONFIGURAÇÃO (ESTILO BÍBLIA) */}
+      <div className="fixed bottom-32 right-8 z-[300] flex flex-col gap-4">
+         <button 
+            onClick={() => setFontSize(f => Math.min(f + 0.1, 2.5))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"
+         >
+            <span className="text-xl font-bold">A+</span>
+         </button>
+         <button 
+            onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"
+         >
+            <span className="text-lg font-bold">A-</span>
+         </button>
       </div>
       
       <footer className="text-center opacity-30 pt-32 pb-20">
