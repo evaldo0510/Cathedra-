@@ -18,11 +18,15 @@ export const CIC_STRUCTURE: Record<string, CatechismHierarchy[]> = {
     { id: "p4_s1", title: "A Oração na Vida Cristã", level: "section" },
     { id: "p4_s2", title: "A Oração do Senhor: Pai Nosso", level: "section" }
   ],
-  // Sub-níveis (Exemplo de expansão para Seções -> Capítulos)
   "p1_s1": [
-    { id: "p1_s1_c1", title: "O Homem é capaz de Deus", level: "chapter" },
+    { id: "p1_s1_c1", title: "O Homem é 'capaz' de Deus", level: "chapter" },
     { id: "p1_s1_c2", title: "Deus vem ao encontro do Homem", level: "chapter" },
     { id: "p1_s1_c3", title: "A Resposta do Homem a Deus", level: "chapter" }
+  ],
+  "p1_s2": [
+    { id: "p1_s2_c1", title: "Creio em Deus Pai", level: "chapter" },
+    { id: "p1_s2_c2", title: "Creio em Jesus Cristo", level: "chapter" },
+    { id: "p1_s2_c3", title: "Creio no Espírito Santo", level: "chapter" }
   ],
   "p3_s2": [
     { id: "m1", title: "1º Mandamento: Amar a Deus sobre todas as coisas", level: "article" },
@@ -33,7 +37,6 @@ export const CIC_STRUCTURE: Record<string, CatechismHierarchy[]> = {
   ]
 };
 
-// Parágrafos fundamentais estáticos para garantir funcionamento "zero-ia" no básico
 export const CIC_STATIC_PARAGRAPHS: Record<string, string> = {
   "1": "Deus, infinitamente perfeito e bem-aventurado em si mesmo, em um desígnio de pura bondade, criou livremente o homem para fazê-lo participar de sua vida bem-aventurada.",
   "27": "O desejo de Deus está inscrito no coração do homem, já que o homem é criado por Deus e para Deus.",

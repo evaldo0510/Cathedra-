@@ -5,6 +5,9 @@ import { Icons } from '../constants';
 interface MassSection {
   title: string;
   subtitle: string;
+  icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  color: string;
+  glow: string;
   parts: {
     name: string;
     rubric?: string;
@@ -17,6 +20,9 @@ const MASS_DATA: MassSection[] = [
   {
     title: 'Ritus Initiales',
     subtitle: 'Ritos Iniciais',
+    icon: Icons.Cross,
+    color: 'text-sacred',
+    glow: 'shadow-sacred/20',
     parts: [
       {
         name: 'Salutatio / Saudação',
@@ -34,18 +40,15 @@ const MASS_DATA: MassSection[] = [
         name: 'Kyrie Eleison',
         latin: 'V/. Kýrie, eléison. R/. Kýrie, eléison.\nV/. Christe, eléison. R/. Christe, eléison.\nV/. Kýrie, eléison. R/. Kýrie, eléison.',
         vernacular: 'V/. Senhor, tende piedade de nós. R/. Senhor, tende piedade de nós.\nV/. Cristo, tende piedade de nós. R/. Cristo, tende piedade de nós.\nV/. Senhor, tende piedade de nós. R/. Senhor, tende piedade de nós.'
-      },
-      {
-        name: 'Gloria in Excelsis',
-        rubric: 'Quando prescrito, canta-se ou reza-se o hino:',
-        latin: 'Glória in excélsis Deo et in terra pax homínibus bonæ voluntátis. Laudámus te, benedícimus te, adorámus te, glorificámus te, grátias ágimus tibi propter magnam glóriam tuam, Dómine Deus, Rex cæléstis, Deus Pater omnípotens.',
-        vernacular: 'Glória a Deus nas alturas, e paz na terra aos homens por Ele amados. Senhor Deus, Rei dos céus, Deus Pai todo-poderoso: nós Vos louvamos, nós Vos bendizemos, nós Vos adoramos, nós Vos glorificamos, nós Vos damos graças por vossa imensa glória.'
       }
     ]
   },
   {
     title: 'Liturgia Verbi',
-    subtitle: 'Liturgia da Palavra',
+    subtitle: 'Palavra',
+    icon: Icons.Book,
+    color: 'text-emerald-600',
+    glow: 'shadow-emerald-600/20',
     parts: [
       {
         name: 'Evangelium / Evangelho',
@@ -62,7 +65,10 @@ const MASS_DATA: MassSection[] = [
   },
   {
     title: 'Liturgia Eucharistica',
-    subtitle: 'Liturgia Eucarística',
+    subtitle: 'Eucaristia',
+    icon: Icons.History,
+    color: 'text-gold',
+    glow: 'shadow-gold/20',
     parts: [
       {
         name: 'Orate Fratres',
@@ -84,7 +90,10 @@ const MASS_DATA: MassSection[] = [
   },
   {
     title: 'Ritus Communionis',
-    subtitle: 'Rito da Comunhão',
+    subtitle: 'Comunhão',
+    icon: Icons.Users,
+    color: 'text-blue-600',
+    glow: 'shadow-blue-600/20',
     parts: [
       {
         name: 'Pater Noster / Pai Nosso',
@@ -101,6 +110,9 @@ const MASS_DATA: MassSection[] = [
   {
     title: 'Ritus Conclusionis',
     subtitle: 'Ritos Finais',
+    icon: Icons.Star,
+    color: 'text-stone-500',
+    glow: 'shadow-stone-500/20',
     parts: [
       {
         name: 'Benedictio / Bênção',
@@ -114,14 +126,25 @@ const MASS_DATA: MassSection[] = [
 const OrdoMissae: React.FC = () => {
   const [view, setView] = useState<'bilingual' | 'latin' | 'vernacular'>('bilingual');
   const [fontSize, setFontSize] = useState(1.2);
+  const [activeSection, setActiveSection] = useState(0);
+
+  const scrollToSection = (idx: number) => {
+    setActiveSection(idx);
+    const el = document.getElementById(`section-${idx}`);
+    if (el) {
+      const yOffset = -140; 
+      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-40 animate-in fade-in duration-700 px-4">
       {/* HEADER DE ALTAR */}
       <header className="text-center space-y-6 pt-10">
         <div className="flex justify-center">
-           <div className="p-8 bg-sacred rounded-[2.5rem] shadow-sacred border-4 border-gold/40 rotate-3 group-hover:rotate-0 transition-transform">
-              <Icons.Cross className="w-12 h-12 text-white" />
+           <div className="p-8 bg-stone-900 rounded-[2.5rem] shadow-sacred border-4 border-gold/40 rotate-3 group-hover:rotate-0 transition-transform">
+              <Icons.Cross className="w-12 h-12 text-gold" />
            </div>
         </div>
         <div className="space-y-2">
@@ -167,36 +190,48 @@ const OrdoMissae: React.FC = () => {
         </div>
       </header>
 
-      {/* NAVEGAÇÃO DE SEÇÕES */}
-      <nav className="flex overflow-x-auto gap-4 no-scrollbar pb-4 max-w-4xl mx-auto border-b border-gold/10">
-        {MASS_DATA.map((section, sIdx) => (
-          <button 
-            key={sIdx}
-            onClick={() => {
-              const el = document.getElementById(`section-${sIdx}`);
-              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
-            className="whitespace-nowrap text-[9px] font-black uppercase tracking-widest text-stone-400 hover:text-gold transition-colors"
-          >
-            {section.subtitle}
-          </button>
-        ))}
+      {/* NAVEGAÇÃO REFINADA POR SEÇÕES (LITURGICAL BAR) */}
+      <nav className="sticky top-20 md:top-24 z-[150] flex justify-center py-4 pointer-events-none">
+        <div className="flex items-center gap-2 md:gap-4 p-2 bg-white/80 dark:bg-stone-900/90 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl pointer-events-auto">
+          {MASS_DATA.map((section, sIdx) => {
+            const isActive = activeSection === sIdx;
+            const Icon = section.icon;
+            return (
+              <button 
+                key={sIdx}
+                onClick={() => scrollToSection(sIdx)}
+                className={`group relative flex flex-col items-center justify-center w-12 h-12 md:w-20 md:h-16 rounded-full md:rounded-3xl transition-all duration-500 ${isActive ? `bg-white dark:bg-stone-800 shadow-xl scale-110 ${section.glow}` : 'hover:bg-stone-100 dark:hover:bg-stone-800'}`}
+              >
+                <Icon className={`w-5 h-5 md:w-6 md:h-6 transition-colors ${isActive ? section.color : 'text-stone-300'}`} />
+                <span className={`hidden md:block text-[8px] font-black uppercase tracking-tighter mt-1 transition-colors ${isActive ? 'text-stone-900 dark:text-white' : 'text-stone-400'}`}>
+                  {section.subtitle}
+                </span>
+                {isActive && (
+                  <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${section.color.replace('text-', 'bg-')}`} />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* CORPO DO MISSAL (COMPLETAMENTE ESTÁTICO) */}
-      <div className="space-y-24 max-w-5xl mx-auto" style={{ fontSize: `${fontSize}rem` }}>
+      {/* CORPO DO MISSAL */}
+      <div className="space-y-32 max-w-5xl mx-auto" style={{ fontSize: `${fontSize}rem` }}>
         {MASS_DATA.map((section, idx) => (
           <section 
             key={idx} 
             id={`section-${idx}`}
-            className="space-y-12 animate-in fade-in slide-in-from-bottom-4 scroll-mt-24"
+            className="space-y-16 animate-in fade-in slide-in-from-bottom-8 scroll-mt-48"
           >
             <div className="flex items-center gap-6">
+               <div className="p-5 bg-white dark:bg-stone-900 rounded-[2rem] border border-stone-100 dark:border-stone-800 shadow-xl">
+                  <section.icon className={`w-8 h-8 ${section.color}`} />
+               </div>
                <div className="text-left">
-                  <h3 className="text-[0.6em] font-black uppercase tracking-[0.6em] text-sacred leading-none">{section.title}</h3>
+                  <h3 className={`text-[0.6em] font-black uppercase tracking-[0.6em] leading-none ${section.color}`}>{section.title}</h3>
                   <span className="text-[0.5em] font-serif italic text-stone-400">{section.subtitle}</span>
                </div>
-               <div className="h-px flex-1 bg-gradient-to-r from-sacred/20 to-transparent" />
+               <div className="h-px flex-1 bg-gradient-to-r from-stone-200 dark:from-stone-800 to-transparent" />
             </div>
             
             <div className="space-y-20">
