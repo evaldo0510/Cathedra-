@@ -58,7 +58,6 @@ async function generateWithRetry(config: any, retries = 2, backoff = 1000): Prom
       await sleep(backoff);
       return generateWithRetry(config, retries - 1, backoff * 2);
     }
-    // Retorna null para sinalizar que o fallback deve ser usado
     return null;
   }
 }
@@ -83,7 +82,6 @@ export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): P
   });
 
   if (!response) {
-    // Fallback estático para Lecionário (Dados genéricos de altar)
     const result = { 
       content: {
         date,
@@ -138,7 +136,28 @@ export const getDailyBundle = async (lang: Language = 'pt'): Promise<any> => {
   return data;
 };
 
-// Funções de IA - Mantidas com tratamento de erro mas focadas em análise profunda
+export const generateSpeech = async (text: string): Promise<string | undefined> => {
+  try {
+    const ai = getAIInstance();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Leia solenemente: ${text}` }] }],
+      config: { 
+        responseModalities: [Modality.AUDIO], 
+        speechConfig: { 
+          voiceConfig: { 
+            prebuiltVoiceConfig: { voiceName: 'Kore' } 
+          } 
+        } 
+      },
+    });
+    return response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+  } catch (e) { 
+    console.error("Erro no motor de áudio:", e);
+    return undefined; 
+  }
+};
+
 export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'): Promise<StudyResult> => {
   const response = await generateWithRetry({
     model: 'gemini-3-pro-preview',
@@ -182,7 +201,6 @@ export const fetchBibleChapterIA = async (book: string, chapter: number, lang: L
   return verses;
 };
 
-// ... Restante das funções auxiliares ...
 export const fetchMonthlyCalendar = async (month: number, year: number, lang: Language = 'pt'): Promise<LiturgyInfo[]> => {
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
@@ -190,18 +208,6 @@ export const fetchMonthlyCalendar = async (month: number, year: number, lang: La
     config: { responseMimeType: "application/json" }
   });
   return response ? safeJsonParse(response.text || "", []) : [];
-};
-
-export const generateSpeech = async (text: string): Promise<string | undefined> => {
-  try {
-    const ai = getAIInstance();
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text }] }],
-      config: { responseModalities: [Modality.AUDIO], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } },
-    });
-    return response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-  } catch (e) { return undefined; }
 };
 
 export const getCatechismSearch = async (query: string, options: any = {}, lang: Language = 'pt'): Promise<CatechismParagraph[]> => {

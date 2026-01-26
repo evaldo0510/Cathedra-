@@ -8,13 +8,13 @@ import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
 import { useOfflineMode } from '../hooks/useOfflineMode';
 import { offlineStorage } from '../services/offlineStorage';
-import { fetchBibleChapterIA } from '../services/gemini';
+import { fetchBibleChapterIA, generateSpeech } from '../services/gemini';
+import { decodeBase64, decodeAudioData } from '../utils/audio';
 
 const CANON = getCatholicCanon();
 
 type ImmersiveBg = 'parchment' | 'sepia' | 'dark' | 'white';
 
-// Componente de Versículo com Destaque Forte (Memorizado para performance)
 const VerseItem = memo(({ v, isActive, onSelect }: { v: Verse, isActive: boolean, onSelect: (n: number) => void }) => (
   <div 
     id={`v-${v.verse}`}
@@ -57,8 +57,11 @@ const Bible: React.FC = () => {
 
   const [isImmersive, setIsImmersive] = useState(false);
   const [immersiveBg, setImmersiveBg] = useState<ImmersiveBg>('parchment');
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const refreshOfflineStatus = useCallback(async () => {
     const books = await offlineStorage.getDownloadedBooks();
@@ -67,14 +70,13 @@ const Bible: React.FC = () => {
 
   useEffect(() => { refreshOfflineStatus(); }, [refreshOfflineStatus]);
 
-  // Otimização de Memória: Descarrega o conteúdo pesado ao trocar de contexto
   useEffect(() => {
     if (viewMode !== 'reading') {
       setVerses([]);
+      stopAudio();
     }
   }, [viewMode]);
 
-  // Detector de Versículo Ativo (UX Center-Focus)
   useEffect(() => {
     if (viewMode === 'reading' && verses.length > 0 && !loading) {
       observerRef.current = new IntersectionObserver((entries) => {
@@ -86,7 +88,7 @@ const Bible: React.FC = () => {
         });
       }, { 
         threshold: 0.8, 
-        rootMargin: '-30% 0px -40% 0px' // Garante foco no meio da viewport
+        rootMargin: '-30% 0px -40% 0px'
       });
 
       verses.forEach(v => {
@@ -97,8 +99,54 @@ const Bible: React.FC = () => {
     return () => observerRef.current?.disconnect();
   }, [verses, viewMode, loading]);
 
+  const stopAudio = () => {
+    if (audioSourceRef.current) {
+      try { audioSourceRef.current.stop(); } catch (e) {}
+      audioSourceRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  const handleSpeech = async () => {
+    if (isPlaying) {
+      stopAudio();
+      return;
+    }
+    if (verses.length === 0) return;
+
+    setIsPlaying(true);
+    try {
+      const fullText = verses.map(v => v.text).join(" ");
+      const textToRead = `${selectedBook.name}, capítulo ${selectedChapter}. ${fullText}`;
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+
+      const base64Audio = await generateSpeech(textToRead);
+      if (base64Audio) {
+        const audioData = decodeBase64(base64Audio);
+        const audioBuffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
+        
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        source.onended = () => setIsPlaying(false);
+        
+        audioSourceRef.current = source;
+        source.start(0);
+      } else {
+        setIsPlaying(false);
+      }
+    } catch (e) {
+      console.error("Erro na leitura assistida:", e);
+      setIsPlaying(false);
+    }
+  };
+
   const loadContent = useCallback(async (bookName: string, chapter: number, targetVerse?: number) => {
-    setVerses([]); // Flush DOM para garantir limpeza de memória
+    stopAudio();
+    setVerses([]); 
     setLoading(true);
     setChapterInput(String(chapter));
     
@@ -395,13 +443,19 @@ const Bible: React.FC = () => {
 
           <div className="flex items-center gap-2 md:gap-4 pr-2">
               <button 
+                onClick={handleSpeech}
+                className={`p-3 md:p-4 rounded-full shadow-md transition-all ${isPlaying ? 'bg-sacred text-white animate-pulse' : 'bg-gold text-stone-900 hover:scale-110'}`}
+                title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo (IA)"}
+              >
+                {isPlaying ? <Icons.Stop className="w-5 h-5" /> : <Icons.Audio className="w-5 h-5" />}
+              </button>
+              <button 
                 onClick={() => setIsImmersive(true)}
                 className="p-3 bg-stone-50 dark:bg-stone-800 rounded-full hover:bg-gold hover:text-stone-900 transition-all shadow-md"
                 title="Modo Sanctum (Imersivo)"
               >
                 <Icons.Layout className="w-5 h-5" />
               </button>
-              <ActionButtons className="hidden sm:flex" itemId={`bible_${selectedBook.name}_${selectedChapter}`} type="verse" title={`${selectedBook.name} ${selectedChapter}`} content={verses.map(v => v.text).join(' ')} />
           </div>
         </nav>
       )}
