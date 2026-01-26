@@ -26,18 +26,16 @@ const DailyLiturgy: React.FC = () => {
     stopAudio();
     
     try {
-      const { content } = await fetchLiturgyByDate(selectedDate, lang);
-      setData(content);
-      // Simulação de tempo de renderização para transição suave
-      setTimeout(() => {
-        setRendering(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 300);
+      const result = await fetchLiturgyByDate(selectedDate, lang);
+      if (result && result.content) {
+        setData(result.content);
+      }
     } catch (e) { 
-      console.error(e); 
-      setRendering(false);
+      console.error("Erro ao carregar liturgia:", e);
     } finally { 
       setLoading(false); 
+      // Garante que o estado de renderização seja liberado após um curto delay
+      setTimeout(() => setRendering(false), 400);
     }
   }, [lang]);
 
@@ -59,8 +57,8 @@ const DailyLiturgy: React.FC = () => {
     setIsPlaying(true);
     try {
       const textToRead = activeTab === 'readings' 
-        ? `Primeira Leitura. ${data.firstReading.text}. Salmo Responsorial. ${data.psalm.text}. Evangelho. ${data.gospel.text}`
-        : `Reflexão teológica para hoje. ${data.gospel.reflection || data.gospel.homily || 'Reflexão não disponível.'}`;
+        ? `Primeira Leitura. ${data.firstReading?.text || ''}. Salmo Responsorial. ${data.psalm?.text || ''}. Evangelho. ${data.gospel?.text || ''}`
+        : `Reflexão teológica para hoje. ${data.gospel?.reflection || data.gospel?.homily || 'Reflexão não disponível.'}`;
       
       if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const base64 = await generateSpeech(textToRead);
@@ -72,6 +70,8 @@ const DailyLiturgy: React.FC = () => {
         source.onended = () => setIsPlaying(false);
         audioSourceRef.current = source;
         source.start(0);
+      } else {
+        setIsPlaying(false);
       }
     } catch (err) { setIsPlaying(false); }
   };
@@ -95,13 +95,17 @@ const DailyLiturgy: React.FC = () => {
   }, [data]);
 
   const formattedDate = useMemo(() => {
-    const d = new Date(date + 'T12:00:00');
-    return d.toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+    try {
+      const d = new Date(date + 'T12:00:00');
+      return d.toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) {
+      return date;
+    }
   }, [date, lang]);
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto pb-40 px-4 animate-in fade-in duration-700">
-      {/* NAVEGAÇÃO SUPERIOR REFINADA (ESTILO CHRONOS) */}
+      {/* NAVEGAÇÃO SUPERIOR REFINADA */}
       <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-2 flex items-center justify-between mx-auto w-full max-w-3xl">
         <button 
           onClick={() => navigateDate(-1)} 
@@ -137,7 +141,7 @@ const DailyLiturgy: React.FC = () => {
         </button>
       </nav>
 
-      {/* SELETOR DE MODO (PALAVRA / REFLEXÃO) */}
+      {/* SELETOR DE MODO */}
       <div className="flex justify-center pt-2">
          <div className="flex bg-stone-100 dark:bg-stone-800 p-1.5 rounded-3xl border border-stone-200 dark:border-stone-700 shadow-inner">
             <button 
@@ -156,9 +160,15 @@ const DailyLiturgy: React.FC = () => {
       </div>
 
       {loading || rendering ? (
-        <div className="py-60 text-center space-y-12 animate-pulse">
-          <div className="w-24 h-24 border-8 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-3xl font-serif italic text-stone-400">Consultando o Depósito da Fé...</p>
+        <div className="py-60 text-center space-y-12">
+          <div className="relative inline-block">
+             <div className="w-24 h-24 border-8 border-gold/10 border-t-gold rounded-full animate-spin mx-auto" />
+             <Icons.Cross className="absolute inset-0 m-auto w-8 h-8 text-sacred animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            <p className="text-3xl font-serif italic text-stone-900 dark:text-stone-100">Cruzando o Nártex...</p>
+            <p className="text-stone-400 font-serif italic animate-pulse">Buscando o Alimento da Palavra nos arquivos sagrados</p>
+          </div>
         </div>
       ) : data && (
         <div className="space-y-12 animate-in fade-in duration-1000">
@@ -169,10 +179,10 @@ const DailyLiturgy: React.FC = () => {
             </div>
             <div className="relative z-10 space-y-6">
               <span className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>
-                {data.gospel?.calendar?.rank || "Feria"} • {data.gospel?.calendar?.season}
+                {data.gospel?.calendar?.rank || "Féria"} • {data.gospel?.calendar?.season || "Tempo Comum"}
               </span>
               <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-[0.85]">
-                {data.gospel?.calendar?.dayName}
+                {data.gospel?.calendar?.dayName || "Dia da Liturgia"}
               </h2>
               <div className="flex items-center justify-center gap-4">
                  <div className="h-px w-8 bg-stone-200 dark:bg-stone-800" />
@@ -185,7 +195,6 @@ const DailyLiturgy: React.FC = () => {
           </header>
 
           {activeTab === 'readings' ? (
-            /* VISUALIZAÇÃO DAS LEITURAS */
             <article className="parchment dark:bg-stone-900/40 p-10 md:p-24 rounded-[3.5rem] md:rounded-[5rem] shadow-xl border border-stone-100 dark:border-stone-800 space-y-24" style={{ fontSize: `${fontSize}rem` }}>
               
               {/* PRIMEIRA LEITURA */}
@@ -195,11 +204,11 @@ const DailyLiturgy: React.FC = () => {
                      <h3 className={`text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Lectio Prima</h3>
                      <span className="text-[10px] text-stone-400 italic font-serif">Da Primeira Leitura</span>
                    </div>
-                   <ActionButtons itemId={`lit1_${date}`} type="liturgy" title="Leitura I" content={data.firstReading.text} />
+                   <ActionButtons itemId={`lit1_${date}`} type="liturgy" title="Leitura I" content={data.firstReading?.text} />
                  </div>
-                 <h4 className="font-serif font-bold text-3xl md:text-4xl text-stone-900 dark:text-gold tracking-tight">{data.firstReading.reference}</h4>
+                 <h4 className="font-serif font-bold text-3xl md:text-4xl text-stone-900 dark:text-gold tracking-tight">{data.firstReading?.reference}</h4>
                  <p className="font-serif text-stone-800 dark:text-stone-200 text-justify leading-relaxed tracking-tight first-letter:text-5xl first-letter:text-sacred first-letter:mr-2 first-letter:float-left first-letter:leading-none">
-                   {data.firstReading.text}
+                   {data.firstReading?.text}
                  </p>
               </section>
 
@@ -211,16 +220,16 @@ const DailyLiturgy: React.FC = () => {
                  </div>
                  <div className="space-y-8 text-center">
                     <p className="font-serif italic font-bold text-3xl md:text-5xl leading-tight text-stone-900 dark:text-stone-100">
-                      R/. {data.psalm.title}
+                      R/. {data.psalm?.title}
                     </p>
                     <p className="font-serif text-stone-700 dark:text-stone-300 whitespace-pre-wrap italic text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto">
-                      {data.psalm.text}
+                      {data.psalm?.text}
                     </p>
                  </div>
               </section>
 
               {/* SEGUNDA LEITURA (OPCIONAL) */}
-              {data.secondReading && (
+              {data.secondReading && data.secondReading.text && (
                 <section className="space-y-8">
                    <div className="flex justify-between items-center border-b border-stone-100 dark:border-stone-800 pb-6">
                      <div className="flex flex-col">
@@ -243,12 +252,12 @@ const DailyLiturgy: React.FC = () => {
                      <h3 className={`text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>Evangelium</h3>
                      <span className="text-[10px] text-stone-400 italic font-serif">Santo Evangelho</span>
                    </div>
-                   <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data.gospel.text} />
+                   <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data.gospel?.text} />
                  </div>
-                 <h4 className="font-serif font-bold text-4xl md:text-5xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel.reference}</h4>
+                 <h4 className="font-serif font-bold text-4xl md:text-5xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel?.reference}</h4>
                  <div className="bg-stone-50 dark:bg-stone-800/40 p-10 md:p-14 rounded-[3rem] border border-stone-200 dark:border-stone-700/50 shadow-2xl">
                     <p className="font-serif text-stone-900 dark:text-stone-100 font-bold text-justify text-2xl md:text-3xl leading-relaxed">
-                      {data.gospel.text}
+                      {data.gospel?.text}
                     </p>
                  </div>
                  <div className="pt-10 flex items-center justify-center gap-6">
@@ -259,7 +268,6 @@ const DailyLiturgy: React.FC = () => {
               </section>
             </article>
           ) : (
-            /* VISUALIZAÇÃO DA HOMILIA / REFLEXÃO */
             <article className="animate-in fade-in slide-in-from-right-8 duration-700">
                <div className="bg-white dark:bg-stone-900 p-12 md:p-24 rounded-[4rem] shadow-4xl border border-gold/10 space-y-10 relative overflow-hidden group">
                   <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sacred via-gold to-sacred" />
@@ -269,7 +277,7 @@ const DailyLiturgy: React.FC = () => {
                   </header>
                   <div className="prose prose-2xl dark:prose-invert max-w-none">
                      <p className="font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed text-justify text-2xl md:text-3xl whitespace-pre-wrap">
-                        {data.gospel.reflection || data.gospel.homily || "Gerando reflexão teológica para este dia..."}
+                        {data.gospel?.reflection || data.gospel?.homily || "Gerando reflexão teológica para este dia..."}
                      </p>
                   </div>
                   <div className="pt-10 border-t border-stone-100 dark:border-stone-800 flex items-center gap-4">
@@ -282,7 +290,7 @@ const DailyLiturgy: React.FC = () => {
             </article>
           )}
 
-          {/* NAVEGAÇÃO DE RODAPÉ ADICIONAL */}
+          {/* NAVEGAÇÃO DE RODAPÉ */}
           <div className="flex flex-col md:flex-row justify-center gap-8 py-20 px-4">
              <button 
                 onClick={() => navigateDate(-1)}
@@ -302,7 +310,7 @@ const DailyLiturgy: React.FC = () => {
         </div>
       )}
 
-      {/* CONTROLES FLUTUANTES REFINADOS */}
+      {/* CONTROLES FLUTUANTES */}
       <div className="fixed bottom-24 right-6 md:right-12 flex flex-col gap-4 z-[300]">
          <button 
             onClick={() => setFontSize(prev => Math.min(prev + 0.1, 1.8))}

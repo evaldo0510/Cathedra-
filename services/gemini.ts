@@ -2,7 +2,6 @@
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from "@google/genai";
 import { StudyResult, Verse, Saint, Gospel, LiturgyInfo, CatechismParagraph, Dogma, Language, ThomisticArticle, UniversalSearchResult, CatechismHierarchy, DailyLiturgyContent, QuizQuestion } from "../types";
 
-// Always use a named parameter for the API key as per guidelines
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +27,8 @@ const cacheHelper = {
 async function generateWithRetry(config: any, retries = 2, backoff = 1000): Promise<any> {
   const ai = getAIInstance();
   try {
-    return await ai.models.generateContent(config);
+    const response = await ai.models.generateContent(config);
+    return response;
   } catch (error: any) {
     const errorMsg = error?.message?.toUpperCase() || "";
     const isQuota = errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED');
@@ -74,24 +74,68 @@ export const fetchLiturgyByDate = async (date: string, lang: Language = 'pt'): P
 
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
-    contents: `Liturgia católica para o dia ${date} (Lecionário Romano). JSON: { "date": "${date}", "collect": "...", "firstReading": {"reference": "...", "text": "..."}, "psalm": {"title": "...", "text": "..."}, "gospel": {"reference": "...", "text": "...", "homily": "...", "calendar": {"dayName": "...", "rank": "...", "color": "white", "cycle": "B", "season": "Tempo Comum"}} }`,
+    contents: `Retorne a Liturgia Católica Apostólica Romana para o dia ${date} no Lecionário Romano. Responda APENAS o JSON.
+    Formato esperado:
+    {
+      "date": "${date}",
+      "collect": "Oração do dia...",
+      "firstReading": {"reference": "Livro Cap, Ver", "text": "Texto completo..."},
+      "psalm": {"title": "Salmo X", "text": "Refrão e estrofes..."},
+      "gospel": {
+        "reference": "Evangelho Cap, Ver", 
+        "text": "Texto do Evangelho...", 
+        "reflection": "Reflexão profunda baseada no magistério...",
+        "calendar": {
+          "dayName": "Nome do Dia (Ex: XX Domingo do Tempo Comum)",
+          "rank": "Solenidade|Festa|Memória|Féria",
+          "color": "green|purple|white|red|rose",
+          "cycle": "A|B|C",
+          "season": "Tempo Comum|Advento|Natal|Quaresma|Páscoa"
+        }
+      }
+    }`,
     config: { responseMimeType: "application/json" }
   });
 
-  const content = response ? safeJsonParse(response.text || "", {}) : { 
+  const defaultContent: DailyLiturgyContent = { 
     date,
-    collect: "Deus, fonte de toda santidade.",
-    firstReading: { reference: "Apoc 1, 1", text: "Leitura local..." },
-    psalm: { title: "Salmo do Dia", text: "O Senhor é meu pastor." },
-    gospel: { reference: "Jo 1, 1", text: "No princípio era o Verbo." }
+    collect: "Deus eterno e todo-poderoso, que governais o céu e a terra, escutai com bondade as preces do vosso povo e dai ao nosso tempo a vossa paz.",
+    firstReading: { reference: "Leitura I", text: "O conteúdo desta leitura está sendo processado ou não está disponível para esta data específica no momento." },
+    psalm: { title: "Salmo Responsorial", text: "O Senhor é minha luz e minha salvação!" },
+    gospel: { 
+      reference: "Evangelho", 
+      text: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus.",
+      reflection: "A liturgia deste dia nos convida à conversão e à escuta atenta da Palavra.",
+      calendar: {
+        dayName: "Dia Litúrgico",
+        rank: "Féria",
+        color: "white",
+        cycle: "A",
+        season: "Tempo Comum"
+      }
+    }
   };
+
+  const content = response ? safeJsonParse(response.text || "", defaultContent) : defaultContent;
   
-  const result = { content, sources: [] };
-  cacheHelper.set(cacheKey, result);
+  // Garantir integridade da estrutura caso o JSON venha incompleto da IA
+  const finalContent = {
+    ...defaultContent,
+    ...content,
+    firstReading: { ...defaultContent.firstReading, ...content.firstReading },
+    psalm: { ...defaultContent.psalm, ...content.psalm },
+    gospel: { 
+      ...defaultContent.gospel, 
+      ...content.gospel,
+      calendar: { ...defaultContent.gospel.calendar, ...(content.gospel?.calendar || {}) }
+    }
+  };
+
+  const result = { content: finalContent, sources: [] };
+  if (response) cacheHelper.set(cacheKey, result);
   return result;
 };
 
-// ... Resto das funções de busca e apoio IA mantidas para análise complexa ...
 export const universalSearch = async (query: string, lang: Language = 'pt'): Promise<UniversalSearchResult[]> => {
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
@@ -132,12 +176,10 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } 
       },
     });
-    // Iterate through all parts to find the audio part as per guidelines
     return response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
   } catch (e) { return undefined; }
 };
 
-// Add missing export getAIStudySuggestions to fix error in pages/StudyMode.tsx
 export const getAIStudySuggestions = async (lang: Language = 'pt'): Promise<string[]> => {
   const response = await generateWithRetry({
     model: 'gemini-3-flash-preview',
@@ -180,7 +222,7 @@ export const fetchThomisticArticle = async (work: string, reference: string, lan
     contents: `Artigo da obra ${work} referência ${reference}. JSON rigoroso conforme tipo ThomisticArticle.`,
     config: { responseMimeType: "application/json" }
   });
-  return response ? safeJsonParse(response.text || "", {}) : {};
+  return response ? safeJsonParse(response.text || "", {}) : {} as ThomisticArticle;
 };
 
 export const fetchLitanies = async (type: string, lang: Language = 'pt'): Promise<any> => {
@@ -300,5 +342,5 @@ export const searchSaint = async (query: string): Promise<Saint> => {
     contents: `Hagiografia completa de "${query}". JSON.`,
     config: { responseMimeType: "application/json" }
   });
-  return response ? safeJsonParse(response.text || "", {}) : {};
+  return response ? safeJsonParse(response.text || "", {}) : {} as Saint;
 };
