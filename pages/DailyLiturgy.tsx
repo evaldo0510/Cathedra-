@@ -28,11 +28,11 @@ const DailyLiturgy: React.FC = () => {
     try {
       const { content } = await fetchLiturgyByDate(selectedDate, lang);
       setData(content);
-      // Garantir transição visual suave
+      // Simulação de tempo de renderização para transição suave
       setTimeout(() => {
         setRendering(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
+      }, 300);
     } catch (e) { 
       console.error(e); 
       setRendering(false);
@@ -101,45 +101,54 @@ const DailyLiturgy: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto pb-40 px-4 animate-in fade-in duration-700">
-      {/* NAVEGAÇÃO SUPERIOR (ESTILO BÍBLIA) */}
-      <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-2 flex items-center justify-between mx-auto max-w-2xl">
+      {/* NAVEGAÇÃO SUPERIOR REFINADA (ESTILO CHRONOS) */}
+      <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-2 flex items-center justify-between mx-auto w-full max-w-3xl">
         <button 
           onClick={() => navigateDate(-1)} 
-          className="p-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-gold rounded-full hover:bg-gold hover:text-stone-900 transition-all active:scale-95 group"
+          className="flex items-center gap-3 px-4 md:px-6 py-3 bg-stone-50 dark:bg-stone-800 text-stone-400 hover:text-sacred hover:bg-white dark:hover:bg-stone-700 rounded-full transition-all active:scale-95 group"
         >
-          <Icons.ArrowDown className="w-5 h-5 rotate-90" />
+          <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-90 group-hover:-translate-x-1 transition-transform" />
+          <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">Anterior</span>
         </button>
 
-        <div className="flex flex-col items-center">
-          <input 
-            type="date" 
-            value={date} 
-            onChange={e => setDate(e.target.value)} 
-            className="bg-transparent border-none text-xs md:text-sm font-serif font-black text-stone-800 dark:text-gold outline-none text-center cursor-pointer" 
-          />
-          <span className="text-[7px] font-black uppercase tracking-widest text-stone-400 mt-1">Lecionarium Romanum</span>
+        <div className="flex-1 flex flex-col items-center px-4">
+           <div className="relative group cursor-pointer">
+              <input 
+                type="date" 
+                value={date} 
+                onChange={e => setDate(e.target.value)} 
+                className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+              />
+              <div className="flex flex-col items-center">
+                 <p className="text-xs md:text-sm font-serif font-black text-stone-800 dark:text-gold tracking-tight border-b border-gold/20 group-hover:border-gold transition-colors leading-none pb-1">
+                   {formattedDate}
+                 </p>
+                 <span className="text-[7px] font-black uppercase tracking-[0.3em] text-stone-400 mt-1.5 opacity-60">Lecionarium Romanum</span>
+              </div>
+           </div>
         </div>
 
         <button 
           onClick={() => navigateDate(1)} 
-          className="p-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-full hover:bg-gold hover:text-stone-900 transition-all active:scale-95 group"
+          className="flex items-center gap-3 px-4 md:px-6 py-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-full hover:scale-105 transition-all active:scale-95 group shadow-lg"
         >
-          <Icons.ArrowDown className="w-5 h-5 -rotate-90" />
+          <span className="hidden md:block text-[10px] font-black uppercase tracking-widest">Próximo</span>
+          <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 -rotate-90 group-hover:translate-x-1 transition-transform" />
         </button>
       </nav>
 
       {/* SELETOR DE MODO (PALAVRA / REFLEXÃO) */}
-      <div className="flex justify-center">
+      <div className="flex justify-center pt-2">
          <div className="flex bg-stone-100 dark:bg-stone-800 p-1.5 rounded-3xl border border-stone-200 dark:border-stone-700 shadow-inner">
             <button 
               onClick={() => setActiveTab('readings')}
-              className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'readings' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400'}`}
+              className={`px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'readings' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
             >
               Palavra
             </button>
             <button 
               onClick={() => setActiveTab('reflection')}
-              className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'reflection' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400'}`}
+              className={`px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'reflection' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-gold shadow-md' : 'text-stone-400 hover:text-stone-600'}`}
             >
               Homilia
             </button>
@@ -152,7 +161,7 @@ const DailyLiturgy: React.FC = () => {
           <p className="text-3xl font-serif italic text-stone-400">Consultando o Depósito da Fé...</p>
         </div>
       ) : data && (
-        <div className="space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="space-y-12 animate-in fade-in duration-1000">
           {/* HEADER LITÚRGICO */}
           <header className={`bg-white dark:bg-stone-900 p-10 md:p-20 rounded-[4rem] border-t-[20px] ${theme.border} shadow-2xl text-center relative overflow-hidden`}>
             <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none group-hover:rotate-12 transition-transform duration-[10s]">
@@ -162,12 +171,16 @@ const DailyLiturgy: React.FC = () => {
               <span className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.4em] ${theme.rubric}`}>
                 {data.gospel?.calendar?.rank || "Feria"} • {data.gospel?.calendar?.season}
               </span>
-              <h2 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-none">
+              <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-[0.85]">
                 {data.gospel?.calendar?.dayName}
               </h2>
-              <p className="text-stone-400 text-xl font-serif italic border-y border-stone-50 dark:border-stone-800 py-4 inline-block px-10">
-                {formattedDate}
-              </p>
+              <div className="flex items-center justify-center gap-4">
+                 <div className="h-px w-8 bg-stone-200 dark:bg-stone-800" />
+                 <p className="text-stone-400 text-xl font-serif italic py-4">
+                   {formattedDate}
+                 </p>
+                 <div className="h-px w-8 bg-stone-200 dark:bg-stone-800" />
+              </div>
             </div>
           </header>
 
@@ -191,13 +204,13 @@ const DailyLiturgy: React.FC = () => {
               </section>
 
               {/* SALMO */}
-              <section className={`${theme.bg} p-12 md:p-20 rounded-[3.5rem] border-l-[16px] ${theme.border} space-y-10 shadow-inner group`}>
+              <section className={`${theme.bg} p-12 md:p-20 rounded-[3.5rem] border-l-[16px] ${theme.border} space-y-10 shadow-inner group transition-all hover:scale-[1.01]`}>
                  <div className="text-center space-y-2">
                     <h3 className={`text-[11px] font-black uppercase tracking-[0.6em] ${theme.rubric}`}>Psalmus</h3>
                     <div className="h-px w-12 bg-stone-200 dark:bg-stone-700 mx-auto" />
                  </div>
                  <div className="space-y-8 text-center">
-                    <p className="font-serif italic font-bold text-3xl md:text-5xl leading-tight text-stone-900 dark:text-stone-100 group-hover:scale-[1.02] transition-transform duration-500">
+                    <p className="font-serif italic font-bold text-3xl md:text-5xl leading-tight text-stone-900 dark:text-stone-100">
                       R/. {data.psalm.title}
                     </p>
                     <p className="font-serif text-stone-700 dark:text-stone-300 whitespace-pre-wrap italic text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto">
@@ -232,8 +245,8 @@ const DailyLiturgy: React.FC = () => {
                    </div>
                    <ActionButtons itemId={`litg_${date}`} type="liturgy" title="Evangelho" content={data.gospel.text} />
                  </div>
-                 <h4 className="font-serif font-bold text-3xl md:text-4xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel.reference}</h4>
-                 <div className="bg-stone-100 dark:bg-stone-800/40 p-10 md:p-14 rounded-[3rem] border border-stone-200 dark:border-stone-700/50 shadow-2xl">
+                 <h4 className="font-serif font-bold text-4xl md:text-5xl text-stone-900 dark:text-gold tracking-tight text-center">{data.gospel.reference}</h4>
+                 <div className="bg-stone-50 dark:bg-stone-800/40 p-10 md:p-14 rounded-[3rem] border border-stone-200 dark:border-stone-700/50 shadow-2xl">
                     <p className="font-serif text-stone-900 dark:text-stone-100 font-bold text-justify text-2xl md:text-3xl leading-relaxed">
                       {data.gospel.text}
                     </p>
@@ -269,18 +282,18 @@ const DailyLiturgy: React.FC = () => {
             </article>
           )}
 
-          {/* NAVEGAÇÃO DE RODAPÉ (TIPO BÍBLIA) */}
+          {/* NAVEGAÇÃO DE RODAPÉ ADICIONAL */}
           <div className="flex flex-col md:flex-row justify-center gap-8 py-20 px-4">
              <button 
                 onClick={() => navigateDate(-1)}
-                className="px-12 md:px-16 py-8 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] transition-all hover:border-gold shadow-2xl flex items-center justify-center gap-6 group"
+                className="px-12 md:px-16 py-8 bg-white dark:bg-[#0c0a09] border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] transition-all hover:border-gold shadow-2xl flex items-center justify-center gap-6 group"
               >
                 <Icons.ArrowDown className="w-5 h-5 rotate-90 group-hover:-translate-x-3 transition-transform" /> 
                 Dia Anterior
               </button>
               <button 
                 onClick={() => navigateDate(1)}
-                className="px-20 md:px-32 py-8 bg-stone-900 text-gold rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] shadow-[0_30px_60px_rgba(212,175,55,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-6 group"
+                className="px-20 md:px-32 py-8 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] tracking-[0.5em] shadow-[0_30px_60px_rgba(212,175,55,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-6 group"
               >
                 Próximo Dia 
                 <Icons.ArrowDown className="w-5 h-5 -rotate-90 group-hover:translate-x-3 transition-transform" />

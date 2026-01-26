@@ -13,8 +13,6 @@ import { decodeBase64, decodeAudioData } from '../utils/audio';
 
 const CANON = getCatholicCanon();
 
-type ImmersiveBg = 'parchment' | 'sepia' | 'dark' | 'white';
-
 const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter }: { 
   v: Verse, 
   isActive: boolean, 
@@ -69,7 +67,6 @@ const Bible: React.FC = () => {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(false);
   const [rendering, setRendering] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [showSidebar, setShowSidebar] = useState(false);
   
@@ -86,12 +83,36 @@ const Bible: React.FC = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const isScrollingRef = useRef(false);
+
+  // Setup do Intersection Observer para atualizar o versículo ativo durante o scroll
+  useEffect(() => {
+    if (viewMode !== 'reading' || loading || rendering) return;
+
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (isScrollingRef.current) return; // Evita conflito durante o scroll programático
+      
+      const visible = entries.find(e => e.isIntersecting);
+      if (visible) {
+        const vNum = parseInt(visible.target.getAttribute('data-verse') || '1');
+        setActiveVerse(vNum);
+      }
+    }, {
+      rootMargin: '-45% 0% -45% 0%', // Foco no centro da tela
+      threshold: 0
+    });
+
+    const elements = document.querySelectorAll('[data-verse]');
+    elements.forEach(el => observerRef.current?.observe(el));
+
+    return () => observerRef.current?.disconnect();
+  }, [viewMode, loading, rendering, verses.length]);
 
   const refreshOfflineStatus = useCallback(async () => {
     const books = await offlineStorage.getDownloadedBooks();
     setOfflineBooks(books);
-    
-    // Carregar histórico local
     const history = JSON.parse(localStorage.getItem('cathedra_bible_history') || '[]');
     setRecentBooks(history);
   }, []);
@@ -103,6 +124,21 @@ const Bible: React.FC = () => {
     const next = [bookName, ...history.filter((b: string) => b !== bookName)].slice(0, 5);
     localStorage.setItem('cathedra_bible_history', JSON.stringify(next));
     setRecentBooks(next);
+  };
+
+  const scrollToVerse = (vNum: number) => {
+    if (vNum < 1 || vNum > verses.length) return;
+    
+    isScrollingRef.current = true;
+    setActiveVerse(vNum);
+    const el = document.getElementById(`v-${vNum}`);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 220;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+    
+    // Libera a trava de scroll após a animação
+    setTimeout(() => { isScrollingRef.current = false; }, 800);
   };
 
   const loadContent = useCallback(async (bookName: string, chapter: number, targetVerse?: number) => {
@@ -147,7 +183,7 @@ const Bible: React.FC = () => {
           setActiveVerse(1);
           window.scrollTo({ top: 0, behavior: 'auto' });
         }
-      }, 50);
+      }, 100);
       
     } catch (e) {
       setLoading(false);
@@ -156,15 +192,6 @@ const Bible: React.FC = () => {
       setLoading(false);
     }
   }, [isOnline, lang, refreshOfflineStatus]);
-
-  const scrollToVerse = (vNum: number) => {
-    const el = document.getElementById(`v-${vNum}`);
-    if (el) {
-      setActiveVerse(vNum);
-      const y = el.getBoundingClientRect().top + window.pageYOffset - 180;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  };
 
   const stopAudio = () => {
     if (audioSourceRef.current) {
@@ -187,7 +214,6 @@ const Bible: React.FC = () => {
         const audioData = decodeBase64(base64Audio);
         const audioBuffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
         const source = audioContextRef.current.createBufferSource();
-        // Fix for Error: Cannot find name 'buffer'. Using the correctly defined 'audioBuffer'.
         source.buffer = audioBuffer;
         source.connect(audioContextRef.current.destination);
         source.onended = () => setIsPlaying(false);
@@ -249,7 +275,6 @@ const Bible: React.FC = () => {
       </header>
 
       <div className="overflow-y-auto h-[calc(100%-140px)] custom-scrollbar p-4 space-y-10 relative z-10">
-        {/* LIVROS RECENTES */}
         {recentBooks.length > 0 && !sidebarSearch && (
           <div className="space-y-4">
              <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-sacred/60 px-3">Lidos Recentemente</h4>
@@ -322,7 +347,6 @@ const Bible: React.FC = () => {
 
   return (
     <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden relative">
-      {/* Sidebar de Navegação Superior (Nível App) controlada pelo showSidebar local */}
       <SidebarBooks />
       {showSidebar && <div className="fixed inset-0 z-[490] bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in duration-300" onClick={() => setShowSidebar(false)} />}
 
@@ -406,7 +430,30 @@ const Bible: React.FC = () => {
           )}
 
           {viewMode === 'reading' && (
-            <div className="min-h-screen animate-in fade-in duration-1000">
+            <div className="min-h-screen animate-in fade-in duration-1000 relative">
+              {/* BOTÕES DE NAVEGAÇÃO LATERAL (SIDE GUTTERS) */}
+              <div className="fixed inset-y-0 left-0 z-[100] flex items-center px-4 md:px-8 pointer-events-none">
+                 <button 
+                    onClick={() => scrollToVerse(activeVerse - 1)}
+                    disabled={activeVerse <= 1}
+                    className={`p-5 md:p-7 bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-full text-gold pointer-events-auto transition-all shadow-2xl border border-gold/10 ${activeVerse <= 1 ? 'opacity-0 scale-75' : 'opacity-30 hover:opacity-100 hover:scale-110 active:scale-90 shadow-sacred/10'}`}
+                    aria-label="Versículo Anterior"
+                 >
+                    <Icons.ArrowDown className="w-6 h-6 md:w-8 md:h-8 rotate-90" />
+                 </button>
+              </div>
+
+              <div className="fixed inset-y-0 right-0 z-[100] flex items-center px-4 md:px-8 pointer-events-none">
+                 <button 
+                    onClick={() => scrollToVerse(activeVerse + 1)}
+                    disabled={activeVerse >= verses.length}
+                    className={`p-5 md:p-7 bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-full text-gold pointer-events-auto transition-all shadow-2xl border border-gold/10 ${activeVerse >= verses.length ? 'opacity-0 scale-75' : 'opacity-30 hover:opacity-100 hover:scale-110 active:scale-90 shadow-sacred/10'}`}
+                    aria-label="Próximo Versículo"
+                 >
+                    <Icons.ArrowDown className="w-6 h-6 md:w-8 md:h-8 -rotate-90" />
+                 </button>
+              </div>
+
               <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full md:rounded-[3rem] border border-stone-200 dark:border-white/10 shadow-2xl p-2 md:p-3 flex items-center justify-between mx-4 md:mx-0 mb-10">
                 <div className="flex items-center gap-1 md:gap-2">
                     <button onClick={() => setShowSidebar(true)} className="p-3 md:p-4 bg-stone-900 text-gold rounded-full hover:bg-gold hover:text-stone-900 transition-all shadow-lg">
@@ -423,14 +470,14 @@ const Bible: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2 md:gap-6 px-4 md:px-10 border-x border-stone-100 dark:border-white/5">
-                    <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="p-2 text-stone-300 hover:text-gold disabled:opacity-10">
+                    <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="p-2 text-stone-300 hover:text-gold disabled:opacity-10 transition-colors">
                       <Icons.ArrowDown className="w-5 h-5 md:w-6 md:h-6 rotate-180" />
                     </button>
                     <div className="flex flex-col items-center">
                       <span className="text-[7px] md:text-[9px] font-black uppercase tracking-[0.2em] text-stone-400">Versículo</span>
                       <span className="text-sm md:text-2xl font-serif font-bold text-gold tabular-nums">{activeVerse}</span>
                     </div>
-                    <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="p-2 text-stone-300 hover:text-gold disabled:opacity-10">
+                    <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="p-2 text-stone-300 hover:text-gold disabled:opacity-10 transition-colors">
                       <Icons.ArrowDown className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                 </div>
