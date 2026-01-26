@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useContext, useCallback, useMemo, useRef, memo } from 'react';
 import { Icons } from '../constants';
-import { getCatechismSearch, getCatechismHierarchy } from '../services/gemini';
+import { getCatechismSearch } from '../services/gemini';
+import { getLocalHierarchy, getLocalParagraph } from '../services/catechismLocal';
 import { CatechismParagraph, CatechismHierarchy } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
@@ -17,7 +18,6 @@ const ROOT_PARTS = [
 
 type ImmersiveBg = 'parchment' | 'sepia' | 'dark' | 'white';
 
-// Componente de Parágrafo Memoizado para economia de recursos e performance
 const ParagraphItem = memo(({ p, fontSize, isActive, onSelect }: { p: CatechismParagraph, fontSize: number, isActive: boolean, onSelect: (n: number) => void }) => (
   <article 
     id={`p-${p.number}`}
@@ -52,7 +52,6 @@ const Catechism: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [jumpInput, setJumpInput] = useState('');
   const [fontSize, setFontSize] = useState(1.2);
-
   const [isImmersive, setIsImmersive] = useState(false);
   const [immersiveBg, setImmersiveBg] = useState<ImmersiveBg>('parchment');
 
@@ -65,14 +64,10 @@ const Catechism: React.FC = () => {
 
   useEffect(() => { refreshPreserved(); }, [refreshPreserved]);
 
-  // MECANISMO DE DESCARREGAMENTO: Purgar memória ao navegar entre visões
   useEffect(() => {
-    if (viewMode !== 'reading') {
-      setParagraphs([]);
-    }
+    if (viewMode !== 'reading') setParagraphs([]);
   }, [viewMode]);
 
-  // Scroll Observer para parágrafos
   useEffect(() => {
     if (viewMode === 'reading' && paragraphs.length > 0) {
       observerRef.current = new IntersectionObserver((entries) => {
@@ -92,32 +87,31 @@ const Catechism: React.FC = () => {
     return () => observerRef.current?.disconnect();
   }, [paragraphs, viewMode]);
 
-  const loadHierarchy = async (parentId?: string, title?: string) => {
+  // CARREGAMENTO HIERÁRQUICO LOCAL (SEM IA)
+  const loadHierarchy = (parentId: string, title: string) => {
     setLoading(true);
     setViewMode('browse');
-    try {
-      const data = await getCatechismHierarchy(parentId, lang);
-      setHierarchy(data);
-      if (title && parentId) {
-        setCurrentPath(prev => [...prev, { id: parentId, title, level: 'section' }]);
-      }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    const data = getLocalHierarchy(parentId);
+    setHierarchy(data);
+    setCurrentPath(prev => [...prev, { id: parentId, title, level: 'section' }]);
+    setLoading(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const loadParagraphs = async (item: CatechismHierarchy) => {
-    setParagraphs([]); // DESCARREGA ANTERIOR IMEDIATAMENTE
+    setParagraphs([]);
     setLoading(true);
     setViewMode('reading');
     
     try {
+      // 1. Tenta Local Storage (Offline/Cache)
       const local = await offlineStorage.getContent(item.id);
       if (local) {
         setParagraphs(local);
-        setLoading(false);
         return;
       }
 
+      // 2. Tenta busca via IA (Apenas se Online) para preencher lacunas
       if (isOnline) {
         const data = await getCatechismSearch(`parágrafos de ${item.title}`, {}, lang);
         if (data.length > 0) {
@@ -144,6 +138,16 @@ const Catechism: React.FC = () => {
     setCurrentPath([{ id: `jump_${target}`, title: `Parágrafo ${target}`, level: 'paragraph' }]);
     
     try {
+      // 1. Tenta Local Primeiro (Gratuito/Nativo)
+      const localP = getLocalParagraph(targetNum);
+      if (localP) {
+        setParagraphs(localP);
+        setActiveParagraph(targetNum);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Se não estiver na base local, tenta IA (Ou busca por número é considerada serviço essencial)
       const data = await getCatechismSearch(`Parágrafo ${target}`, {}, lang);
       setParagraphs(data);
       if (data.length > 0) setActiveParagraph(data[0].number);
@@ -154,9 +158,7 @@ const Catechism: React.FC = () => {
   const navigateParagraph = (dir: number) => {
     const current = activeParagraph || (paragraphs.length > 0 ? paragraphs[0].number : 1);
     const next = current + dir;
-    if (next >= 1 && next <= 2865) {
-      handleJump(String(next));
-    }
+    if (next >= 1 && next <= 2865) handleJump(String(next));
   };
 
   const scrollToParagraph = (n: number) => {
@@ -185,7 +187,9 @@ const Catechism: React.FC = () => {
       newPath.pop();
       const last = newPath[newPath.length - 1];
       setCurrentPath(newPath);
-      loadHierarchy(last.id);
+      // Recarrega hierarquia baseada no pai do item atual
+      const parentId = newPath.length > 1 ? newPath[newPath.length-2].id : last.id.split('_')[0] + '_' + last.id.split('_')[1];
+      setHierarchy(getLocalHierarchy(last.id));
     }
   };
 
@@ -265,45 +269,43 @@ const Catechism: React.FC = () => {
           <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter">{currentPath[currentPath.length-1]?.title}</h2>
        </header>
 
-       {loading ? (
-         <div className="py-40 text-center animate-pulse space-y-8">
-            <div className="w-16 h-16 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-2xl font-serif italic text-stone-400">Consultando as tábuas da Lei...</p>
-         </div>
-       ) : (
-         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {hierarchy.map(item => {
-              const isPreserved = preservedIds.has(item.id);
-              // DESTAQUE "IMPERIAL GOLD" PARA SELEÇÕES ATIVAS
-              const isCurrent = currentPath.some(p => p.id === item.id);
-              return (
-                <button 
-                  key={item.id} 
-                  onClick={() => item.level === 'article' ? loadParagraphs(item) : loadHierarchy(item.id, item.title)}
-                  className={`p-12 rounded-[3.5rem] border-4 transition-all text-left flex flex-col justify-between group relative overflow-hidden h-72 shadow-xl ${
-                    isCurrent 
-                      ? 'bg-[#b8952e] border-gold text-white scale-105 z-10 shadow-[0_0_40px_rgba(184,149,46,0.5)]' 
-                      : isPreserved ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'
-                  } hover:border-gold hover:-translate-y-2`}
-                >
-                   <div className="space-y-3 relative z-10">
-                      <div className="flex justify-between items-center">
-                        <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isCurrent ? 'text-white/80' : 'text-gold/60'}`}>{item.level}</span>
-                        {isPreserved && <Icons.Pin className={`w-4 h-4 ${isCurrent ? 'text-white' : 'text-emerald-500'}`} />}
-                      </div>
-                      <h4 className={`text-2xl md:text-3xl font-serif font-bold leading-tight transition-colors ${isCurrent ? 'text-white' : 'group-hover:text-sacred dark:text-stone-200'}`}>{item.title}</h4>
-                   </div>
-                   <div className="mt-8 flex justify-end relative z-10">
-                      <div className={`p-4 rounded-2xl transition-all shadow-md ${isCurrent ? 'bg-white/20' : 'bg-stone-50 dark:bg-stone-800 group-hover:bg-gold'}`}>
-                        <Icons.ArrowDown className={`w-5 h-5 -rotate-90 ${isCurrent ? 'text-white' : 'text-stone-300 group-hover:text-stone-900'}`} />
-                      </div>
-                   </div>
-                   {isCurrent && <div className="absolute inset-0 bg-white/10 animate-pulse pointer-events-none" />}
-                </button>
-              );
-            })}
-         </div>
-       )}
+       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {hierarchy.length > 0 ? hierarchy.map(item => {
+            const isPreserved = preservedIds.has(item.id);
+            const isCurrent = currentPath.some(p => p.id === item.id);
+            return (
+              <button 
+                key={item.id} 
+                onClick={() => item.level === 'article' ? loadParagraphs(item) : loadHierarchy(item.id, item.title)}
+                className={`p-12 rounded-[3.5rem] border-4 transition-all text-left flex flex-col justify-between group relative overflow-hidden h-72 shadow-xl ${
+                  isCurrent 
+                    ? 'bg-[#b8952e] border-gold text-white scale-105 z-10 shadow-[0_0_40px_rgba(184,149,46,0.5)]' 
+                    : isPreserved ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800'
+                } hover:border-gold hover:-translate-y-2`}
+              >
+                 <div className="space-y-3 relative z-10">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${isCurrent ? 'text-white/80' : 'text-gold/60'}`}>{item.level}</span>
+                      {isPreserved && <Icons.Pin className={`w-4 h-4 ${isCurrent ? 'text-white' : 'text-emerald-500'}`} />}
+                    </div>
+                    <h4 className={`text-2xl md:text-3xl font-serif font-bold leading-tight transition-colors ${isCurrent ? 'text-white' : 'group-hover:text-sacred dark:text-stone-200'}`}>{item.title}</h4>
+                 </div>
+                 <div className="mt-8 flex justify-end relative z-10">
+                    <div className={`p-4 rounded-2xl transition-all shadow-md ${isCurrent ? 'bg-white/20' : 'bg-stone-50 dark:bg-stone-800 group-hover:bg-gold'}`}>
+                      <Icons.ArrowDown className={`w-5 h-5 -rotate-90 ${isCurrent ? 'text-white' : 'text-stone-300 group-hover:text-stone-900'}`} />
+                    </div>
+                 </div>
+                 {isCurrent && <div className="absolute inset-0 bg-white/10 animate-pulse pointer-events-none" />}
+              </button>
+            );
+          }) : (
+             <div className="col-span-full py-20 text-center space-y-4 opacity-40">
+                <Icons.Cross className="w-16 h-16 mx-auto" />
+                <p className="text-2xl font-serif italic">Esta seção está sendo restaurada em nossa base nativa.</p>
+                <button onClick={() => setViewMode('index')} className="text-gold font-black uppercase tracking-widest text-[10px]">Voltar ao Início</button>
+             </div>
+          )}
+       </div>
     </div>
   );
 
@@ -323,19 +325,15 @@ const Catechism: React.FC = () => {
               <h2 className="text-4xl md:text-8xl font-serif font-bold tracking-tighter">Codex CIC</h2>
               <div className="h-px w-24 bg-current mx-auto opacity-20" />
            </header>
-
            <div className="space-y-16">
              {paragraphs.map(p => (
                <ParagraphItem key={p.number} p={p} fontSize={fontSize * 1.3} isActive={activeParagraph === p.number} onSelect={scrollToParagraph} />
              ))}
            </div>
-
            <div className="mt-40 pt-20 border-t border-current opacity-5 flex justify-center pb-20">
               <Icons.Cross className="w-24 h-24" />
            </div>
         </div>
-
-        {/* Floating Minimal Controls */}
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1010] bg-stone-900/90 backdrop-blur-3xl border border-white/10 rounded-full px-8 py-4 flex items-center gap-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-6 group">
            <div className="flex items-center gap-4 border-r border-white/10 pr-10">
               {(['parchment', 'sepia', 'dark', 'white'] as ImmersiveBg[]).map(bg => (
@@ -347,17 +345,12 @@ const Catechism: React.FC = () => {
                 />
               ))}
            </div>
-           
            <div className="flex items-center gap-4 text-white/40">
              <button onClick={() => setFontSize(prev => Math.max(0.8, prev - 0.1))} className="hover:text-gold transition-colors"><Icons.ArrowDown className="w-4 h-4 rotate-90" /></button>
              <span className="text-[10px] font-black uppercase tracking-widest min-w-[60px] text-center">Tamanho</span>
              <button onClick={() => setFontSize(prev => Math.min(2.5, prev + 0.1))} className="hover:text-gold transition-colors"><Icons.ArrowDown className="w-4 h-4 -rotate-90" /></button>
            </div>
-
-           <button 
-             onClick={() => setIsImmersive(false)}
-             className="flex items-center gap-2 text-white hover:text-sacred transition-colors text-[10px] font-black uppercase tracking-widest pl-6 border-l border-white/10"
-           >
+           <button onClick={() => setIsImmersive(false)} className="flex items-center gap-2 text-white hover:text-sacred transition-colors text-[10px] font-black uppercase tracking-widest pl-6 border-l border-white/10">
              <Icons.Cross className="w-5 h-5 rotate-45" /> Sair
            </button>
         </div>
@@ -368,82 +361,39 @@ const Catechism: React.FC = () => {
   const ReadingView = () => (
     <div className="space-y-12 md:space-y-20 animate-in fade-in duration-700 pb-48">
       {isImmersive && <ImmersiveLectorium />}
-
-      {/* BARRA DE NAVEGAÇÃO SUPERIOR - REFINADA IGUAL À BÍBLIA */}
-      <nav className="sticky top-2 md:top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full md:rounded-[3rem] border border-stone-200 dark:border-white/10 shadow-2xl p-2 md:p-3 flex items-center justify-between mx-2 md:mx-0 transition-all">
+      <nav className="sticky top-2 md:top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full md:rounded-[3rem] border border-stone-200 dark:border-white/10 shadow-2xl p-2 md:p-3 flex items-center justify-between mx-2 md:mx-0">
          <div className="flex items-center gap-2">
             <button onClick={() => setViewMode('browse')} className="p-3 md:p-4 bg-stone-50 dark:bg-stone-800 hover:bg-gold hover:text-stone-900 rounded-full transition-all text-stone-400 group">
                <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-90 group-hover:-translate-x-1" />
             </button>
             <div className="flex items-center bg-stone-100 dark:bg-stone-900 rounded-full p-1 border border-stone-200 dark:border-stone-800 shadow-inner">
-               <button onClick={reset} className="px-4 md:px-6 py-2 hover:bg-white dark:hover:bg-stone-800 rounded-full text-stone-900 dark:text-white font-serif font-bold text-xs md:text-lg transition-colors truncate max-w-[80px] md:max-w-none">Codex</button>
+               <button onClick={reset} className="px-4 md:px-6 py-2 hover:bg-white dark:hover:bg-stone-800 rounded-full text-stone-900 dark:text-white font-serif font-bold text-xs md:text-lg">Codex</button>
                <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-1 md:mx-2" />
-               
-               {/* SALTO DE PARÁGRAFO DIRETO */}
                <form onSubmit={(e) => { e.preventDefault(); handleJump(); }} className="relative flex items-center group">
                   <input 
-                    type="number" 
-                    value={jumpInput}
-                    onChange={e => setJumpInput(e.target.value)}
+                    type="number" value={jumpInput} onChange={e => setJumpInput(e.target.value)}
                     className="w-12 md:w-24 px-1 md:px-2 py-1 bg-transparent border-none text-gold font-serif font-bold text-xl md:text-2xl text-center outline-none focus:ring-0 placeholder-gold/30"
-                    placeholder="Nº"
-                    min="1"
-                    max="2865"
+                    placeholder="Nº" min="1" max="2865"
                   />
-                  <button type="submit" className="p-1 md:p-2 text-stone-300 group-hover:text-gold transition-colors" title="Pular para parágrafo">
-                     <Icons.Search className="w-3 h-3 md:w-4 md:h-4" />
-                  </button>
+                  <button type="submit" className="p-1 md:p-2 text-stone-300 group-hover:text-gold transition-colors"><Icons.Search className="w-3 h-3 md:w-4 md:h-4" /></button>
                </form>
             </div>
          </div>
-         
-         {/* NAVEGAÇÃO SEQUENCIAL DISCRETA */}
          <div className="flex items-center gap-2 md:gap-6 px-4 md:px-10 border-x border-stone-100 dark:border-white/5">
-            <button 
-              onClick={() => navigateParagraph(-1)}
-              className="p-2 md:p-3 text-stone-300 hover:text-gold transition-all group/v"
-              aria-label="Parágrafo anterior"
-            >
-              <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-180 group-active/v:scale-75" />
-            </button>
+            <button onClick={() => navigateParagraph(-1)} className="p-2 md:p-3 text-stone-300 hover:text-gold transition-all"><Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-180" /></button>
             <div className="flex flex-col items-center min-w-[40px] md:min-w-[80px]">
                <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-stone-400 select-none">Parágrafo</span>
                <span className="text-sm md:text-xl font-serif font-bold text-gold tabular-nums transition-all">{activeParagraph || paragraphs[0]?.number || '...'}</span>
             </div>
-            <button 
-              onClick={() => navigateParagraph(1)}
-              className="p-2 md:p-3 text-stone-300 hover:text-gold transition-all group/v"
-              aria-label="Próximo parágrafo"
-            >
-              <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 group-active/v:scale-75" />
-            </button>
+            <button onClick={() => navigateParagraph(1)} className="p-2 md:p-3 text-stone-300 hover:text-gold transition-all"><Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5" /></button>
          </div>
-
          <div className="flex items-center gap-2 md:gap-4 pr-2">
-            <button 
-               onClick={() => setIsImmersive(true)}
-               className="p-3 md:p-4 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-gold hover:text-stone-900 transition-all text-stone-400 shadow-sm"
-               title="Modo Lectorium (Imersivo)"
-            >
-               <Icons.Layout className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-            <div className="hidden lg:flex items-center gap-2 bg-stone-50 dark:bg-stone-800 p-2 rounded-2xl border border-stone-100 dark:border-stone-700">
-               <span className="text-[9px] font-black text-stone-400">A</span>
-               <input 
-                 type="range" min="0.8" max="2.5" step="0.1" value={fontSize} 
-                 onChange={e => setFontSize(parseFloat(e.target.value))}
-                 className="w-20 h-1 bg-stone-200 dark:bg-stone-900 rounded-lg appearance-none cursor-pointer accent-gold"
-               />
-               <span className="text-sm font-black text-stone-400">A</span>
-            </div>
+            <button onClick={() => setIsImmersive(true)} className="p-3 md:p-4 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-gold hover:text-stone-900 transition-all text-stone-400" title="Modo Lectorium"><Icons.Layout className="w-4 h-4 md:w-5 md:h-5" /></button>
          </div>
       </nav>
 
-      {/* HEADER DE SEÇÃO */}
       <header className="bg-white dark:bg-stone-900 p-12 md:p-24 rounded-[4rem] md:rounded-[5rem] shadow-xl border-t-[16px] md:border-t-[20px] border-sacred text-center relative overflow-hidden mx-2 md:mx-0">
-         <div className="absolute top-0 right-0 p-16 opacity-[0.02] pointer-events-none">
-            <Icons.Cross className="w-80 h-80" />
-         </div>
+         <div className="absolute top-0 right-0 p-16 opacity-[0.02] pointer-events-none"><Icons.Cross className="w-80 h-80" /></div>
          <div className="relative z-10 space-y-6">
             <span className="text-[10px] md:text-[14px] font-black uppercase tracking-[1em] text-gold">Codex Fidei</span>
             <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-none">{currentPath[currentPath.length-1]?.title}</h2>
@@ -451,7 +401,6 @@ const Catechism: React.FC = () => {
          </div>
       </header>
 
-      {/* CONTEÚDO PRINCIPAL */}
       <div className="max-w-4xl mx-auto space-y-12 px-4 md:px-0">
         {loading ? (
           <div className="py-40 text-center space-y-8 animate-pulse">
@@ -467,20 +416,11 @@ const Catechism: React.FC = () => {
         )}
       </div>
 
-      {/* NAVEGAÇÃO INFERIOR */}
       <div className="flex flex-col md:flex-row justify-center gap-6 pb-40 px-4 md:px-0">
-         <button 
-           disabled={paragraphs.length > 0 && paragraphs[0].number <= 1}
-           onClick={() => navigateParagraph(-1)}
-           className="px-12 md:px-14 py-7 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.5em] disabled:opacity-10 transition-all hover:border-gold shadow-xl flex items-center justify-center gap-6 group"
-         >
+         <button disabled={paragraphs.length > 0 && paragraphs[0].number <= 1} onClick={() => navigateParagraph(-1)} className="px-12 md:px-14 py-7 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.5em] disabled:opacity-10 transition-all hover:border-gold shadow-xl flex items-center justify-center gap-6 group">
            <Icons.ArrowDown className="w-5 h-5 rotate-90 group-hover:-translate-x-2 transition-transform" /> Anterior
          </button>
-         <button 
-           disabled={paragraphs.length > 0 && paragraphs[paragraphs.length-1].number >= 2865}
-           onClick={() => navigateParagraph(1)}
-           className="px-16 md:px-24 py-7 bg-gold text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.5em] shadow-[0_25px_50px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-6 group"
-         >
+         <button disabled={paragraphs.length > 0 && paragraphs[paragraphs.length-1].number >= 2865} onClick={() => navigateParagraph(1)} className="px-16 md:px-24 py-7 bg-gold text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[10px] md:text-[11px] tracking-[0.5em] shadow-[0_25px_50px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-6 group">
            Próximo <Icons.ArrowDown className="w-5 h-5 -rotate-90 group-hover:translate-x-2 transition-transform" />
          </button>
       </div>
