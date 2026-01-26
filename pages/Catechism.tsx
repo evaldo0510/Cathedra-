@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect, useContext, useMemo, memo } from 'react';
+import React, { useState, useContext, useMemo, memo, useCallback } from 'react';
 import { Icons } from '../constants';
 import { 
   CIC_PARTS, 
   CIC_STRUCTURE, 
   getParagraphsForChapter, 
-  getParagraphLocal,
   searchCatechismLocal 
 } from '../services/catechismLocal';
 import { CatechismParagraph } from '../types';
@@ -18,48 +17,43 @@ const ParagraphItem = memo(({ p, fontSize, onInvestigate }: {
   onInvestigate: (p: CatechismParagraph) => void 
 }) => (
   <article 
-    className="parchment dark:bg-stone-900/40 p-8 md:p-12 rounded-[3rem] shadow-xl border-l-[16px] border-gold transition-all duration-500 group relative overflow-hidden mb-10"
+    className="bg-white dark:bg-stone-800/40 p-6 md:p-8 rounded-[2rem] shadow-sm border border-stone-100 dark:border-stone-800 transition-all duration-300 group relative overflow-hidden mb-4 hover:shadow-md"
     style={{ fontSize: `${fontSize}rem` }}
   >
-     <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="px-6 py-2 bg-stone-900 text-gold rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-lg">
+     <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-1.5 bg-stone-900 dark:bg-stone-700 text-gold rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
             § {p.number}
           </div>
-          <span className="text-[10px] text-stone-400 font-serif italic">{p.context}</span>
+          <span className="text-[9px] text-stone-400 font-serif italic">{p.context}</span>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button 
             onClick={() => onInvestigate(p)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-sacred text-white hover:bg-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95 group/ai"
+            className="flex items-center gap-2 px-5 py-2 bg-sacred text-white hover:bg-stone-900 rounded-full text-[8px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95 group/ai"
           >
-             <Icons.Search className="w-3.5 h-3.5 group-hover/ai:rotate-12 transition-transform" /> 
-             Investigação Teológica
+             <Icons.Search className="w-3 h-3 group-hover/ai:rotate-12 transition-transform" /> 
+             Análise IA
           </button>
-          <ActionButtons itemId={`cic_${p.number}`} type="catechism" title={`CIC §${p.number}`} content={p.content} />
+          <ActionButtons itemId={`cic_${p.number}`} type="catechism" title={`CIC §${p.number}`} content={p.content} className="scale-90" />
         </div>
      </header>
 
-     <p className="font-serif text-stone-800 dark:text-stone-100 leading-relaxed tracking-tight text-justify first-letter:text-5xl first-letter:font-serif first-letter:text-sacred first-letter:mr-2 first-letter:float-left">
+     <p className="font-serif text-stone-800 dark:text-stone-200 leading-relaxed tracking-tight text-justify first-letter:text-4xl first-letter:font-serif first-letter:text-sacred first-letter:mr-2 first-letter:float-left">
         {p.content}
      </p>
-
-     <footer className="mt-8 pt-6 border-t border-stone-100 dark:border-stone-800/50 flex justify-between items-center opacity-30 group-hover:opacity-100 transition-opacity">
-        <span className="text-[8px] font-black uppercase tracking-[0.4em] text-stone-400">Catechismus Catholicae Ecclesiae</span>
-        <Icons.Book className="w-4 h-4 text-gold" />
-     </footer>
   </article>
 ));
 
 const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDive }) => {
-  const [viewMode, setViewMode] = useState<'index' | 'reading'>('index');
-  const [selectedPart, setSelectedPart] = useState(CIC_PARTS[0]);
-  const [paragraphs, setParagraphs] = useState<CatechismParagraph[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { lang } = useContext(LangContext);
   const [searchTerm, setSearchTerm] = useState('');
-  const [fontSize, setFontSize] = useState(1.1);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['1.1'])); // Seção 1.1 aberta por padrão
+  const [fontSize, setFontSize] = useState(1.0);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [loadedContent, setLoadedContent] = useState<Record<string, CatechismParagraph[]>>({});
+  const [searchResults, setSearchResults] = useState<CatechismParagraph[] | null>(null);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -70,33 +64,44 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
     });
   };
 
+  const toggleChapter = useCallback((section: any, chapter: string, partId: string) => {
+    const chapterKey = `${section.id}_${chapter}`;
+    
+    if (!expandedChapters.has(chapterKey)) {
+      // Lazy load content if not already loaded
+      if (!loadedContent[chapterKey]) {
+        const data = getParagraphsForChapter(partId, section.title, chapter);
+        setLoadedContent(prev => ({ ...prev, [chapterKey]: data }));
+      }
+    }
+
+    setExpandedChapters(prev => {
+      const next = new Set(prev);
+      if (next.has(chapterKey)) next.delete(chapterKey);
+      else next.add(chapterKey);
+      return next;
+    });
+  }, [expandedChapters, loadedContent]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchTerm) return;
-    setLoading(true);
-    const results = searchCatechismLocal(searchTerm);
-    if (results.length > 0) {
-      setParagraphs(results);
-      setViewMode('reading');
-    } else {
-      alert("Nenhum parágrafo encontrado na base offline.");
+    if (!searchTerm) {
+      setSearchResults(null);
+      return;
     }
-    setLoading(false);
+    const results = searchCatechismLocal(searchTerm);
+    setSearchResults(results);
+    window.scrollTo({ top: 400, behavior: 'smooth' });
   };
 
-  const loadChapter = (part: any, section: any, chapter: string) => {
-    setLoading(true);
-    setSelectedPart(part);
-    const data = getParagraphsForChapter(part.id, section.title, chapter);
-    setParagraphs(data);
-    setViewMode('reading');
-    setLoading(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const clearSearch = () => {
+    setSearchTerm('');
+    setSearchResults(null);
   };
 
-  const IndexView = () => (
-    <div className="space-y-16 animate-in fade-in duration-1000 pb-40">
-       <header className="text-center space-y-8 pt-10 px-4">
+  return (
+    <div className="max-w-7xl mx-auto space-y-16 animate-in fade-in duration-1000 pb-40 px-4 md:px-0">
+       <header className="text-center space-y-8 pt-10">
           <div className="flex justify-center">
             <div className="p-8 bg-stone-900 rounded-[3rem] shadow-sacred border-4 border-gold/30">
                <Icons.Cross className="w-16 h-16 text-gold" />
@@ -107,7 +112,7 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
             <p className="text-stone-400 italic text-2xl md:text-3xl max-w-3xl mx-auto leading-relaxed">"O depósito sagrado da fé confiado à Igreja."</p>
           </div>
           
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto pt-10 group relative px-2">
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto pt-10 group relative">
              <Icons.Search className="absolute left-10 top-1/2 -translate-y-1/2 w-6 h-6 text-stone-300 group-focus-within:text-gold transition-colors z-10" />
              <input 
               type="text" 
@@ -116,13 +121,36 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-20 pr-32 py-8 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-[2.5rem] outline-none focus:ring-16 focus:ring-gold/5 focus:border-gold transition-all text-2xl font-serif italic shadow-2xl dark:text-white"
             />
-            <button type="submit" className="absolute right-8 top-1/2 -translate-y-1/2 px-10 py-3 bg-gold text-stone-900 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">Abrir</button>
+            <button type="submit" className="absolute right-8 top-1/2 -translate-y-1/2 px-10 py-3 bg-gold text-stone-900 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-transform">Buscar</button>
           </form>
        </header>
 
-       <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto px-4">
+       {/* RESULTADOS DE BUSCA */}
+       {searchResults && (
+         <section className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
+               <h3 className="text-2xl font-serif font-bold text-stone-900 dark:text-stone-100">Resultados da Investigação</h3>
+               <button onClick={clearSearch} className="text-[10px] font-black uppercase text-sacred hover:underline">Limpar Busca</button>
+            </div>
+            {searchResults.length > 0 ? (
+              searchResults.map(p => (
+                <ParagraphItem 
+                  key={`search_${p.number}`} 
+                  p={p} 
+                  fontSize={fontSize} 
+                  onInvestigate={(item) => onDeepDive(`Análise teológica profunda do parágrafo ${item.number} do CIC: "${item.content}"`)} 
+                />
+              ))
+            ) : (
+              <div className="py-20 text-center text-stone-400 font-serif italic">Nenhum parágrafo encontrado.</div>
+            )}
+         </section>
+       )}
+
+       {/* NAVEGAÇÃO HIERÁRQUICA */}
+       <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto">
           {CIC_PARTS.map(part => (
-            <div key={part.id} className="bg-white dark:bg-stone-900 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden flex flex-col">
+            <div key={part.id} className="bg-white dark:bg-stone-900 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden flex flex-col h-fit">
                <div className={`p-10 ${part.color} text-white space-y-2 relative overflow-hidden group/part`}>
                   <Icons.Cross className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 group-hover/part:scale-110 transition-transform duration-700" />
                   <span className="text-[10px] font-black uppercase tracking-[0.4em] relative z-10 opacity-70">Parte {part.id}</span>
@@ -132,103 +160,90 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
                
                <div className="p-8 flex-1 space-y-4">
                   {CIC_STRUCTURE[part.id]?.map((sec: any) => {
-                    const isOpen = expandedSections.has(sec.id);
+                    const isSectionOpen = expandedSections.has(sec.id);
                     return (
                       <div key={sec.id} className="border border-stone-50 dark:border-stone-800 rounded-[2.5rem] overflow-hidden transition-all duration-300">
                         <button 
                           onClick={() => toggleSection(sec.id)}
-                          className={`w-full flex items-center justify-between p-6 text-left transition-colors ${isOpen ? 'bg-stone-50 dark:bg-stone-800/50' : 'hover:bg-stone-50 dark:hover:bg-stone-800/30'}`}
+                          className={`w-full flex items-center justify-between p-6 text-left transition-colors ${isSectionOpen ? 'bg-stone-50 dark:bg-stone-800/50 border-b border-stone-100 dark:border-stone-700' : 'hover:bg-stone-50 dark:hover:bg-stone-800/30'}`}
                         >
                           <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-lg ${isOpen ? 'bg-gold text-stone-900' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
+                            <div className={`p-2 rounded-lg ${isSectionOpen ? 'bg-gold text-stone-900' : 'bg-stone-100 dark:bg-stone-800 text-stone-400'}`}>
                               <Icons.Book className="w-4 h-4" />
                             </div>
-                            <h4 className={`text-sm font-serif font-bold transition-colors ${isOpen ? 'text-stone-900 dark:text-gold' : 'text-stone-600 dark:text-stone-400'}`}>
+                            <h4 className={`text-sm font-serif font-bold transition-colors ${isSectionOpen ? 'text-stone-900 dark:text-gold' : 'text-stone-600 dark:text-stone-400'}`}>
                               {sec.title}
                             </h4>
                           </div>
-                          <Icons.ArrowDown className={`w-5 h-5 text-stone-300 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`} />
+                          <Icons.ArrowDown className={`w-5 h-5 text-stone-300 transition-transform duration-500 ${isSectionOpen ? 'rotate-180' : ''}`} />
                         </button>
 
-                        {isOpen && (
-                          <div className="p-6 bg-white dark:bg-stone-900/50 animate-in slide-in-from-top-2 duration-300">
-                            <div className="grid grid-cols-4 gap-3">
-                              {sec.chapters.map((chap: string) => (
-                                <button 
-                                  key={chap}
-                                  onClick={() => loadChapter(part, sec, chap)}
-                                  className="aspect-square flex items-center justify-center bg-stone-50 dark:bg-stone-800 hover:bg-gold hover:text-stone-900 rounded-2xl text-[11px] font-black transition-all shadow-sm active:scale-95 border border-stone-100 dark:border-stone-700 hover:border-gold"
-                                >
-                                  {chap}
-                                </button>
-                              ))}
-                            </div>
+                        {isSectionOpen && (
+                          <div className="p-4 bg-stone-50/30 dark:bg-stone-950/20 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                            {sec.chapters.map((chap: string) => {
+                              const chapterKey = `${sec.id}_${chap}`;
+                              const isChapterOpen = expandedChapters.has(chapterKey);
+                              const chapterParas = loadedContent[chapterKey] || [];
+                              
+                              return (
+                                <div key={chap} className="border border-stone-100/50 dark:border-stone-800 rounded-[2rem] overflow-hidden bg-white dark:bg-stone-900/50">
+                                   <button 
+                                      onClick={() => toggleChapter(sec, chap, part.id)}
+                                      className={`w-full flex items-center justify-between px-6 py-4 text-left transition-all ${isChapterOpen ? 'bg-gold/5' : 'hover:bg-gold/5'}`}
+                                   >
+                                      <span className={`text-[11px] font-black uppercase tracking-widest ${isChapterOpen ? 'text-gold' : 'text-stone-400'}`}>Capítulo {chap}</span>
+                                      <div className={`p-1.5 rounded-full transition-transform duration-500 ${isChapterOpen ? 'rotate-180 bg-gold text-stone-900' : 'text-stone-300'}`}>
+                                        <Icons.ArrowDown className="w-3 h-3" />
+                                      </div>
+                                   </button>
+                                   
+                                   {isChapterOpen && (
+                                     <div className="px-4 pb-6 pt-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                                        {chapterParas.length > 0 ? (
+                                          chapterParas.map(p => (
+                                            <ParagraphItem 
+                                              key={`${chapterKey}_${p.number}`} 
+                                              p={p} 
+                                              fontSize={fontSize} 
+                                              onInvestigate={(item) => onDeepDive(`Realize uma Análise IA profunda para o parágrafo ${item.number} do CIC que diz: "${item.content}". Busque referências na Bíblia e Santos.`)} 
+                                            />
+                                          ))
+                                        ) : (
+                                          <div className="py-10 text-center animate-pulse flex flex-col items-center gap-3">
+                                             <Icons.History className="w-6 h-6 text-gold/30 animate-spin" />
+                                             <span className="text-[9px] font-black uppercase text-stone-400">Extraindo Parágrafos...</span>
+                                          </div>
+                                        )}
+                                     </div>
+                                   )}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
                     );
                   })}
-                  {!CIC_STRUCTURE[part.id] && (
-                    <div className="py-20 text-center opacity-20">
-                      <Icons.History className="w-12 h-12 mx-auto mb-4" />
-                      <p className="text-xs uppercase font-black tracking-widest">Em Catalogação...</p>
-                    </div>
-                  )}
                </div>
             </div>
           ))}
        </div>
-    </div>
-  );
 
-  const ReadingView = () => (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-48">
-      <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-3 flex items-center justify-between mx-4">
-         <div className="flex items-center gap-2">
-            <button onClick={() => setViewMode('index')} className="p-3 bg-stone-900 text-gold rounded-full hover:bg-gold hover:text-stone-900 transition-all shadow-lg">
-               <Icons.ArrowDown className="w-5 h-5 rotate-90" />
-            </button>
-            <div className="hidden md:flex items-center bg-stone-50 dark:bg-stone-800 rounded-full px-5 py-2">
-               <span className="text-[10px] font-black uppercase text-gold">Catechismus Romanus</span>
-            </div>
-         </div>
-
-         <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-               <span className="text-[10px] font-black text-stone-400">A</span>
-               <input type="range" min="0.8" max="2" step="0.1" value={fontSize} onChange={e => setFontSize(parseFloat(e.target.value))} className="w-32 h-1 accent-gold" />
-               <span className="text-sm font-black text-stone-400">A</span>
-            </div>
-         </div>
-      </nav>
-
-      <header className="bg-stone-900 p-12 md:p-24 rounded-[4rem] md:rounded-[5rem] shadow-4xl border-t-[16px] border-gold text-center relative overflow-hidden mx-4">
-         <div className="absolute top-0 right-0 p-16 opacity-[0.05] pointer-events-none group-hover:scale-110 transition-transform duration-[10s]">
-            <Icons.Cross className="w-80 h-80 text-gold" />
-         </div>
-         <div className="relative z-10 space-y-6">
-            <span className="text-[10px] md:text-[14px] font-black uppercase tracking-[1em] text-gold/60">Depositum Fidei</span>
-            <h2 className="text-4xl md:text-7xl font-serif font-bold text-white tracking-tighter leading-none">{selectedPart.title}</h2>
-            <div className="h-px w-32 bg-gold/20 mx-auto mt-10" />
-         </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto space-y-8 px-4 md:px-0 min-h-[60vh]">
-        {paragraphs.map(p => (
-          <ParagraphItem 
-            key={p.number} 
-            p={p} 
-            fontSize={fontSize} 
-            onInvestigate={(item) => onDeepDive(`Realize um cruzamento teológico profundo para o parágrafo ${item.number} do Catecismo da Igreja Católica que diz: "${item.content}". Busque referências na Bíblia, Magistério e Santos.`)} 
-          />
-        ))}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="max-w-7xl mx-auto page-enter overflow-x-hidden">
-      {viewMode === 'index' ? <IndexView /> : <ReadingView />}
+       {/* CONTROLES FLUTUANTES (Ajuste de Texto) */}
+       <div className="fixed bottom-32 right-8 z-[300] flex flex-col gap-3">
+          <button 
+            onClick={() => setFontSize(f => Math.min(f + 0.1, 1.8))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-400 hover:text-gold transition-all"
+          >
+            <span className="text-xl font-bold">A+</span>
+          </button>
+          <button 
+            onClick={() => setFontSize(f => Math.max(f - 0.1, 0.7))}
+            className="p-4 bg-white dark:bg-stone-800 rounded-full shadow-2xl border border-stone-100 dark:border-stone-700 text-stone-400 hover:text-gold transition-all"
+          >
+            <span className="text-sm font-bold">A-</span>
+          </button>
+       </div>
     </div>
   );
 };

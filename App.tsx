@@ -68,29 +68,25 @@ const App: React.FC = () => {
   const connectivity = useOfflineMode();
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 800);
+    // Reduzido para 200ms para uma sensação de "instant app"
+    const timer = setTimeout(() => setLoading(false), 200);
     notificationService.initNotifications(lang);
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
-    // Captura do evento de instalação PWA
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     });
 
-    window.addEventListener('appinstalled', () => {
-      setDeferredPrompt(null);
-      console.log('Cathedra instalada com sucesso.');
-    });
+    return () => clearTimeout(timer);
   }, [lang, isDark]);
 
   const handleInstall = useCallback(async () => {
     if (!deferredPrompt) {
-      // Caso seja iOS, o prompt não existe, então apenas notificamos o usuário (ou mostramos manual)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isIOS) {
-        alert("Para baixar no iPhone:\n1. Toque no ícone de Compartilhar (quadrado com seta)\n2. Role para baixo e toque em 'Adicionar à Tela de Início'.");
+        alert("Para baixar no iPhone:\n1. Toque no ícone de Compartilhar\n2. Toque em 'Adicionar à Tela de Início'.");
       }
       return;
     }

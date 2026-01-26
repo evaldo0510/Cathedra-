@@ -10,12 +10,11 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
   const { lang, t, handleInstall, installPrompt } = useContext(LangContext);
   const [dailyVerse, setDailyVerse] = useState<any>(null);
   const [dailyBundle, setDailyBundle] = useState<any>(null);
-  const [recentStudies, setRecentStudies] = useState<StudyResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      // Tenta carregar dados em paralelo
       try {
         const [verse, bundle] = await Promise.all([
           fetchDailyVerse(lang),
@@ -23,30 +22,21 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         ]);
         setDailyVerse(verse);
         setDailyBundle(bundle);
-        
-        const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
-        setRecentStudies(history.slice(0, 3));
-      } catch (e) { console.warn(e); } 
-      finally { setLoading(false); }
+      } catch (e) { 
+        console.warn("Falha ao carregar destaques da IA, usando fallback."); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchData();
   }, [lang]);
 
-  if (loading && !dailyVerse) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-pulse space-y-8">
-        <div className="w-20 h-20 border-4 border-gold border-t-transparent rounded-full animate-spin" />
-        <p className="text-2xl font-serif italic text-stone-400">Cruzando o Nártex...</p>
-      </div>
-    );
-  }
-
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
   return (
-    <div className="space-y-24 pb-32 animate-in fade-in duration-1000 -mt-10">
+    <div className="space-y-24 pb-32 animate-in fade-in duration-700 -mt-10">
       {/* SEÇÃO HERO: O VERBO HOJE */}
-      <section className="relative h-[80vh] md:h-[90vh] mx-[-1rem] md:mx-[-4rem] lg:mx-[-6rem] overflow-hidden group shadow-4xl border-b border-gold/20">
+      <section className="relative h-[80vh] md:h-[90vh] mx-[-1rem] md:mx-[-4rem] lg:mx-[-6rem] overflow-hidden group shadow-4xl border-b border-gold/20 bg-stone-950">
         <div className="absolute inset-0 z-0">
           <SacredImage 
             src={dailyVerse?.imageUrl || "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=1600"} 
@@ -58,19 +48,30 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         </div>
 
         <div className="absolute inset-0 z-10 flex flex-col justify-end p-8 md:p-24 space-y-12 max-w-7xl">
-          <div className="space-y-6 animate-in slide-in-from-left-12 duration-1000">
+          <div className="space-y-6 animate-in slide-in-from-left-8 duration-700">
             <div className="flex items-center gap-4">
               <span className="px-6 py-2 bg-sacred text-white text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-2xl border border-white/10 backdrop-blur-md">
                 Luz do Dia (Lumen Diei)
               </span>
-              <span className="text-white/70 text-xl font-serif italic border-l border-white/20 pl-4">{dailyVerse?.reference}</span>
+              {dailyVerse?.reference ? (
+                <span className="text-white/70 text-xl font-serif italic border-l border-white/20 pl-4 animate-in fade-in">{dailyVerse?.reference}</span>
+              ) : (
+                <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse" />
+              )}
             </div>
-            <h1 className="text-5xl md:text-8xl lg:text-9xl font-serif font-bold text-white tracking-tighter leading-[0.85] drop-shadow-4xl max-w-5xl">
-               {dailyVerse?.verse || "A Verdade vos libertará."}
-            </h1>
+            {dailyVerse?.verse ? (
+              <h1 className="text-5xl md:text-8xl lg:text-9xl font-serif font-bold text-white tracking-tighter leading-[0.85] drop-shadow-4xl max-w-5xl animate-in fade-in">
+                 {dailyVerse?.verse}
+              </h1>
+            ) : (
+              <div className="space-y-4">
+                <div className="h-16 md:h-24 w-3/4 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="h-16 md:h-24 w-1/2 bg-white/5 rounded-2xl animate-pulse" />
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-5 animate-in slide-in-from-bottom-12 duration-1000 delay-300">
+          <div className="flex flex-wrap gap-5 animate-in slide-in-from-bottom-8 duration-700 delay-200">
             <button onClick={() => onNavigate(AppRoute.BIBLE)} className="px-14 py-6 bg-gold text-stone-900 rounded-[2.5rem] font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-white transition-all active:scale-95 flex items-center gap-4 group">
               <Icons.Book className="w-6 h-6 group-hover:rotate-6 transition-transform" /> Abrir Bíblia
             </button>
@@ -81,7 +82,7 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
         </div>
       </section>
 
-      {/* BANNER DE INSTALAÇÃO (DOWNLOAD APP) - APENAS SE NÃO ESTIVER INSTALADO */}
+      {/* BANNER DE INSTALAÇÃO */}
       {!isStandalone && (
         <section className="max-w-7xl mx-auto px-4">
            <div className="bg-stone-900 rounded-[4rem] p-10 md:p-16 border border-gold/30 shadow-sacred relative overflow-hidden group">
@@ -92,12 +93,8 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
                  <div className="space-y-6 text-center md:text-left">
                     <h3 className="text-4xl md:text-6xl font-serif font-bold text-white leading-none">Cathedra no seu Dispositivo</h3>
                     <p className="text-white/60 font-serif italic text-xl max-w-2xl leading-relaxed">
-                      "Baixe o aplicativo para acesso instantâneo, modo offline total e notificações do Evangelho."
+                      "Baixe o aplicativo para acesso instantâneo e modo offline total."
                     </p>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-4 text-[9px] font-black uppercase tracking-widest text-gold/60">
-                       <span className="flex items-center gap-2"><Icons.Download className="w-4 h-4" /> Uso Offline</span>
-                       <span className="flex items-center gap-2"><Icons.History className="w-4 h-4" /> Acesso Rápido</span>
-                    </div>
                  </div>
                  <button 
                   onClick={handleInstall}
@@ -143,26 +140,34 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; onNavigate: (rout
       </section>
 
       {/* SENTENÇA DOS SANTOS */}
-      {dailyBundle?.saint?.quote && (
-        <section className="max-w-7xl mx-auto px-4">
-          <div className="bg-white dark:bg-stone-900 p-20 md:p-32 rounded-[6rem] shadow-4xl border border-stone-100 dark:border-white/5 relative overflow-hidden group">
-            <div className="relative z-10 text-center space-y-16">
-               <div className="flex flex-col items-center gap-6">
-                  <div className="h-px w-32 bg-gold/30" />
-                  <span className="text-[14px] font-black uppercase tracking-[1.2em] text-gold">Sentença dos Santos (Sententia)</span>
-                  <div className="h-px w-32 bg-gold/30" />
+      <section className="max-w-7xl mx-auto px-4">
+        <div className="bg-white dark:bg-stone-900 p-20 md:p-32 rounded-[6rem] shadow-4xl border border-stone-100 dark:border-white/5 relative overflow-hidden group min-h-[400px] flex items-center justify-center">
+          <div className="relative z-10 text-center space-y-16 w-full">
+             <div className="flex flex-col items-center gap-6">
+                <div className="h-px w-32 bg-gold/30" />
+                <span className="text-[14px] font-black uppercase tracking-[1.2em] text-gold">Sentença dos Santos (Sententia)</span>
+                <div className="h-px w-32 bg-gold/30" />
+             </div>
+             
+             {dailyBundle?.saint?.quote ? (
+               <div className="animate-in fade-in duration-1000">
+                  <p className="text-4xl md:text-7xl lg:text-8xl font-serif italic text-stone-800 dark:text-stone-100 leading-[1.05] tracking-tight max-w-6xl mx-auto">
+                    "{dailyBundle.saint.quote}"
+                  </p>
+                  <div className="space-y-2 mt-12">
+                    <h5 className="text-3xl font-serif font-bold text-stone-900 dark:text-gold uppercase tracking-widest">{dailyBundle.saint.name}</h5>
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-stone-400">Rogai por nós</p>
+                  </div>
                </div>
-               <p className="text-4xl md:text-7xl lg:text-8xl font-serif italic text-stone-800 dark:text-stone-100 leading-[1.05] tracking-tight max-w-6xl mx-auto">
-                 "{dailyBundle.saint.quote}"
-               </p>
-               <div className="space-y-2">
-                 <h5 className="text-3xl font-serif font-bold text-stone-900 dark:text-gold uppercase tracking-widest">{dailyBundle.saint.name}</h5>
-                 <p className="text-[10px] font-black uppercase tracking-[0.5em] text-stone-400">Rogai por nós</p>
+             ) : (
+               <div className="space-y-8 animate-pulse">
+                  <div className="h-20 w-3/4 bg-stone-100 dark:bg-stone-800 rounded-2xl mx-auto" />
+                  <div className="h-8 w-1/4 bg-stone-100 dark:bg-stone-800 rounded-full mx-auto" />
                </div>
-            </div>
+             )}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
     </div>
   );
 };
