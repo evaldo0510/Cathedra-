@@ -28,18 +28,18 @@ const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter }: {
       contentVisibility: 'auto', 
       containIntrinsicSize: '0 60px' 
     } as React.CSSProperties}
-    className={`group relative py-6 md:py-8 px-6 md:px-10 rounded-[2rem] md:rounded-[3rem] transition-all duration-500 cursor-pointer border-l-[6px] md:border-l-[10px] mb-4 ${
+    className={`group relative py-5 md:py-8 px-5 md:px-10 rounded-[1.8rem] md:rounded-[3rem] transition-all duration-500 cursor-pointer border-l-[5px] md:border-l-[10px] mb-3 md:mb-4 ${
       isActive 
-        ? 'bg-gold/15 border-gold shadow-2xl scale-[1.02] z-10 ring-4 ring-gold/5' 
+        ? 'bg-gold/15 border-gold shadow-xl scale-[1.01] md:scale-[1.02] z-10 ring-4 ring-gold/5' 
         : 'border-transparent hover:bg-stone-50 dark:hover:bg-white/5'
     }`}
   >
-    <div className="flex justify-between items-start gap-4">
+    <div className="flex justify-between items-start gap-3 md:gap-4">
       <div className="flex-1">
-        <sup className={`text-[0.7em] font-black mr-3 md:mr-4 select-none transition-all ${isActive ? 'text-sacred scale-125' : 'text-stone-300'}`}>
+        <sup className={`text-[0.7em] font-black mr-2 md:mr-4 select-none transition-all ${isActive ? 'text-sacred scale-125' : 'text-stone-300'}`}>
           {v.verse}
         </sup>
-        <span className={`font-serif tracking-tight leading-[1.8] text-justify inline-block ${isActive ? 'text-stone-900 dark:text-white font-bold' : 'text-stone-800 dark:text-stone-200'}`}>
+        <span className={`font-serif tracking-tight leading-[1.7] md:leading-[1.8] text-justify inline-block ${isActive ? 'text-stone-900 dark:text-white font-bold' : 'text-stone-800 dark:text-stone-200'}`}>
           {v.text}
         </span>
       </div>
@@ -51,7 +51,7 @@ const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter }: {
             type="verse" 
             title={`${bookName} ${chapter}:${v.verse}`} 
             content={v.text} 
-            className="bg-white/90 dark:bg-stone-800/90 p-1 rounded-2xl shadow-xl backdrop-blur-sm"
+            className="bg-white/90 dark:bg-stone-800/90 p-1 rounded-2xl shadow-xl backdrop-blur-sm scale-90 md:scale-100"
            />
         </div>
       )}
@@ -75,8 +75,7 @@ const Bible: React.FC = () => {
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [activeVerse, setActiveVerse] = useState<number>(1);
   const [offlineBooks, setOfflineBooks] = useState<Set<string>>(new Set());
-  const [recentBooks, setRecentBooks] = useState<string[]>([]);
-  const [fontSize, setFontSize] = useState(1.2);
+  const [fontSize, setFontSize] = useState(1.15);
 
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -106,18 +105,9 @@ const Bible: React.FC = () => {
   const refreshOfflineStatus = useCallback(async () => {
     const books = await offlineStorage.getDownloadedBooks();
     setOfflineBooks(books);
-    const history = JSON.parse(localStorage.getItem('cathedra_bible_history') || '[]');
-    setRecentBooks(history);
   }, []);
 
   useEffect(() => { refreshOfflineStatus(); }, [refreshOfflineStatus]);
-
-  const updateHistory = (bookName: string) => {
-    const history = JSON.parse(localStorage.getItem('cathedra_bible_history') || '[]');
-    const next = [bookName, ...history.filter((b: string) => b !== bookName)].slice(0, 5);
-    localStorage.setItem('cathedra_bible_history', JSON.stringify(next));
-    setRecentBooks(next);
-  };
 
   const scrollToVerse = (vNum: number) => {
     if (vNum < 1 || vNum > verses.length) return;
@@ -125,7 +115,7 @@ const Bible: React.FC = () => {
     setActiveVerse(vNum);
     const el = document.getElementById(`v-${vNum}`);
     if (el) {
-      const offset = window.innerHeight < 700 ? 120 : 220;
+      const offset = window.innerWidth < 768 ? 140 : 220;
       const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
@@ -137,7 +127,6 @@ const Bible: React.FC = () => {
     setVerses([]); 
     setLoading(true);
     setRendering(true);
-    updateHistory(bookName);
     
     try {
       let data: Verse[] = [];
@@ -181,28 +170,19 @@ const Bible: React.FC = () => {
   const handleReferenceJump = (e: React.FormEvent) => {
     e.preventDefault();
     if (!refSearch.trim()) return;
-
     const regex = /^(.+?)\s+(\d+)(?::(\d+))?$/;
     const match = refSearch.trim().match(regex);
-
     if (match) {
       const bookQuery = match[1].toLowerCase();
       const chapterNum = parseInt(match[2]);
       const verseNum = match[3] ? parseInt(match[3]) : 1;
-
-      const foundBook = CATHOLIC_BIBLE_BOOKS.find(b => 
-        b.name.toLowerCase().includes(bookQuery) || 
-        bookQuery.includes(b.name.toLowerCase())
-      );
-
+      const foundBook = CATHOLIC_BIBLE_BOOKS.find(b => b.name.toLowerCase().includes(bookQuery));
       if (foundBook) {
         setSelectedBook(foundBook);
         setSelectedChapter(chapterNum);
         setViewMode('reading');
         loadContent(foundBook.name, chapterNum, verseNum);
         setRefSearch('');
-      } else {
-        alert("Livro não encontrado.");
       }
     }
   };
@@ -220,8 +200,7 @@ const Bible: React.FC = () => {
     if (verses.length === 0) return;
     setIsPlaying(true);
     try {
-      const fullText = verses.map(v => v.text).join(" ");
-      const textToRead = `${selectedBook.name}, capítulo ${selectedChapter}. ${fullText}`;
+      const textToRead = `${selectedBook.name}, capítulo ${selectedChapter}. ` + verses.map(v => v.text).join(" ");
       if (!audioContextRef.current) audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       const base64Audio = await generateSpeech(textToRead);
       if (base64Audio) {
@@ -260,17 +239,15 @@ const Bible: React.FC = () => {
         <div className="relative">
            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300" />
            <input 
-            type="text" 
-            placeholder="Buscar livro..." 
-            value={sidebarSearch}
+            type="text" placeholder="Buscar livro..." value={sidebarSearch}
             onChange={e => setSidebarSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-3 bg-stone-50 dark:bg-stone-800/50 border border-stone-100 dark:border-stone-700 rounded-2xl outline-none text-xs font-serif italic"
            />
         </div>
       </header>
-      <div className="overflow-y-auto h-[calc(100%-140px)] custom-scrollbar p-4 space-y-8">
+      <div className="overflow-y-auto h-[calc(100%-140px)] custom-scrollbar p-4 space-y-4">
         {CATHOLIC_BIBLE_BOOKS.filter(b => b.name.toLowerCase().includes(sidebarSearch.toLowerCase())).map(b => (
-          <button key={b.id} onClick={() => { setSelectedBook(b); if (viewMode === 'reading') { loadContent(b.name, 1); } else { setViewMode('chapters'); } setShowSidebar(false); }} className={`w-full text-left px-4 py-2.5 rounded-xl transition-all flex items-center justify-between group ${selectedBook.id === b.id ? 'bg-gold/10 text-gold border border-gold/20' : 'hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-500'}`}>
+          <button key={b.id} onClick={() => { setSelectedBook(b); if (viewMode === 'reading') { loadContent(b.name, 1); } else { setViewMode('chapters'); } setShowSidebar(false); }} className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${selectedBook.id === b.id ? 'bg-gold/10 text-gold border border-gold/20' : 'hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-500'}`}>
             <span className="font-serif text-[15px]">{b.name}</span>
             {offlineBooks.has(b.name) && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
           </button>
@@ -287,66 +264,64 @@ const Bible: React.FC = () => {
       <div className="flex-1 min-w-0 bg-[#fdfcf8] dark:bg-[#0c0a09]">
         <div className="max-w-7xl mx-auto px-2 md:px-12">
           {viewMode === 'library' && (
-            <div className="space-y-12 animate-in fade-in duration-700 pb-32 pt-4">
-              <header className="text-center space-y-10 pt-6">
+            <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-32 pt-4">
+              <header className="text-center space-y-6 md:space-y-10 pt-4 md:pt-6">
                 <div className="flex justify-center">
-                   <div className="p-8 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sacred border border-gold/30">
-                      <Icons.Book className="w-12 h-12 md:w-16 md:h-16 text-sacred" />
+                   <div className="p-6 md:p-8 bg-white dark:bg-stone-900 rounded-[2.5rem] md:rounded-[3rem] shadow-sacred border border-gold/30">
+                      <Icons.Book className="w-10 h-10 md:w-16 md:h-16 text-sacred" />
                    </div>
                 </div>
-                <div className="space-y-4 px-4">
-                  <h2 className="text-5xl md:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter leading-none">Scriptuarium</h2>
-                  <p className="text-stone-400 italic text-xl md:text-3xl font-serif">"O Verbo Eterno guardado no coração."</p>
+                <div className="space-y-2 md:space-y-4 px-4">
+                  <h2 className="text-4xl md:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter leading-none">Scriptuarium</h2>
+                  <p className="text-stone-400 italic text-lg md:text-3xl font-serif px-6">"O Verbo Eterno guardado no coração."</p>
                 </div>
                 
-                <div className="max-w-2xl mx-auto space-y-4 px-4">
+                <div className="max-w-2xl mx-auto space-y-3 md:space-y-4 px-4">
                    <form onSubmit={handleReferenceJump} className="relative group">
-                      <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-stone-300 group-focus-within:text-gold transition-colors" />
+                      <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-gold transition-colors" />
                       <input 
-                        type="text" 
-                        placeholder="João 3:16..." 
-                        value={refSearch}
+                        type="text" placeholder="João 3:16..." value={refSearch}
                         onChange={e => setRefSearch(e.target.value)}
-                        className="w-full pl-16 pr-24 py-6 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl outline-none focus:ring-8 focus:ring-gold/5 focus:border-gold transition-all text-lg font-serif italic shadow-xl dark:text-white"
+                        className="w-full pl-14 pr-20 py-5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-[2rem] outline-none focus:ring-8 focus:ring-gold/5 focus:border-gold transition-all text-base font-serif italic shadow-xl dark:text-white"
                       />
-                      <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 px-6 py-2.5 bg-stone-900 text-gold rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg">Saltar</button>
+                      <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 px-5 py-2 bg-stone-900 text-gold rounded-xl font-black uppercase text-[8px] tracking-widest shadow-lg">Saltar</button>
                    </form>
-                   <button onClick={() => setShowSidebar(true)} className="w-full px-10 py-6 bg-stone-50 dark:bg-stone-800/50 border border-stone-100 dark:border-stone-800 text-stone-400 rounded-3xl font-black uppercase tracking-widest text-[10px] hover:text-gold transition-all flex items-center justify-center gap-4">
-                    <Icons.Menu className="w-5 h-5" /> Explorar Índice Completo
+                   <button onClick={() => setShowSidebar(true)} className="w-full px-8 py-5 bg-stone-50 dark:bg-stone-800/50 border border-stone-100 dark:border-stone-800 text-stone-400 rounded-[2rem] font-black uppercase tracking-widest text-[9px] hover:text-gold transition-all flex items-center justify-center gap-4 shadow-sm">
+                    <Icons.Menu className="w-4 h-4" /> Explorar Índice Completo
                   </button>
                 </div>
               </header>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 px-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 px-4">
                  {CATHOLIC_BIBLE_BOOKS.slice(0, 11).map((b, i) => (
-                   <button key={i} onClick={() => { setSelectedBook(b); setViewMode('chapters'); window.scrollTo(0,0); }} className="p-6 md:p-8 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2.5rem] shadow-lg text-left group hover:border-gold hover:-translate-y-1 transition-all">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-stone-300 block mb-3">{b.category}</span>
-                      <h4 className="text-xl md:text-2xl font-serif font-bold group-hover:text-gold transition-colors leading-tight">{b.name}</h4>
-                      <p className="text-[10px] text-stone-400 mt-2">{b.chapters} Capítulos</p>
+                   <button key={i} onClick={() => { setSelectedBook(b); setViewMode('chapters'); window.scrollTo(0,0); }} className="p-5 md:p-8 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] md:rounded-[2.5rem] shadow-lg text-left group hover:border-gold hover:-translate-y-1 transition-all">
+                      <span className="text-[7px] font-black uppercase tracking-widest text-stone-300 block mb-2">{b.category}</span>
+                      <h4 className="text-lg md:text-2xl font-serif font-bold group-hover:text-gold transition-colors leading-tight">{b.name}</h4>
+                      <p className="text-[9px] text-stone-400 mt-1 md:mt-2">{b.chapters} Capítulos</p>
                    </button>
                  ))}
-                 <button onClick={() => setShowSidebar(true)} className="p-6 md:p-8 bg-stone-50 dark:bg-stone-800/40 border border-dashed border-stone-200 dark:border-stone-700 rounded-[2.5rem] flex flex-col items-center justify-center text-stone-400 hover:text-gold transition-all group">
-                    <Icons.Book className="w-10 h-10 mb-4 group-hover:scale-110 transition-transform" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Ver Todos</span>
+                 <button onClick={() => setShowSidebar(true)} className="p-5 md:p-8 bg-stone-50 dark:bg-stone-800/40 border border-dashed border-stone-200 dark:border-stone-700 rounded-[2rem] flex flex-col items-center justify-center text-stone-400 hover:text-gold transition-all group">
+                    <Icons.Book className="w-8 h-8 mb-3 md:mb-4 group-hover:scale-110 transition-transform" />
+                    <span className="text-[8px] font-black uppercase tracking-widest">Ver Todos</span>
                  </button>
               </div>
             </div>
           )}
 
           {viewMode === 'chapters' && (
-            <div className="space-y-12 animate-in slide-in-from-bottom-8 duration-700 pb-32 px-4 pt-10">
-               <div className="flex items-center justify-between">
-                  <button onClick={() => setViewMode('library')} className="flex items-center gap-2 text-gold text-[10px] font-black uppercase tracking-widest hover:translate-x-[-4px] transition-transform">
-                      <Icons.ArrowDown className="w-5 h-5 rotate-90" /> Biblioteca
+            <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700 pb-32 px-2 pt-6">
+               <div className="flex items-center justify-between px-2">
+                  <button onClick={() => setViewMode('library')} className="flex items-center gap-2 text-gold text-[9px] font-black uppercase tracking-widest hover:translate-x-[-4px] transition-all">
+                      <Icons.ArrowDown className="w-4 h-4 rotate-90" /> Biblioteca
                   </button>
                </div>
-               <header className="text-center space-y-6">
-                  <span className="text-[12px] font-black uppercase tracking-[0.6em] text-gold">{selectedBook.category}</span>
-                  <h2 className="text-5xl md:text-9xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-none">{selectedBook.name}</h2>
+               <header className="text-center space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gold">{selectedBook.category}</span>
+                  <h2 className="text-4xl md:text-9xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-none">{selectedBook.name}</h2>
                </header>
-               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-4 max-w-5xl mx-auto">
+               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-3 max-w-5xl mx-auto px-2">
                   {Array.from({ length: selectedBook.chapters }).map((_, i) => (
-                    <button key={i} onClick={() => { setSelectedChapter(i + 1); setViewMode('reading'); loadContent(selectedBook.name, i + 1); }} className={`aspect-square rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center font-serif text-2xl md:text-3xl font-bold transition-all shadow-xl active:scale-95 ${selectedChapter === (i+1) ? 'bg-gold text-stone-900 scale-110 z-10' : 'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 hover:border-gold'}`}>
+                    <button key={i} onClick={() => { setSelectedChapter(i + 1); setViewMode('reading'); loadContent(selectedBook.name, i + 1); }} className={`aspect-square rounded-[1.2rem] md:rounded-[2.5rem] flex items-center justify-center font-serif text-xl md:text-3xl font-bold transition-all shadow-xl active:scale-90 ${selectedChapter === (i+1) ? 'bg-gold text-stone-900 scale-105 z-10' : 'bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 hover:border-gold'}`}>
                       {i + 1}
                     </button>
                   ))}
@@ -357,53 +332,46 @@ const Bible: React.FC = () => {
           {viewMode === 'reading' && (
             <div className="min-h-screen animate-in fade-in duration-1000 relative">
               
-              {/* GOTEIRAS DE NAVEGAÇÃO LATERAIS - DISCRETAS MAS ACESSÍVEIS */}
-              <div className="fixed inset-y-0 left-0 w-8 md:w-24 z-[100] flex items-center group/prev pointer-events-none">
+              {/* GOTEIRAS DE NAVEGAÇÃO LATERAIS - MOBILE OPTIMIZED */}
+              <div className="fixed inset-y-0 left-0 w-4 md:w-24 z-[100] flex items-center group/prev pointer-events-none">
                  <button 
-                  onClick={() => scrollToVerse(activeVerse - 1)} 
-                  disabled={activeVerse <= 1} 
-                  className="h-full w-full pointer-events-auto flex items-center justify-center opacity-0 group-hover/prev:opacity-100 transition-opacity bg-gradient-to-r from-gold/5 to-transparent border-l-2 border-transparent hover:border-gold/30 group/btn"
-                  title="Versículo Anterior"
+                  onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} 
+                  className="h-full w-full pointer-events-auto flex items-center justify-center opacity-0 group-hover/prev:opacity-100 transition-opacity bg-gradient-to-r from-gold/10 to-transparent group/btn"
                  >
-                    <Icons.ArrowDown className="w-8 h-8 rotate-90 text-gold/30 group-hover/btn:text-gold transition-colors" />
+                    <Icons.ArrowDown className="w-6 h-6 md:w-10 md:h-10 rotate-90 text-gold/50" />
                  </button>
               </div>
 
-              <div className="fixed inset-y-0 right-0 w-8 md:w-24 z-[100] flex items-center group/next pointer-events-none">
+              <div className="fixed inset-y-0 right-0 w-4 md:w-24 z-[100] flex items-center group/next pointer-events-none">
                  <button 
-                  onClick={() => scrollToVerse(activeVerse + 1)} 
-                  disabled={activeVerse >= verses.length} 
-                  className="h-full w-full pointer-events-auto flex items-center justify-center opacity-0 group-hover/next:opacity-100 transition-opacity bg-gradient-to-l from-gold/5 to-transparent border-r-2 border-transparent hover:border-gold/30 group/btn"
-                  title="Próximo Versículo"
+                  onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} 
+                  className="h-full w-full pointer-events-auto flex items-center justify-center opacity-0 group-hover/next:opacity-100 transition-opacity bg-gradient-to-l from-gold/10 to-transparent group/btn"
                  >
-                    <Icons.ArrowDown className="w-8 h-8 -rotate-90 text-gold/30 group-hover/btn:text-gold transition-colors" />
+                    <Icons.ArrowDown className="w-6 h-6 md:w-10 md:h-10 -rotate-90 text-gold/50" />
                  </button>
               </div>
 
-              <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full md:rounded-[3rem] border border-stone-200 dark:border-white/10 shadow-2xl p-1.5 md:p-3 flex items-center justify-between mx-2 md:mx-0 mb-10">
+              <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-[#0c0a09]/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-white/10 shadow-2xl p-1.5 md:p-3 flex items-center justify-between mx-1 md:mx-0 mb-8">
                 <div className="flex items-center gap-1">
-                    <button onClick={() => setShowSidebar(true)} className="p-3 md:p-4 bg-stone-900 text-gold rounded-full hover:bg-gold hover:text-stone-900 transition-all shadow-lg">
+                    <button onClick={() => setShowSidebar(true)} className="p-3 md:p-4 bg-stone-900 text-gold rounded-full shadow-lg">
                       <Icons.Menu className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
-                    <div className="flex items-center bg-stone-100 dark:bg-stone-900 rounded-full p-1 border border-stone-200 dark:border-stone-800">
-                      <button onClick={() => setViewMode('library')} className="px-3 md:px-6 py-1.5 hover:bg-white dark:hover:bg-stone-800 rounded-full text-stone-900 dark:text-white font-serif font-bold text-[10px] md:text-lg truncate max-w-[80px] md:max-w-none">{selectedBook.name}</button>
-                      <div className="w-px h-5 md:h-6 bg-stone-200 dark:bg-stone-700 mx-1 md:mx-2" />
-                      <div className="flex items-center">
-                         <span className="text-gold font-serif font-bold text-lg md:text-2xl px-1 md:px-2">{selectedChapter}</span>
-                         <span className="text-[7px] md:text-[10px] font-black uppercase text-stone-300 mr-2 md:mr-4">Cap.</span>
-                      </div>
+                    <div className="flex items-center bg-stone-100 dark:bg-stone-900 rounded-full p-0.5 md:p-1 border border-stone-200 dark:border-stone-800 max-w-[120px] md:max-w-none">
+                      <button onClick={() => setViewMode('library')} className="px-3 md:px-6 py-1.5 text-stone-900 dark:text-white font-serif font-bold text-[10px] md:text-lg truncate">{selectedBook.name}</button>
+                      <div className="w-px h-4 md:h-6 bg-stone-200 dark:bg-stone-700" />
+                      <span className="text-gold font-serif font-bold text-base md:text-2xl px-2 md:px-4">{selectedChapter}</span>
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-1 md:gap-6 px-1 md:px-10 border-x border-stone-100 dark:border-white/5">
-                    <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="p-1 md:p-2 text-stone-300 hover:text-gold disabled:opacity-10 transition-colors">
+                    <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="p-1 md:p-2 text-stone-300 disabled:opacity-10 transition-colors">
                       <Icons.ArrowDown className="w-4 h-4 md:w-6 md:h-6 rotate-180" />
                     </button>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[6px] md:text-[9px] font-black uppercase tracking-[0.2em] text-stone-400">Verse</span>
+                    <div className="flex flex-col items-center min-w-[20px] md:min-w-[40px]">
+                      <span className="text-[6px] md:text-[9px] font-black uppercase text-stone-400">§</span>
                       <span className="text-xs md:text-2xl font-serif font-bold text-gold tabular-nums">{activeVerse}</span>
                     </div>
-                    <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="p-1 md:p-2 text-stone-300 hover:text-gold disabled:opacity-10 transition-colors">
+                    <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="p-1 md:p-2 text-stone-300 disabled:opacity-10 transition-colors">
                       <Icons.ArrowDown className="w-4 h-4 md:w-6 md:h-6" />
                     </button>
                 </div>
@@ -415,79 +383,52 @@ const Bible: React.FC = () => {
                 </div>
               </nav>
 
-              <header className="bg-white dark:bg-stone-900 p-8 md:p-24 rounded-[3.5rem] md:rounded-[5rem] shadow-2xl border-t-[12px] md:border-t-[24px] border-gold text-center relative overflow-hidden mx-2 md:mx-4">
-                <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none"><Icons.Cross className="w-64 h-64 md:w-96 md:h-96" /></div>
-                <div className="relative z-10 space-y-4 md:space-y-6">
-                    <span className="text-[9px] md:text-[14px] font-black uppercase tracking-[0.8em] md:tracking-[1em] text-gold">{selectedBook.category}</span>
-                    <h2 className="text-4xl md:text-9xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter">{selectedBook.name} {selectedChapter}</h2>
-                    <div className="h-px w-24 md:w-40 bg-gold/20 mx-auto mt-6 md:mt-10" />
+              <header className="bg-white dark:bg-stone-900 p-8 md:p-24 rounded-[3rem] md:rounded-[5rem] shadow-xl border-t-[8px] md:border-t-[24px] border-gold text-center relative overflow-hidden mx-1 md:mx-4">
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none"><Icons.Cross className="w-48 h-48 md:w-96 md:h-96" /></div>
+                <div className="relative z-10 space-y-2 md:space-y-6">
+                    <span className="text-[8px] md:text-[14px] font-black uppercase tracking-[0.5em] md:tracking-[1em] text-gold">{selectedBook.category}</span>
+                    <h2 className="text-3xl md:text-9xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter">{selectedBook.name} {selectedChapter}</h2>
+                    <div className="h-px w-16 md:w-40 bg-gold/20 mx-auto mt-4 md:mt-10" />
                 </div>
               </header>
 
-              <div className="max-w-5xl mx-auto px-2 md:px-0 pt-10 md:pt-16">
-                <article className="p-6 md:p-24 rounded-[3rem] md:rounded-[6rem] relative min-h-[60vh] overflow-hidden bg-white dark:bg-stone-900/40 border border-stone-100 dark:border-stone-800 shadow-inner" style={{ fontSize: `${fontSize}rem` }}>
+              <div className="max-w-5xl mx-auto px-1 md:px-0 pt-6 md:pt-16">
+                <article className="p-4 md:p-24 rounded-[2rem] md:rounded-[6rem] relative min-h-[50vh] overflow-hidden bg-white dark:bg-stone-950 shadow-inner border border-stone-50 dark:border-stone-900" style={{ fontSize: `${fontSize}rem` }}>
                    {loading || rendering ? (
-                      <div className="py-40 md:py-60 text-center space-y-8 md:space-y-12 animate-pulse">
-                        <div className="w-16 h-16 md:w-24 md:h-24 border-8 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-2xl md:text-3xl font-serif italic text-stone-400">Atualizando Scriptuarium...</p>
+                      <div className="py-32 md:py-60 text-center space-y-6 md:space-y-12 animate-pulse">
+                        <div className="w-12 h-12 md:w-24 md:h-24 border-6 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="text-xl md:text-3xl font-serif italic text-stone-400">Consultando Escrituras...</p>
                       </div>
                    ) : (
-                     <div className="space-y-4 md:space-y-6 max-w-3xl mx-auto px-1 md:px-0">
+                     <div className="space-y-2 md:space-y-4 max-w-3xl mx-auto">
                         {verses.map((v) => (
                           <VerseItem key={`${selectedBook.name}-${selectedChapter}-${v.verse}`} v={v} isActive={activeVerse === v.verse} onSelect={scrollToVerse} bookName={selectedBook.name} chapter={selectedChapter} />
                         ))}
                         
-                        {/* BOTÕES DE NAVEGAÇÃO DE RODAPÉ DO CONTEÚDO */}
-                        <div className="pt-20 flex justify-center gap-4">
-                           <button 
-                            onClick={() => scrollToVerse(activeVerse - 1)} 
-                            disabled={activeVerse <= 1}
-                            className="px-6 py-4 bg-stone-50 dark:bg-stone-800 text-stone-400 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all hover:text-gold disabled:opacity-10 border border-stone-100 dark:border-stone-700"
-                           >
-                              Versículo Anterior
-                           </button>
-                           <button 
-                            onClick={() => scrollToVerse(activeVerse + 1)} 
-                            disabled={activeVerse >= verses.length}
-                            className="px-8 py-4 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-10"
-                           >
-                              Próximo Versículo
-                           </button>
+                        <div className="pt-16 flex justify-center gap-3">
+                           <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="px-5 py-3 bg-stone-50 dark:bg-stone-900 text-stone-400 rounded-xl text-[8px] font-black uppercase tracking-widest border border-stone-100 dark:border-stone-800">Anterior</button>
+                           <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="px-6 py-3 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg">Próximo</button>
                         </div>
                      </div>
                    )}
-                   <div className="mt-20 md:mt-32 pt-24 border-t border-stone-100 dark:border-white/5 flex justify-center opacity-10 pb-16"><Icons.Cross className="w-16 h-16 md:w-24 md:h-24" /></div>
+                   <div className="mt-16 md:mt-32 pt-12 border-t border-stone-50 dark:border-white/5 flex justify-center opacity-10 pb-8 md:pb-16"><Icons.Cross className="w-12 h-12 md:w-24 md:h-24" /></div>
                 </article>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-center gap-4 md:gap-8 py-20 md:py-40 px-4 md:px-0">
-                <button disabled={selectedChapter <= 1} onClick={() => navigateChapter(-1)} className="px-10 md:px-16 py-6 md:py-8 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[9px] md:text-[10px] tracking-[0.4em] md:tracking-[0.5em] disabled:opacity-10 transition-all hover:border-gold shadow-2xl flex items-center justify-center gap-4 md:gap-6 group">
-                  <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 rotate-90 group-hover:-translate-x-2 md:group-hover:-translate-x-3 transition-transform" /> Anterior
+              <div className="flex flex-col md:flex-row justify-center gap-4 py-16 md:py-40 px-4">
+                <button disabled={selectedChapter <= 1} onClick={() => navigateChapter(-1)} className="px-10 py-6 md:py-8 bg-white dark:bg-stone-950 border border-stone-100 dark:border-stone-800 rounded-full md:rounded-[3rem] font-black uppercase text-[8px] md:text-[10px] tracking-widest shadow-xl flex items-center justify-center gap-3 group">
+                  <Icons.ArrowDown className="w-4 h-4 rotate-90" /> Anterior
                 </button>
-                <button disabled={selectedChapter >= selectedBook.chapters} onClick={() => navigateChapter(1)} className="px-14 md:px-32 py-6 md:py-8 bg-gold text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[9px] md:text-[10px] tracking-[0.4em] md:tracking-[0.5em] shadow-xl md:shadow-[0_30px_60px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 md:gap-6 group">
-                  Próximo <Icons.ArrowDown className="w-4 h-4 md:w-5 md:h-5 -rotate-90 group-hover:translate-x-2 md:group-hover:translate-x-3 transition-transform" />
+                <button disabled={selectedChapter >= selectedBook.chapters} onClick={() => navigateChapter(1)} className="px-12 py-6 md:py-8 bg-gold text-stone-900 rounded-full md:rounded-[3rem] font-black uppercase text-[8px] md:text-[10px] tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 group">
+                  Próximo <Icons.ArrowDown className="w-4 h-4 -rotate-90" />
                 </button>
               </div>
 
-              {/* PÍLULA DE NAVEGAÇÃO FLUTUANTE (MOBILE/ACCESS) */}
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] md:hidden flex items-center gap-2 bg-stone-900/90 backdrop-blur-xl border border-gold/30 rounded-full p-1.5 shadow-4xl animate-in slide-in-from-bottom-8">
-                 <button 
-                   onClick={() => scrollToVerse(activeVerse - 1)} 
-                   disabled={activeVerse <= 1}
-                   className="p-3 text-gold disabled:opacity-20"
-                 >
-                    <Icons.ArrowDown className="w-5 h-5 rotate-180" />
-                 </button>
-                 <div className="px-4 border-x border-gold/10">
-                    <span className="text-white font-serif font-bold text-lg tabular-nums">§ {activeVerse}</span>
-                 </div>
-                 <button 
-                   onClick={() => scrollToVerse(activeVerse + 1)} 
-                   disabled={activeVerse >= verses.length}
-                   className="p-3 text-gold disabled:opacity-20"
-                 >
-                    <Icons.ArrowDown className="w-5 h-5" />
-                 </button>
+              {/* BARRA FLUTUANTE MOBILE */}
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] md:hidden flex items-center gap-2 bg-stone-900/90 backdrop-blur-xl border border-gold/30 rounded-full p-1 shadow-4xl">
+                 <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="p-3 text-gold disabled:opacity-20"><Icons.ArrowDown className="w-5 h-5 rotate-180" /></button>
+                 <div className="px-3 border-x border-gold/10"><span className="text-white font-serif font-bold text-lg tabular-nums">§ {activeVerse}</span></div>
+                 <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={activeVerse >= verses.length} className="p-3 text-gold disabled:opacity-20"><Icons.ArrowDown className="w-5 h-5" /></button>
               </div>
 
             </div>
@@ -496,11 +437,11 @@ const Bible: React.FC = () => {
       </div>
       
       {viewMode === 'reading' && (
-        <div className="fixed bottom-24 right-4 md:bottom-32 md:right-8 z-[300] flex flex-col gap-3">
-           <button onClick={() => setFontSize(f => Math.min(f + 0.1, 2.5))} className="p-3.5 md:p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all">
+        <div className="fixed bottom-24 right-4 md:bottom-32 md:right-8 z-[300] flex flex-col gap-2">
+           <button onClick={() => setFontSize(f => Math.min(f + 0.1, 2.5))} className="p-3.5 md:p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-2xl shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all">
              <span className="text-lg md:text-xl font-bold">A+</span>
            </button>
-           <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-3.5 md:p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all">
+           <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-3.5 md:p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-2xl shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all">
              <span className="text-sm md:text-lg font-bold">A-</span>
            </button>
         </div>
