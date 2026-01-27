@@ -58,10 +58,12 @@ const App: React.FC = () => {
   const [lang, setLangState] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
   const [loading, setLoading] = useState(true);
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
+  const [routeHistory, setRouteHistory] = useState<AppRoute[]>([]);
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   const [user, setUser] = useState<User | null>(() => {
     try {
@@ -76,8 +78,12 @@ const App: React.FC = () => {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
   const connectivity = useOfflineMode();
 
+  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+    const top = e.currentTarget.scrollTop;
+    setShowScrollTop(top > 400);
+  }, []);
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 200);
     notificationService.initNotifications(lang);
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -96,6 +102,11 @@ const App: React.FC = () => {
       setDeferredPrompt(e);
     });
 
+    const timer = setTimeout(() => {
+        setLoading(false);
+        window.dispatchEvent(new CustomEvent('cathedra-ready'));
+    }, 400);
+
     return () => {
       clearTimeout(timer);
       window.removeEventListener('cathedra-open-ai-study', handleAIRequest);
@@ -110,16 +121,29 @@ const App: React.FC = () => {
   }, [deferredPrompt]);
 
   const navigateTo = useCallback((r: AppRoute) => {
-    // Somente rotas de IA profunda e comunidade são protegidas por login
     const protectedRoutes = [AppRoute.STUDY_MODE, AppRoute.COMMUNITY];
     if (protectedRoutes.includes(r) && !user) {
       setRoute(AppRoute.LOGIN);
     } else {
-      setRoute(r);
+      if (route !== r) {
+        setRouteHistory(prev => [...prev, route]);
+        setRoute(r);
+      }
     }
     setIsSidebarOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [user]);
+    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [user, route]);
+
+  const goBack = useCallback(() => {
+    if (routeHistory.length > 0) {
+      const prev = routeHistory[routeHistory.length - 1];
+      setRouteHistory(prevHistory => prevHistory.slice(0, -1));
+      setRoute(prev);
+      document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setRoute(AppRoute.DASHBOARD);
+    }
+  }, [routeHistory]);
 
   const handleSearch = useCallback(async (topic: string) => {
     if (!user) {
@@ -130,7 +154,6 @@ const App: React.FC = () => {
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
-      // Aqui simulamos o registro no Supabase/DB local do usuário
       const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
       localStorage.setItem('cathedra_history', JSON.stringify([result, ...history.slice(0, 19)]));
     } catch (e) { 
@@ -188,19 +211,36 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <main className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar">
+        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar scroll-smooth">
           <div className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
-             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-xl transition-colors"><Icons.Menu className="w-6 h-6" /></button>
-             
-             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
-                <Logo className="w-10 h-10 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110" />
-                <div className="flex flex-col">
-                  <span className="text-sm md:text-base font-serif font-black uppercase tracking-[0.25em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
-                  <span className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 leading-none mt-1">Digital Sanctuarium</span>
-                </div>
+             <div className="flex items-center gap-2">
+               {route !== AppRoute.DASHBOARD ? (
+                 <button 
+                  onClick={goBack}
+                  className="p-3 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-gold rounded-2xl hover:bg-gold hover:text-stone-900 transition-all active:scale-90"
+                  aria-label="Voltar"
+                 >
+                   <Icons.ArrowDown className="w-5 h-5 rotate-90" />
+                 </button>
+               ) : (
+                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-2xl transition-colors">
+                   <Icons.Menu className="w-6 h-6" />
+                 </button>
+               )}
+               
+               <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
+                  <Logo className="w-9 h-9 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110" />
+                  <div className="flex flex-col">
+                    <span className="text-sm md:text-base font-serif font-black uppercase tracking-[0.25em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 leading-none mt-1">Digital Sanctuarium</span>
+                  </div>
+               </div>
              </div>
 
              <div className="flex items-center gap-2">
+               <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-stone-400 hover:text-gold transition-colors hidden sm:block">
+                 <Icons.Search className="w-5 h-5" />
+               </button>
                {user?.role === 'admin' && (
                  <button onClick={() => setRoute(AppRoute.DIAGNOSTICS)} className="p-3 text-stone-400 hover:text-gold transition-colors"><Icons.Layout className="w-5 h-5" /></button>
                )}
@@ -222,6 +262,14 @@ const App: React.FC = () => {
           </div>
 
           <Footer onNavigate={navigateTo} />
+          
+          {/* BOTÃO SURSUM CORDA (SOBE) */}
+          <button 
+            onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className={`fixed bottom-24 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl border-2 border-white transition-all duration-500 active:scale-90 ${showScrollTop ? 'translate-y-0 opacity-100 rotate-0' : 'translate-y-20 opacity-0 rotate-180'}`}
+          >
+             <Icons.ArrowDown className="w-6 h-6 rotate-180" />
+          </button>
         </main>
 
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)] pb-[calc(12px+var(--sab))]">

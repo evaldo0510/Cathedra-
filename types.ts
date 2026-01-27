@@ -30,38 +30,29 @@ export enum AppRoute {
   DIAGNOSTICS = '/diagnostics'
 }
 
-export interface SourceMetadata {
+export interface ReadingProgress {
+  lastBibleChapter?: { book: string; chapter: number };
+  lastCatechismPara?: number;
+  streak: number;
+  totalMinutesRead: number;
+  completedBooks: string[];
+}
+
+export interface User {
+  id: string;
   name: string;
-  code: string; 
-  reliability: 'high' | 'medium';
-  uri?: string;
-}
-
-export interface UniversalSearchResult {
-  id: string;
-  type: 'verse' | 'catechism' | 'dogma' | 'saint' | 'aquinas' | 'magisterium';
-  title: string;
-  snippet: string;
-  source: SourceMetadata;
-  relevance: number;
-}
-
-export interface QuizQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation: string;
-  category: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
-
-export interface CatechismHierarchy {
-  id: string;
-  title: string;
-  level: 'part' | 'section' | 'chapter' | 'article' | 'paragraph';
-  number?: string;
-  children?: CatechismHierarchy[];
+  email: string;
+  role: 'pilgrim' | 'scholar' | 'admin';
+  isPremium?: boolean;
+  joinedAt: string;
+  avatar?: string;
+  progress: ReadingProgress;
+  stats: {
+    versesSaved: number;
+    studiesPerformed: number;
+    daysActive: number;
+    quizScore?: number;
+  };
 }
 
 export interface Verse {
@@ -69,6 +60,21 @@ export interface Verse {
   chapter: number;
   verse: number;
   text: string;
+}
+
+export interface CatechismParagraph {
+  number: number;
+  content: string;
+  context?: string;
+}
+
+export interface StudyResult {
+  topic: string;
+  summary: string;
+  bibleVerses: Verse[];
+  catechismParagraphs: CatechismParagraph[];
+  magisteriumDocs: any[];
+  saintsQuotes: any[];
 }
 
 export interface SavedItem {
@@ -84,14 +90,10 @@ export interface LiturgyInfo {
   color: 'green' | 'purple' | 'white' | 'red' | 'rose' | 'black';
   season: string;
   rank: string;
-  rankValue: number;
+  date: string;
   dayName: string;
   cycle: string;
   week: string;
-  psalterWeek?: string;
-  date: string;
-  isHolyDayOfObligation?: boolean;
-  saints?: string[];
 }
 
 export interface DailyLiturgyContent {
@@ -99,25 +101,7 @@ export interface DailyLiturgyContent {
   collect: string;
   firstReading: { reference: string; text: string };
   psalm: { title: string; text: string };
-  secondReading?: { reference: string; text: string };
-  gospel: { reference: string; text: string; homily?: string; reflection?: string; calendar?: any };
-  saint?: Saint;
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'pilgrim' | 'scholar' | 'admin';
-  isPremium?: boolean;
-  joinedAt: string;
-  avatar?: string;
-  stats: {
-    versesSaved: number;
-    studiesPerformed: number;
-    daysActive: number;
-    quizScore?: number;
-  };
+  gospel: { reference: string; text: string; reflection?: string };
 }
 
 export interface Saint {
@@ -129,67 +113,30 @@ export interface Saint {
   quote?: string;
 }
 
-export interface CatechismParagraph {
-  number: number;
-  content: string;
-  context?: string;
-}
-
-export interface MagisteriumDoc {
-  title: string;
-  source: string;
-  year: string;
-  summary: string;
-}
-
-export interface SaintQuote {
-  saint: string;
-  quote: string;
-}
-
-export interface StudyResult {
-  topic: string;
-  summary: string;
-  bibleVerses: Verse[];
-  catechismParagraphs: CatechismParagraph[];
-  magisteriumDocs: MagisteriumDoc[];
-  saintsQuotes: SaintQuote[];
-}
-
-export interface Dogma {
-  title: string;
-  definition: string;
-  council?: string;
-  year?: string;
-  period?: string;
-  tags?: string[];
-  sourceUrl?: string;
-}
-
-export interface Prayer {
+export interface UniversalSearchResult {
   id: string;
+  type: string;
   title: string;
-  latin?: string;
-  vernacular: string;
-  category: 'daily' | 'marian' | 'latin' | 'rosary' | 'litany' | string;
+  snippet: string;
+  source: { name: string; code: string; reliability: string };
+  relevance: number;
 }
 
-export interface Gospel {
-  reference: string;
-  text: string;
-  reflection?: string;
-  homily?: string;
-  calendar?: any;
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  category: string;
+  difficulty: string;
 }
 
 export interface ThomisticArticle {
   reference: string;
-  questionTitle: string;
   articleTitle: string;
   objections: { id: number; text: string }[];
-  sedContra: string;
   respondeo: string;
-  replies: { id: number; text: string }[];
 }
 
 export interface AquinasWork {
@@ -200,23 +147,46 @@ export interface AquinasWork {
   parts: string[];
 }
 
-export interface CommunityQuestion {
-  id: string;
-  userId: string;
-  userName: string;
+// Added Dogma interface to resolve module error
+export interface Dogma {
   title: string;
-  content: string;
-  createdAt: string;
-  votes: number;
-  category: string;
-  replies: CommunityReply[];
+  definition: string;
+  council?: string;
+  year?: string;
+  period?: string;
+  tags?: string[];
+  sourceUrl?: string;
 }
 
-export interface CommunityReply {
+// Added Gospel interface to resolve module error
+export interface Gospel {
+  reference: string;
+  text: string;
+  reflection?: string;
+}
+
+// Added MagisteriumDoc interface to resolve module error
+export interface MagisteriumDoc {
+  title: string;
+  source: string;
+  year: string;
+  summary: string;
+}
+
+// Added CommunityQuestion interface to resolve module error
+export interface CommunityQuestion {
   id: string;
-  userId: string;
-  userName: string;
+  title: string;
   content: string;
-  createdAt: string;
-  isAI?: boolean;
+  author: string;
+  timestamp: string;
+}
+
+// Added Prayer interface to resolve module error
+export interface Prayer {
+  id: string;
+  title: string;
+  latin?: string;
+  vernacular: string;
+  category: string;
 }

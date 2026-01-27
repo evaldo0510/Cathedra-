@@ -22,12 +22,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setTimeout(() => {
       const isAdmin = email === 'admin@cathedra.com';
       
+      // Fixed Error: Added missing 'progress' property to comply with User interface
       const mockUser: User = {
         id: Math.random().toString(36).substr(2, 9),
         name: isAdmin ? 'Administrador' : (isRegister ? name : email.split('@')[0]),
         email: email,
         role: isAdmin ? 'admin' : 'scholar',
         joinedAt: new Date().toISOString(),
+        progress: {
+          streak: 1,
+          totalMinutesRead: 0,
+          completedBooks: []
+        },
         stats: {
           versesSaved: 0,
           studiesPerformed: 0,

@@ -70,23 +70,17 @@ const Bible: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<Book>(CATHOLIC_BIBLE_BOOKS[0]);
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [activeVerse, setActiveVerse] = useState<number>(1);
-  const [fontSize, setFontSize] = useState(1.1); // Padrão igual ao Catecismo
+  const [fontSize, setFontSize] = useState(1.1);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    return () => {
-      setVerses(null); 
-    };
-  }, [selectedChapter, selectedBook]);
 
   const scrollToVerse = (vNum: number) => {
     if (!verses || vNum < 1 || vNum > verses.length) return;
     setActiveVerse(vNum);
     const el = document.getElementById(`v-${vNum}`);
     if (el) {
-      const offset = window.innerWidth < 768 ? 140 : 200;
+      const offset = 200;
       const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      document.getElementById('main-content')?.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 
@@ -106,7 +100,7 @@ const Bible: React.FC = () => {
         setActiveVerse(1);
       });
       
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'auto' });
     } catch (e) { 
       console.error("Erro ao carregar Escrituras:", e); 
     } finally { 
@@ -122,8 +116,22 @@ const Bible: React.FC = () => {
     }
   };
 
+  const Breadcrumbs = () => (
+    <nav className="flex items-center gap-2 mb-8 bg-white/50 dark:bg-stone-900/50 p-3 rounded-2xl w-fit border border-stone-100 dark:border-stone-800">
+      <button onClick={() => setViewMode('library')} className="text-[10px] font-black uppercase text-stone-400 hover:text-gold transition-colors">Biblioteca</button>
+      <Icons.ArrowDown className="w-2 h-2 -rotate-90 text-stone-300" />
+      <button onClick={() => setViewMode('chapters')} className={`text-[10px] font-black uppercase transition-colors ${viewMode === 'chapters' ? 'text-gold' : 'text-stone-400 hover:text-gold'}`}>{selectedBook.name}</button>
+      {viewMode === 'reading' && (
+        <>
+          <Icons.ArrowDown className="w-2 h-2 -rotate-90 text-stone-300" />
+          <span className="text-[10px] font-black uppercase text-gold">Cap. {selectedChapter}</span>
+        </>
+      )}
+    </nav>
+  );
+
   return (
-    <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-1000 pb-40 px-2 md:px-4">
+    <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700 pb-40 px-2 md:px-4">
       {viewMode === 'library' && (
         <div className="space-y-12 pt-6">
           <header className="text-center space-y-6">
@@ -151,8 +159,8 @@ const Bible: React.FC = () => {
       )}
 
       {viewMode === 'chapters' && (
-        <div className="space-y-10 animate-in slide-in-from-bottom-8 pt-6">
-           <button onClick={() => setViewMode('library')} className="flex items-center gap-2 text-gold text-[9px] font-black uppercase tracking-widest px-4 hover:translate-x-[-4px] transition-transform"><Icons.ArrowDown className="w-4 h-4 rotate-90" /> Biblioteca</button>
+        <div className="space-y-8 animate-in slide-in-from-right-4 pt-6">
+           <Breadcrumbs />
            <header className="text-center space-y-4">
               <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gold">{selectedBook.category}</span>
               <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100">{selectedBook.name}</h2>
@@ -168,15 +176,24 @@ const Bible: React.FC = () => {
 
       {viewMode === 'reading' && (
         <div className="min-h-screen pt-4 pb-40">
-          <nav className="sticky top-4 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-stone-800 shadow-2xl p-2 flex items-center justify-between mx-2 md:mx-0 mb-12">
-             <div className="flex items-center gap-1">
-                <button onClick={() => { setViewMode('library'); setVerses(null); }} className="p-3 bg-stone-900 dark:bg-stone-800 text-gold rounded-full hover:scale-105 transition-transform"><Icons.Home className="w-4 h-4" /></button>
-                <div className="px-4 font-serif font-bold text-lg text-stone-900 dark:text-stone-100">{selectedBook.name} {selectedChapter}</div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <Breadcrumbs />
+            <div className="flex bg-white dark:bg-stone-900 p-1 rounded-full border border-stone-100 dark:border-stone-800 shadow-sm self-start">
+               <button onClick={() => navigateChapter(-1)} disabled={selectedChapter <= 1} className="p-3 text-stone-300 hover:text-gold disabled:opacity-10"><Icons.ArrowDown className="w-4 h-4 rotate-90" /></button>
+               <div className="px-6 py-2 font-serif font-bold text-lg text-stone-700 dark:text-stone-300">Cap. {selectedChapter}</div>
+               <button onClick={() => navigateChapter(1)} disabled={selectedChapter >= selectedBook.chapters} className="p-3 text-stone-300 hover:text-gold disabled:opacity-10"><Icons.ArrowDown className="w-4 h-4 -rotate-90" /></button>
+            </div>
+          </div>
+
+          <nav className="sticky top-20 z-[130] bg-white/95 dark:bg-stone-900/95 backdrop-blur-2xl rounded-full border border-stone-200 dark:border-stone-800 shadow-2xl p-2 flex items-center justify-between mx-2 md:mx-0 mb-12">
+             <div className="flex items-center gap-3 px-4">
+                <div className="p-2 bg-gold/10 rounded-lg"><Icons.Pin className="w-4 h-4 text-gold" /></div>
+                <div className="font-serif font-bold text-lg text-stone-900 dark:text-stone-100">{selectedBook.name} {selectedChapter}</div>
              </div>
              <div className="flex items-center gap-4 px-4">
                 <button onClick={() => scrollToVerse(activeVerse - 1)} disabled={activeVerse <= 1} className="text-stone-300 hover:text-gold disabled:opacity-10 transition-colors"><Icons.ArrowDown className="w-5 h-5 rotate-180" /></button>
-                <div className="px-5 py-1.5 bg-gold/10 rounded-full border border-gold/20">
-                  <span className="text-gold font-serif font-bold text-xl tabular-nums">§ {activeVerse}</span>
+                <div className="px-5 py-1.5 bg-stone-900 dark:bg-gold rounded-full text-gold dark:text-stone-900 shadow-lg">
+                  <span className="font-serif font-bold text-xl tabular-nums">§ {activeVerse}</span>
                 </div>
                 <button onClick={() => scrollToVerse(activeVerse + 1)} disabled={!verses || activeVerse >= verses.length} className="text-stone-300 hover:text-gold disabled:opacity-10 transition-colors"><Icons.ArrowDown className="w-5 h-5" /></button>
              </div>
@@ -204,21 +221,14 @@ const Bible: React.FC = () => {
                </div>
              )}
           </div>
-
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] flex gap-3">
-             <button onClick={() => navigateChapter(-1)} disabled={selectedChapter <= 1} className="px-8 py-4 bg-stone-900 text-gold rounded-full font-black uppercase text-[10px] shadow-4xl active:scale-95 border border-gold/30 disabled:opacity-50">Anterior</button>
-             <button onClick={() => navigateChapter(1)} disabled={selectedChapter >= selectedBook.chapters} className="px-8 py-4 bg-gold text-stone-900 rounded-full font-black uppercase text-[10px] shadow-4xl active:scale-95 border border-white disabled:opacity-50">Próximo</button>
-          </div>
         </div>
       )}
 
-      {/* ACESSIBILIDADE FIXA (Harmonizada com Catechism.tsx) */}
-      {viewMode === 'reading' && (
-        <div className="fixed bottom-24 right-4 md:right-8 z-[300] flex flex-col gap-2">
-           <button onClick={() => setFontSize(f => Math.min(f + 0.1, 1.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"><span className="text-xl font-black">A+</span></button>
-           <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 dark:border-stone-700 text-stone-500 hover:text-gold transition-all"><span className="text-lg font-black">A-</span></button>
-        </div>
-      )}
+      {/* ACESSIBILIDADE FIXA */}
+      <div className="fixed bottom-24 left-4 md:left-8 z-[300] flex flex-col gap-2">
+          <button onClick={() => setFontSize(f => Math.min(f + 0.1, 1.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 text-stone-500 hover:text-gold transition-all"><span className="text-xl font-black">A+</span></button>
+          <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 text-stone-500 hover:text-gold transition-all"><span className="text-lg font-black">A-</span></button>
+      </div>
     </div>
   );
 };

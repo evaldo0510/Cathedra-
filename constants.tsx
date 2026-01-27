@@ -12,55 +12,51 @@ export const COLORS = {
 export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
   <div className={`relative flex items-center justify-center group ${className}`}>
     {/* Brilho de Fundo Dinâmico */}
-    <div className="absolute inset-0 bg-gold/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+    <div className="absolute inset-[-20%] bg-gold/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
     
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-2xl">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]">
       <defs>
         <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#d4af37" />
-          <stop offset="50%" stopColor="#fbfbfb" stopOpacity="0.3" />
+          <stop offset="50%" stopColor="#fbfbfb" />
           <stop offset="100%" stopColor="#b8952e" />
         </linearGradient>
-        <filter id="innerShadow">
-          <feOffset dx="0" dy="1" />
-          <feGaussianBlur stdDeviation="1" result="offset-blur" />
-          <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-          <feFlood floodColor="black" floodOpacity="0.5" result="color" />
-          <feComposite operator="in" in="color" in2="inverse" result="shadow" />
-          <feComposite operator="over" in="shadow" in2="SourceGraphic" />
+        <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
       </defs>
       
       {/* Anel de Glória Externo */}
-      <circle cx="50" cy="50" r="48" stroke="url(#goldGrad)" strokeWidth="0.5" strokeDasharray="4 4" className="opacity-40 animate-[spin_20s_linear_infinite]" />
+      <circle cx="50" cy="50" r="46" stroke="url(#goldGrad)" strokeWidth="0.75" strokeDasharray="4 6" className="opacity-40 animate-[spin_30s_linear_infinite]" />
       
       {/* Estrutura da Cathedra (Trono) */}
       <path 
         d="M25 75V35C25 29.4772 29.4772 25 35 25H65C70.5228 25 75 29.4772 75 35V75" 
         stroke="url(#goldGrad)" 
-        strokeWidth="4" 
+        strokeWidth="5" 
         strokeLinecap="round" 
-        filter="url(#innerShadow)"
+        style={{ filter: 'url(#goldGlow)' }}
       />
       
       {/* Base do Trono com chanfro */}
       <path 
         d="M20 75H80L85 85H15L20 75Z" 
         fill="#d4af37" 
-        fillOpacity="0.1"
+        fillOpacity="0.15"
         stroke="url(#goldGrad)" 
         strokeWidth="3" 
       />
       
       {/* Cruz Central (Chi-Rho inspirada) */}
-      <path d="M50 32V60" stroke="url(#goldGrad)" strokeWidth="4" strokeLinecap="round" />
-      <path d="M38 42H62" stroke="url(#goldGrad)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M50 32V63" stroke="url(#goldGrad)" strokeWidth="5" strokeLinecap="round" />
+      <path d="M36 44H64" stroke="url(#goldGrad)" strokeWidth="5" strokeLinecap="round" />
       
       {/* Detalhes Pontuais (As 4 Marcas da Igreja) */}
-      <circle cx="50" cy="15" r="2.5" fill="#d4af37" className="animate-pulse" />
-      <circle cx="85" cy="50" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:0.5s]" />
-      <circle cx="50" cy="85" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:1s]" />
-      <circle cx="15" cy="50" r="2.5" fill="#d4af37" className="animate-pulse [animation-delay:1.5s]" />
+      <circle cx="50" cy="15" r="3" fill="#d4af37" className="animate-pulse" />
+      <circle cx="85" cy="50" r="3" fill="#d4af37" className="animate-pulse [animation-delay:0.5s]" />
+      <circle cx="50" cy="85" r="3" fill="#d4af37" className="animate-pulse [animation-delay:1s]" />
+      <circle cx="15" cy="50" r="3" fill="#d4af37" className="animate-pulse [animation-delay:1.5s]" />
     </svg>
   </div>
 );
@@ -68,15 +64,15 @@ export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12"
 // Logo Mobile - Monograma de Alta Fidelidade
 export const MobileLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
   <div className={`relative flex items-center justify-center ${className}`}>
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-md">
       <path 
         d="M30 70V40C30 34.4772 34.4772 30 40 30H60C65.5228 30 70 34.4772 70 40V70" 
         stroke="#d4af37" 
-        strokeWidth="7" 
+        strokeWidth="8" 
         strokeLinecap="round" 
       />
-      <path d="M50 35V65" stroke="#d4af37" strokeWidth="7" strokeLinecap="round" />
-      <path d="M40 45H60" stroke="#d4af37" strokeWidth="7" strokeLinecap="round" />
+      <path d="M50 35V65" stroke="#d4af37" strokeWidth="8" strokeLinecap="round" />
+      <path d="M38 48H62" stroke="#d4af37" strokeWidth="8" strokeLinecap="round" />
     </svg>
   </div>
 );
