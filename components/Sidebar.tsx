@@ -27,28 +27,38 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       ]
     },
     {
+      title: 'Liturgia (Cultus)',
+      items: [
+        { name: 'Ordinário da Missa', icon: Icons.Cross, path: AppRoute.ORDO_MISSAE, subtitle: 'Missale Romanum' },
+        { name: 'Breviário', icon: Icons.Book, path: AppRoute.BREVIARY, subtitle: 'Ofício Divino' },
+        { name: 'Santo Rosário', icon: Icons.Star, path: AppRoute.ROSARY, subtitle: 'Mistérios de Maria' },
+        { name: 'Via Sacra', icon: Icons.Pin, path: AppRoute.VIA_CRUCIS, subtitle: 'Paixão do Senhor' },
+      ]
+    },
+    {
       title: 'Doutrina (Sacra Doctrina)',
       items: [
         { name: t('catechism'), icon: Icons.Cross, path: AppRoute.CATECHISM, subtitle: t('catechism_sub') },
-        { name: 'Magistério (Magisterium)', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'Autoridade da Igreja' },
-        { name: 'Dogmas de Fé', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'Verdades Imutáveis' },
-        { name: t('saints'), icon: Icons.Users, path: AppRoute.SAINTS, subtitle: t('saints_sub') },
+        { name: 'Magistério', icon: Icons.Globe, path: AppRoute.MAGISTERIUM, subtitle: 'Documentos da Igreja' },
+        { name: 'Dogmas', icon: Icons.Pin, path: AppRoute.DOGMAS, subtitle: 'Verdades Imutáveis' },
+        { name: 'Suma Teológica', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'Opera Omnia' },
+      ]
+    },
+    {
+      title: 'Espiritualidade (Anima)',
+      items: [
+        { name: 'Confissão (Poenitentia)', icon: Icons.Cross, path: AppRoute.POENITENTIA, subtitle: 'Exame de Consciência' },
+        { name: 'Ladainhas', icon: Icons.Message, path: AppRoute.LITANIES, subtitle: 'Súplicas da Igreja' },
+        { name: 'Lectio Divina', icon: Icons.Book, path: AppRoute.LECTIO_DIVINA, subtitle: 'Oração Escriturística' },
+        { name: 'Quiz (Certamen)', icon: Icons.Layout, path: AppRoute.CERTAMEN, subtitle: 'Testar Conhecimentos' },
       ]
     },
     {
       title: 'Estudos (Academia)',
       items: [
-        { name: t('study'), icon: Icons.Search, path: AppRoute.STUDY_MODE, subtitle: t('study_sub') },
-        { name: 'Aula Magna', icon: Icons.Users, path: AppRoute.COMMUNITY, subtitle: 'Diálogo Teológico' },
-        { name: 'Obras de S. Tomás', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA, subtitle: 'Opera Omnia' },
-        { name: 'Quiz (Certamen)', icon: Icons.Layout, path: AppRoute.CERTAMEN, subtitle: 'Duelo de Conhecimento' },
-      ]
-    },
-    {
-      title: 'Espiritualidade (Spiritus)',
-      items: [
-        { name: t('prayers'), icon: Icons.Feather, path: AppRoute.PRAYERS, subtitle: t('prayers_sub') },
-        { name: 'Lectio Divina', icon: Icons.Book, path: AppRoute.LECTIO_DIVINA, subtitle: 'Oração com as Escrituras' },
+        { name: 'Investigação IA', icon: Icons.Search, path: AppRoute.STUDY_MODE, subtitle: 'Analogias Teológicas' },
+        { name: 'Aula Magna', icon: Icons.Users, path: AppRoute.COMMUNITY, subtitle: 'Recurso Scholar' },
+        { name: 'Favoritos', icon: Icons.Star, path: AppRoute.FAVORITES, subtitle: 'Florilégio Pessoal' },
       ]
     }
   ];

@@ -1,95 +1,83 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import { Icons } from '../constants';
 import { searchSaint } from '../services/gemini';
 import { Saint } from '../types';
 import SacredImage from '../components/SacredImage';
 import { NATIVE_SAINTS } from '../services/nativeData';
-import { offlineStorage } from '../services/offlineStorage';
-import { useOfflineMode } from '../hooks/useOfflineMode';
+import { LangContext } from '../App';
 
-const CATEGORIES = ['Todos', 'Apóstolos', 'Mártires', 'Doutores', 'Virgens', 'Papas', 'Místicos', 'Fundadores'];
+const CATEGORIES = ['Todos', 'Apóstolos', 'Mártires', 'Doutores', 'Virgens', 'Místicos', 'Papass'];
 
 const Saints: React.FC = () => {
-  const { isOnline } = useOfflineMode();
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const { lang } = useContext(LangContext);
   const [selectedSaint, setSelectedSaint] = useState<Saint | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('Todos');
+  const [loadingAI, setLoadingAI] = useState(false);
 
-  // Usamos a lista nativa como base
-  const saints = NATIVE_SAINTS;
-
-  const handleSaintClick = async (saint: Saint) => {
+  // Carregamento instantâneo via base nativa local
+  const handleSaintClick = (saint: Saint) => {
     setSelectedSaint(saint);
-    setLoadingDetails(true);
+  };
 
+  const handleAIEnhance = async () => {
+    if (!selectedSaint) return;
+    setLoadingAI(true);
     try {
-      const storageId = `saint_${saint.name.replace(/\s+/g, '_')}`;
-      const local = await offlineStorage.getContent(storageId);
-      
-      if (local) {
-        setSelectedSaint(local);
-      } else if (isOnline) {
-        // IA utilizada apenas para o aprofundamento (Analogias e o que disseram)
-        const detailed = await searchSaint(saint.name);
-        const finalSaint = { ...saint, ...detailed };
-        setSelectedSaint(finalSaint);
-        await offlineStorage.saveContent(storageId, 'saint', saint.name, finalSaint);
-      }
-    } catch (e) { 
-      console.warn("Usando dados básicos do santo.");
+      // IA usada como ferramenta de aprofundamento erudito
+      const detailed = await searchSaint(selectedSaint.name);
+      setSelectedSaint({ ...selectedSaint, ...detailed });
+    } catch (e) {
+      console.warn("Houve um problema ao conectar com a IA. Exibindo dados de prateleira.");
     } finally {
-      setLoadingDetails(false);
+      setLoadingAI(false);
     }
   };
 
   const filteredSaints = useMemo(() => {
-    return (saints || []).filter(s => {
+    return NATIVE_SAINTS.filter(s => {
       const textMatch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           s.patronage.toLowerCase().includes(searchTerm.toLowerCase());
-      
       if (activeCategory === 'Todos') return textMatch;
-      
-      const categoryKeywords: Record<string, string[]> = {
-        'Apóstolos': ['apóstolo', 'apostolo'],
-        'Mártires': ['mártir', 'martir', 'martírio'],
-        'Doutores': ['doutor', 'doctor'],
-        'Virgens': ['virgem', 'virgo'],
-        'Papas': ['papa', 'pontífice'],
-        'Místicos': ['místico', 'mística', 'visões'],
-        'Fundadores': ['fundador', 'fundou']
-      };
-
-      const keywords = categoryKeywords[activeCategory] || [activeCategory.toLowerCase()];
-      return textMatch && keywords.some(k => s.patronage.toLowerCase().includes(k));
+      // Busca simples por tags nas biografias nativas
+      return textMatch && s.biography.toLowerCase().includes(activeCategory.toLowerCase().slice(0, -1));
     });
-  }, [saints, searchTerm, activeCategory]);
+  }, [searchTerm, activeCategory]);
 
   return (
-    <div className="space-y-10 page-enter pb-40">
-      <header className="text-center space-y-6 pt-6">
-        <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Santos (Sanctorum)</h2>
-        <p className="text-stone-400 italic text-xl font-serif">"O que os Santos disseram sobre o Caminho."</p>
+    <div className="space-y-10 page-enter pb-48">
+      <header className="text-center space-y-8 pt-8">
+        <div className="flex justify-center">
+          <div className="p-10 bg-white dark:bg-stone-900 rounded-[3rem] shadow-sacred border border-gold/20 rotate-3 transition-transform hover:rotate-0">
+            <Icons.Users className="w-16 h-16 text-sacred" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Sanctorum</h2>
+          <p className="text-stone-400 italic text-xl md:text-2xl font-serif max-w-2xl mx-auto leading-relaxed">
+            "Não temas, porque eu te remi; chamei-te pelo teu nome, tu és meu." — Isaías 43:1
+          </p>
+        </div>
 
-        <div className="max-w-2xl mx-auto px-4 space-y-6">
-          <div className="relative group">
-            <Icons.Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 group-focus-within:text-gold transition-colors" />
+        <div className="max-w-4xl mx-auto px-4 space-y-8 pt-4">
+          <div className="relative group max-w-2xl mx-auto">
+            <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-stone-300 group-focus-within:text-gold transition-colors" />
             <input 
               type="text"
-              placeholder="Buscar santo..."
+              placeholder="Pesquisar por nome ou patronato..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-3xl shadow-xl outline-none text-lg font-serif italic"
+              className="w-full pl-16 pr-8 py-6 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2.5rem] shadow-2xl outline-none text-xl font-serif italic focus:ring-16 focus:ring-gold/5 focus:border-gold transition-all"
             />
           </div>
-
-          <nav className="flex overflow-x-auto gap-2 no-scrollbar pb-2 justify-start md:justify-center">
+          
+          <nav className="flex overflow-x-auto gap-3 no-scrollbar pb-4 justify-start md:justify-center">
             {CATEGORIES.map(cat => (
               <button 
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeCategory === cat ? 'bg-sacred text-white border-sacred shadow-lg' : 'bg-white dark:bg-stone-900 text-stone-400 border-stone-100 dark:border-stone-800'}`}
+                className={`px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap shadow-sm ${activeCategory === cat ? 'bg-sacred text-white border-sacred scale-105' : 'bg-white dark:bg-stone-900 text-stone-400 border-stone-100 dark:border-stone-800 hover:border-gold'}`}
               >
                 {cat}
               </button>
@@ -98,64 +86,89 @@ const Saints: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 px-4">
+      {/* Grid de Santos Nativo */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4 max-w-7xl mx-auto">
         {filteredSaints.map((s, i) => (
           <article 
             key={i} 
             onClick={() => handleSaintClick(s)}
-            className="rounded-[2.5rem] bg-white dark:bg-stone-900 shadow-lg border border-stone-100 dark:border-stone-800 overflow-hidden cursor-pointer transition-all duration-500 group hover:border-gold hover:-translate-y-1"
+            className="rounded-[3rem] bg-white dark:bg-stone-900 shadow-xl border border-stone-50 dark:border-stone-800 overflow-hidden cursor-pointer transition-all duration-500 group hover:border-gold hover:-translate-y-2 hover:shadow-2xl"
           >
-            <div className="h-56 relative overflow-hidden">
+            <div className="h-64 relative overflow-hidden">
               <SacredImage src={s.image} alt={s.name} className="w-full h-full" priority={i < 4} />
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent flex items-end p-4">
-                 <span className="text-white text-[8px] font-black uppercase tracking-widest">Estudo Profundo</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+              <div className="absolute bottom-6 left-6 right-6">
+                <span className="text-[8px] font-black uppercase tracking-widest text-gold bg-stone-900/80 backdrop-blur-md px-3 py-1 rounded-full">{s.feastDay}</span>
               </div>
             </div>
-            <div className="p-6 space-y-1">
-              <span className="text-[9px] font-black uppercase text-gold">{s.feastDay}</span>
-              <h3 className="text-lg font-serif font-bold text-stone-900 dark:text-stone-100 truncate">{s.name}</h3>
-              <p className="text-[8px] text-stone-400 uppercase tracking-tighter">{s.patronage}</p>
+            <div className="p-8 space-y-2">
+              <h3 className="text-xl md:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-sacred transition-colors">{s.name}</h3>
+              <p className="text-[10px] text-stone-400 font-black uppercase tracking-widest leading-none">{s.patronage}</p>
             </div>
           </article>
         ))}
       </div>
 
+      {/* Modal de Detalhes Hagiográficos */}
       {selectedSaint && (
-        <div className="fixed inset-0 z-[500] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedSaint(null)}>
-          <div className="bg-white dark:bg-stone-900 w-full max-w-3xl max-h-[85vh] rounded-[3.5rem] shadow-4xl overflow-hidden flex flex-col animate-modal-zoom relative" onClick={e => e.stopPropagation()}>
-            <div className="h-64 md:h-80 w-full relative">
+        <div className="fixed inset-0 z-[600] bg-stone-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedSaint(null)}>
+          <div className="bg-white dark:bg-stone-900 w-full max-w-4xl max-h-[90vh] rounded-[4rem] shadow-4xl overflow-hidden flex flex-col animate-modal-zoom relative border border-white/10" onClick={e => e.stopPropagation()}>
+            
+            <div className="h-80 md:h-[450px] w-full relative group">
               <SacredImage src={selectedSaint.image} alt={selectedSaint.name} className="w-full h-full" priority={true} />
               <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-stone-900 via-transparent to-transparent" />
-              <button onClick={() => setSelectedSaint(null)} className="absolute top-6 right-6 p-4 bg-black/40 text-white rounded-full transition-all z-20 shadow-2xl">
-                <Icons.Cross className="w-5 h-5 rotate-45" />
+              
+              <button onClick={() => setSelectedSaint(null)} className="absolute top-8 right-8 p-4 bg-stone-900/50 hover:bg-sacred text-white rounded-full transition-all z-20 backdrop-blur-md">
+                <Icons.Cross className="w-6 h-6 rotate-45" />
               </button>
             </div>
 
-            <div className="p-8 md:p-12 flex-1 overflow-y-auto custom-scrollbar space-y-8 -mt-12 relative z-10">
-              <header className="space-y-4 text-center md:text-left">
-                 <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start">
-                    <span className="px-5 py-1.5 bg-gold text-stone-900 rounded-full text-[9px] font-black uppercase tracking-[0.3em] shadow-lg inline-block">{selectedSaint.feastDay}</span>
-                    {loadingDetails && <span className="text-[8px] font-black uppercase text-gold animate-pulse">Sintetizando Analogias IA...</span>}
+            <div className="p-10 md:p-16 flex-1 overflow-y-auto custom-scrollbar space-y-10 -mt-24 relative z-10">
+              <header className="space-y-6 text-center md:text-left">
+                 <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start">
+                    <span className="px-6 py-2 bg-gold text-stone-900 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">{selectedSaint.feastDay}</span>
+                    <button 
+                      onClick={handleAIEnhance}
+                      disabled={loadingAI}
+                      className="px-6 py-2 bg-sacred text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-stone-900 transition-all disabled:opacity-50 flex items-center gap-3"
+                    >
+                      {loadingAI ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Icons.Search className="w-3 h-3" />}
+                      Investigação Profunda IA
+                    </button>
                  </div>
-                 <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-none">{selectedSaint.name}</h2>
-                 <p className="text-sacred dark:text-gold text-lg md:text-2xl font-serif italic border-l-4 border-gold/30 pl-4">{selectedSaint.patronage}</p>
+                 <h2 className="text-5xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter leading-none">{selectedSaint.name}</h2>
+                 <p className="text-sacred dark:text-gold text-2xl md:text-3xl font-serif italic border-l-[10px] border-gold/20 pl-8 py-2">
+                   "{selectedSaint.patronage}"
+                 </p>
               </header>
 
-              <div className="prose dark:prose-invert max-w-none">
-                 <p className="text-lg md:text-xl font-serif text-stone-700 dark:text-stone-300 leading-relaxed text-justify whitespace-pre-wrap italic">
-                   {selectedSaint.biography || "Consultando o Martirológio..."}
+              <div className="prose prose-stone dark:prose-invert max-w-none">
+                 <p className="text-xl md:text-2xl font-serif text-stone-700 dark:text-stone-300 leading-relaxed text-justify indent-10 whitespace-pre-wrap">
+                   {selectedSaint.biography}
                  </p>
               </div>
 
               {selectedSaint.quote && (
-                <div className="bg-stone-50 dark:bg-stone-800 p-8 rounded-[2.5rem] border-l-8 border-gold">
-                   <p className="text-xl font-serif italic">"{selectedSaint.quote}"</p>
+                <div className="bg-[#fcf8e8] dark:bg-stone-800/40 p-10 md:p-14 rounded-[3.5rem] border-l-[16px] border-gold shadow-inner relative overflow-hidden group">
+                   <Icons.Feather className="absolute top-0 right-0 w-48 h-48 opacity-[0.03] group-hover:rotate-12 transition-transform duration-1000" />
+                   <p className="text-2xl md:text-4xl font-serif italic text-stone-800 dark:text-stone-200 leading-snug tracking-tight">
+                     "{selectedSaint.quote}"
+                   </p>
+                   <footer className="mt-6 flex items-center gap-4">
+                      <div className="h-px w-12 bg-gold/30" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gold">{selectedSaint.name}</span>
+                   </footer>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      <footer className="text-center pt-10 pb-20 opacity-30">
+         <p className="text-[10px] font-black uppercase tracking-[1em] mb-4">Omnes Sancti et Sanctæ Dei</p>
+         <Icons.Cross className="w-8 h-8 mx-auto" />
+      </footer>
     </div>
   );
 };

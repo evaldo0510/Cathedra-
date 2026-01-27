@@ -18,6 +18,7 @@ import Profile from './pages/Profile';
 import Community from './pages/Community';
 import LectioDivina from './pages/LectioDivina';
 import Checkout from './pages/Checkout';
+import Admin from './pages/Admin';
 import Poenitentia from './pages/Poenitentia';
 import OrdoMissae from './pages/OrdoMissae';
 import Rosary from './pages/Rosary';
@@ -26,6 +27,8 @@ import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import Diagnostics from './pages/Diagnostics';
 import Favorites from './pages/Favorites';
+import Breviary from './pages/Breviary';
+import Missal from './pages/Missal';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
@@ -59,12 +62,18 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('cathedra_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('cathedra_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Erro ao carregar usuário:", e);
+      return null;
+    }
   });
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
 
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
   const connectivity = useOfflineMode();
 
   useEffect(() => {
@@ -73,49 +82,61 @@ const App: React.FC = () => {
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
-    const handleBeforeInstall = (e: any) => {
-      e.preventDefault();
-      console.log('Evento beforeinstallprompt capturado');
-      setDeferredPrompt(e);
+    const handleAIRequest = (e: any) => {
+      if (!user) {
+        setRoute(AppRoute.LOGIN);
+        return;
+      }
+      handleSearch(e.detail.topic);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('cathedra-open-ai-study', handleAIRequest);
+    window.addEventListener('beforeinstallprompt', (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('cathedra-open-ai-study', handleAIRequest);
     };
-  }, [lang, isDark]);
+  }, [lang, isDark, user]);
 
   const handleInstall = useCallback(async () => {
-    if (!deferredPrompt) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS) {
-        alert("Para baixar no iPhone:\n1. Toque no botão de 'Compartilhar' (ícone quadrado com seta)\n2. Role para baixo e selecione 'Adicionar à Tela de Início'.");
-      } else {
-        alert("A opção de instalação ainda não está disponível. Tente atualizar a página ou verifique se já possui o app instalado no menu do navegador.");
-      }
-      return;
-    }
-    
+    if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`Usuário respondeu à instalação: ${outcome}`);
     if (outcome === 'accepted') setDeferredPrompt(null);
   }, [deferredPrompt]);
 
   const navigateTo = useCallback((r: AppRoute) => {
-    setRoute(r);
+    // Somente rotas de IA profunda e comunidade são protegidas por login
+    const protectedRoutes = [AppRoute.STUDY_MODE, AppRoute.COMMUNITY];
+    if (protectedRoutes.includes(r) && !user) {
+      setRoute(AppRoute.LOGIN);
+    } else {
+      setRoute(r);
+    }
     setIsSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [user]);
 
   const handleSearch = useCallback(async (topic: string) => {
+    if (!user) {
+      setRoute(AppRoute.LOGIN);
+      return;
+    }
     setRoute(AppRoute.STUDY_MODE);
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
-    } catch (e) { console.error(e); } 
-  }, [lang]);
+      // Aqui simulamos o registro no Supabase/DB local do usuário
+      const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
+      localStorage.setItem('cathedra_history', JSON.stringify([result, ...history.slice(0, 19)]));
+    } catch (e) { 
+      console.error("Erro na busca IA:", e); 
+    } 
+  }, [lang, user]);
 
   const t = useCallback((key: string) => {
     return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS['en'][key] || key;
@@ -126,16 +147,15 @@ const App: React.FC = () => {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
       case AppRoute.BIBLE: return <Bible />;
       case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
-      case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
-      case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
+      case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.PROFILE); }} />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
       case AppRoute.MAGISTERIUM: return <Magisterium />;
-      case AppRoute.DOGMAS: return <Dogmas />;
       case AppRoute.SAINTS: return <Saints />;
-      case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
-      case AppRoute.PRAYERS: return <Prayers />;
       case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
+      case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
+      case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
+      case AppRoute.PRAYERS: return <Prayers />;
       case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.CERTAMEN: return <Certamen />;
       case AppRoute.POENITENTIA: return <Poenitentia />;
@@ -143,10 +163,12 @@ const App: React.FC = () => {
       case AppRoute.ROSARY: return <Rosary />;
       case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
       case AppRoute.LITANIES: return <Litanies />;
+      case AppRoute.BREVIARY: return <Breviary />;
+      case AppRoute.MISSAL: return <Missal />;
       case AppRoute.FAVORITES: return <Favorites />;
-      case AppRoute.DIAGNOSTICS: return <Diagnostics />;
-      case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
+      case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
+      case AppRoute.DIAGNOSTICS: return user?.role === 'admin' ? <Diagnostics /> : <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
       default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
     }
   }, [route, user, lang, handleSearch, navigateTo, studyData]);
@@ -166,43 +188,48 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <main className="flex-1 overflow-y-auto flex flex-col relative pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar">
           <div className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-xl transition-colors"><Icons.Menu className="w-6 h-6" /></button>
              
              <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
-                <Logo className="w-10 h-10 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110 group-active:scale-95" />
+                <Logo className="w-10 h-10 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110" />
                 <div className="flex flex-col">
                   <span className="text-sm md:text-base font-serif font-black uppercase tracking-[0.25em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
                   <span className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 leading-none mt-1">Digital Sanctuarium</span>
                 </div>
              </div>
 
-             <button 
-              onClick={() => {
-                const next = !isDark;
-                setIsDark(next);
-                localStorage.setItem('cathedra_dark', String(next));
-              }} 
-              className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700 transition-all active:scale-90"
-             >
-              {isDark ? <Icons.Star className="w-5 h-5 text-gold fill-current" /> : <Icons.History className="w-5 h-5" />}
-             </button>
+             <div className="flex items-center gap-2">
+               {user?.role === 'admin' && (
+                 <button onClick={() => setRoute(AppRoute.DIAGNOSTICS)} className="p-3 text-stone-400 hover:text-gold transition-colors"><Icons.Layout className="w-5 h-5" /></button>
+               )}
+               <button 
+                onClick={() => {
+                  const next = !isDark;
+                  setIsDark(next);
+                  localStorage.setItem('cathedra_dark', String(next));
+                }} 
+                className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700 transition-all"
+               >
+                {isDark ? <Icons.Star className="w-5 h-5 text-gold fill-current" /> : <Icons.History className="w-5 h-5" />}
+               </button>
+             </div>
           </div>
 
-          <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto">
+          <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto page-enter">
             {content}
           </div>
 
           <Footer onNavigate={navigateTo} />
         </main>
 
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)] pb-[calc(12px+var(--sab))]">
           {[
             { id: AppRoute.DASHBOARD, icon: Icons.Home, label: 'Início' },
             { id: AppRoute.BIBLE, icon: Icons.Book, label: 'Bíblia' },
-            { id: AppRoute.DAILY_LITURGY, icon: Icons.History, label: 'Liturgia' },
-            { id: AppRoute.PROFILE, icon: Icons.Users, label: 'Perfil' }
+            { id: AppRoute.STUDY_MODE, icon: Icons.Search, label: 'IA' },
+            { id: AppRoute.PROFILE, icon: Icons.Users, label: 'Membro' }
           ].map(item => (
             <button 
               key={item.id}
