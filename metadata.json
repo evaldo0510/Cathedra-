@@ -12,7 +12,6 @@
   "prefer_related_applications": false,
   "categories": [
     "education",
-    "books",
     "religious"
   ],
   "shortcuts": [
@@ -51,15 +50,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=1080&h=1920&fit=crop",
-      "sizes": "1080x1920",
-      "type": "image/jpeg",
-      "form_factor": "narrow",
-      "label": "Interface Imersiva de Estudo"
     }
   ],
   "requestFramePermissions": []

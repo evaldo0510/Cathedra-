@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useContext, memo, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useContext, memo, useMemo, useRef } from 'react';
 import { Icons } from '../constants';
 import { getBibleVersesLocal, CATHOLIC_BIBLE_BOOKS, Book } from '../services/bibleLocal';
 import { fetchExternalBibleText } from '../services/bibleApi';
@@ -8,9 +8,10 @@ import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
 import { offlineStorage } from '../services/offlineStorage';
 
-const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter, fontSize, isImmersive }: { 
+const VerseItem = memo(({ v, isActive, isReading, onSelect, bookName, chapter, fontSize, isImmersive }: { 
   v: Verse, 
   isActive: boolean, 
+  isReading: boolean,
   onSelect: (n: number) => void,
   bookName: string,
   chapter: number,
@@ -24,7 +25,7 @@ const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter, fontSize, is
       <span 
         id={`v-${v.verse}`}
         onClick={() => onSelect(v.verse)}
-        className={`inline transition-all duration-300 cursor-pointer px-0.5 rounded ${isActive ? 'bg-gold/20 font-bold ring-2 ring-gold/10' : 'hover:text-gold'}`}
+        className={`inline transition-all duration-300 cursor-pointer px-0.5 rounded ${isReading ? 'bg-gold/40 text-stone-900 font-bold ring-2 ring-gold/20' : isActive ? 'bg-gold/20 font-bold' : 'hover:text-gold'}`}
       >
         <sup className="text-[0.6em] font-black mr-1 text-gold/60">{v.verse}</sup>
         {v.text}{' '}
@@ -37,19 +38,21 @@ const VerseItem = memo(({ v, isActive, onSelect, bookName, chapter, fontSize, is
       id={`v-${v.verse}`}
       onClick={() => onSelect(v.verse)}
       className={`p-6 md:p-10 rounded-[2.5rem] border-2 transition-all duration-500 group relative overflow-hidden mb-6 cursor-pointer ${
-        isActive 
-          ? 'bg-gold/15 border-gold shadow-xl scale-[1.01] z-10' 
-          : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold/30'
+        isReading 
+          ? 'bg-gold/30 border-gold shadow-[0_0_40px_rgba(212,175,55,0.3)] scale-[1.02] z-20'
+          : isActive 
+            ? 'bg-gold/15 border-gold shadow-xl scale-[1.01] z-10' 
+            : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold/30'
       }`}
       style={style}
     >
       <header className="flex justify-between items-center mb-6">
-        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isActive ? 'bg-gold text-stone-900' : 'bg-stone-100 dark:bg-stone-700 text-stone-500'}`}>
-          § {v.verse}
+        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isReading ? 'bg-stone-900 text-gold' : isActive ? 'bg-gold text-stone-900' : 'bg-stone-100 dark:bg-stone-700 text-stone-500'}`}>
+          § {v.verse} {isReading && "• Lendo..."}
         </div>
-        {isActive && <ActionButtons itemId={`v_${bookName}_${chapter}_${v.verse}`} type="verse" title={`${bookName} ${chapter}:${v.verse}`} content={v.text} className="scale-90" />}
+        {(isActive || isReading) && <ActionButtons itemId={`v_${bookName}_${chapter}_${v.verse}`} type="verse" title={`${bookName} ${chapter}:${v.verse}`} content={v.text} className="scale-90" />}
       </header>
-      <p className={`font-serif leading-relaxed text-justify transition-all ${isActive ? 'text-stone-900 dark:text-stone-50' : 'text-stone-800 dark:text-stone-200'}`}>
+      <p className={`font-serif leading-relaxed text-justify transition-all ${isReading ? 'text-stone-950 dark:text-white font-bold' : isActive ? 'text-stone-900 dark:text-stone-50' : 'text-stone-800 dark:text-stone-200'}`}>
         {v.text}
       </p>
     </article>
@@ -68,7 +71,93 @@ const Bible: React.FC = () => {
   const [activeVerse, setActiveVerse] = useState<number>(1);
   const [fontSize, setFontSize] = useState(1.15);
 
+  // --- Speech Engine State ---
+  const [isReading, setIsReading] = useState(false);
+  const [readingVerseIndex, setReadingVerseIndex] = useState<number | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>('');
+  const [rate, setRate] = useState(0.9);
+  const [pitch, setPitch] = useState(1.0);
+  const [showSpeechSettings, setShowSpeechSettings] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices.filter(v => v.lang.startsWith('pt') || v.lang.startsWith('en')));
+      // Tenta selecionar uma voz premium PT por padrão
+      const defaultVoice = availableVoices.find(v => v.name.includes('Google') && v.lang.startsWith('pt')) || availableVoices.find(v => v.lang.startsWith('pt'));
+      if (defaultVoice) setSelectedVoice(defaultVoice.name);
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const stopReading = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsReading(false);
+    setReadingVerseIndex(null);
+  }, []);
+
+  const readVerse = useCallback((index: number) => {
+    if (!verses || index >= verses.length) {
+      stopReading();
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    setReadingVerseIndex(index);
+    const verse = verses[index];
+    const utterance = new SpeechSynthesisUtterance(verse.text);
+    
+    const voice = voices.find(v => v.name === selectedVoice);
+    if (voice) utterance.voice = voice;
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+
+    utterance.onend = () => {
+      if (isReading) {
+        readVerse(index + 1);
+      }
+    };
+
+    utterance.onerror = () => stopReading();
+
+    speechRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+    
+    // Auto-scroll para o versículo lido
+    const element = document.getElementById(`v-${verse.verse}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [verses, voices, selectedVoice, rate, pitch, isReading, stopReading]);
+
+  const toggleReading = () => {
+    if (isReading) {
+      window.speechSynthesis.pause();
+      setIsReading(false);
+    } else {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+        setIsReading(true);
+      } else {
+        setIsReading(true);
+        // Começa do versículo ativo ou do início
+        const startIdx = activeVerse > 1 ? activeVerse - 1 : 0;
+        readVerse(startIdx);
+      }
+    }
+  };
+
+  // --- End Speech Engine Logic ---
+
   const loadContent = useCallback(async (bookName: string, chapter: number) => {
+    stopReading();
     setLoading(true);
     try {
       let data = await offlineStorage.getBibleVerses(bookName, chapter);
@@ -95,7 +184,7 @@ const Bible: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [stopReading]);
 
   const navigateChapter = (dir: number) => {
     const next = selectedChapter + dir;
@@ -133,7 +222,6 @@ const Bible: React.FC = () => {
         </button>
       </header>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-        {/* Fix: Explicitly cast Object.entries to ensure 'books' is not inferred as 'unknown' */}
         {(Object.entries(groupedBooks) as [string, Book[]][]).map(([cat, books]) => (
           <div key={cat} className="space-y-2">
             <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-gold/60 px-2">{cat}</h4>
@@ -166,12 +254,13 @@ const Bible: React.FC = () => {
         <div className="fixed inset-0 z-[1000] overflow-y-auto bg-[#fdfcf8] dark:bg-[#050505] animate-in fade-in duration-500 p-6 md:p-20">
           <div className="max-w-3xl mx-auto">
             <header className="mb-20 text-center space-y-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gold/40">Nova Vulgata / CNBB</span>
               <h1 className="text-5xl md:text-7xl font-serif font-bold tracking-tight dark:text-gold">{selectedBook.name} {selectedChapter}</h1>
               <div className="h-px w-20 bg-gold/30 mx-auto" />
             </header>
             <div className="font-serif leading-[1.8] text-justify indent-8 text-stone-800 dark:text-stone-300" style={{ fontSize: `${fontSize * 1.2}rem` }}>
-              {verses?.map(v => (
-                <VerseItem key={v.verse} v={v} isActive={activeVerse === v.verse} onSelect={setActiveVerse} bookName={selectedBook.name} chapter={selectedChapter} fontSize={fontSize} isImmersive={true} />
+              {verses?.map((v, i) => (
+                <VerseItem key={v.verse} v={v} isActive={activeVerse === v.verse} isReading={readingVerseIndex === i} onSelect={setActiveVerse} bookName={selectedBook.name} chapter={selectedChapter} fontSize={fontSize} isImmersive={true} />
               ))}
             </div>
             <button onClick={() => setIsImmersive(false)} className="fixed bottom-10 right-10 p-5 bg-gold text-stone-900 rounded-full shadow-4xl hover:scale-110 transition-all"><Icons.Cross className="w-6 h-6 rotate-45" /></button>
@@ -182,8 +271,9 @@ const Bible: React.FC = () => {
       {viewMode === 'library' && (
         <div className="space-y-12 pt-6">
           <header className="text-center space-y-4">
-            <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter">Sagradas Escrituras</h2>
-            <p className="text-stone-400 italic text-xl font-serif">A Palavra Viva em suas mãos.</p>
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-sacred">Cânon Bíblico Católico</span>
+            <h2 className="text-5xl md:text-8xl font-serif font-bold text-stone-900 dark:text-gold tracking-tighter leading-none">Scriptuarium</h2>
+            <p className="text-stone-400 italic text-xl font-serif">Fonte: Nova Vulgata (Tradução Oficial)</p>
           </header>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
              {CATHOLIC_BIBLE_BOOKS.map((b, i) => (
@@ -225,10 +315,20 @@ const Bible: React.FC = () => {
               <button onClick={() => setIsBookshelfOpen(true)} className="p-3 bg-gold/10 text-gold rounded-2xl hover:bg-gold/20 transition-all" title="Mudar Livro">
                 <Icons.Book className="w-5 h-5" />
               </button>
-              <h3 className="text-2xl font-serif font-bold dark:text-stone-100">{selectedBook.name} {selectedChapter}</h3>
+              <div>
+                <h3 className="text-2xl font-serif font-bold dark:text-stone-100">{selectedBook.name} {selectedChapter}</h3>
+                <p className="text-[7px] font-black uppercase text-stone-400 tracking-widest">Fonte Oficial: Nova Vulgata</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-               <button onClick={() => setIsImmersive(true)} className="px-6 py-3 bg-stone-900 text-gold rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Modo Imersivo</button>
+               <button 
+                onClick={toggleReading} 
+                className={`p-3 rounded-2xl shadow-xl transition-all flex items-center gap-2 px-5 ${isReading ? 'bg-sacred text-white' : 'bg-stone-900 text-gold hover:scale-105'}`}
+               >
+                 {isReading ? <Icons.Stop className="w-5 h-5" /> : <Icons.Audio className="w-5 h-5" />}
+                 <span className="text-[10px] font-black uppercase tracking-widest">{isReading ? 'Pausar' : 'Ouvir'}</span>
+               </button>
+               <button onClick={() => setIsImmersive(true)} className="px-6 py-3 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 border border-stone-100 dark:border-stone-700 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Modo Imersivo</button>
                <div className="flex bg-white dark:bg-stone-900 p-1 rounded-full border border-stone-100 dark:border-stone-800 shadow-xl">
                   <button onClick={() => navigateChapter(-1)} disabled={selectedChapter <= 1} className="p-3 text-stone-300 hover:text-gold disabled:opacity-10"><Icons.ArrowDown className="w-4 h-4 rotate-90" /></button>
                   <button onClick={() => navigateChapter(1)} disabled={selectedChapter >= selectedBook.chapters} className="p-3 text-stone-300 hover:text-gold disabled:opacity-10"><Icons.ArrowDown className="w-4 h-4 -rotate-90" /></button>
@@ -244,8 +344,8 @@ const Bible: React.FC = () => {
                </div>
              ) : verses && verses.length > 0 ? (
                <div className="space-y-2">
-                  {verses.map(v => (
-                    <VerseItem key={v.verse} v={v} isActive={activeVerse === v.verse} onSelect={setActiveVerse} bookName={selectedBook.name} chapter={selectedChapter} fontSize={fontSize} />
+                  {verses.map((v, i) => (
+                    <VerseItem key={v.verse} v={v} isActive={activeVerse === v.verse} isReading={readingVerseIndex === i} onSelect={setActiveVerse} bookName={selectedBook.name} chapter={selectedChapter} fontSize={fontSize} />
                   ))}
                </div>
              ) : (
@@ -256,6 +356,63 @@ const Bible: React.FC = () => {
                </div>
              )}
           </div>
+        </div>
+      )}
+
+      {/* --- FLOATING SPEECH CONTROLS --- */}
+      {isReading && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[400] w-[90%] max-w-lg animate-in slide-in-from-bottom-8">
+           <div className="bg-stone-950/95 backdrop-blur-2xl p-4 rounded-[2.5rem] shadow-4xl border border-white/10 flex flex-col gap-4">
+              <div className="flex items-center justify-between px-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Lectorium Activo</span>
+                 </div>
+                 <button onClick={() => setShowSpeechSettings(!showSpeechSettings)} className="p-2 text-stone-400 hover:text-gold transition-all">
+                    <Icons.Layout className="w-5 h-5" />
+                 </button>
+              </div>
+
+              {showSpeechSettings && (
+                <div className="px-4 pb-4 space-y-4 animate-in fade-in zoom-in-95">
+                   <div className="space-y-1">
+                      <label className="text-[8px] font-black uppercase text-stone-500">Vox (Voz)</label>
+                      <select 
+                        value={selectedVoice} 
+                        onChange={(e) => setSelectedVoice(e.target.value)}
+                        className="w-full bg-stone-900 text-white text-xs border-none rounded-xl p-2 outline-none"
+                      >
+                         {voices.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+                      </select>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                         <label className="text-[8px] font-black uppercase text-stone-500">Velocidade: {rate.toFixed(1)}x</label>
+                         <input type="range" min="0.5" max="2" step="0.1" value={rate} onChange={e => setRate(parseFloat(e.target.value))} className="w-full accent-gold" />
+                      </div>
+                      <div className="space-y-1">
+                         <label className="text-[8px] font-black uppercase text-stone-500">Tom: {pitch.toFixed(1)}</label>
+                         <input type="range" min="0.5" max="2" step="0.1" value={pitch} onChange={e => setPitch(parseFloat(e.target.value))} className="w-full accent-gold" />
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-6 pb-2">
+                 <button onClick={() => { if(readingVerseIndex !== null) readVerse(Math.max(0, readingVerseIndex - 1)); }} className="p-3 text-stone-400 hover:text-white transition-all">
+                    <Icons.ArrowDown className="w-6 h-6 rotate-90" />
+                 </button>
+                 <button onClick={toggleReading} className="w-16 h-16 bg-gold text-stone-950 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-all">
+                    <Icons.Stop className="w-8 h-8" />
+                 </button>
+                 <button onClick={() => { if(readingVerseIndex !== null && verses) readVerse(Math.min(verses.length - 1, readingVerseIndex + 1)); }} className="p-3 text-stone-400 hover:text-white transition-all">
+                    <Icons.ArrowDown className="w-6 h-6 -rotate-90" />
+                 </button>
+                 <button onClick={stopReading} className="p-3 text-red-500 hover:bg-red-500/10 rounded-full transition-all">
+                    <Icons.Cross className="w-6 h-6 rotate-45" />
+                 </button>
+              </div>
+           </div>
         </div>
       )}
 

@@ -12,29 +12,21 @@ import { CatechismParagraph } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { LangContext } from '../App';
 
-const ParagraphItem = memo(({ p, fontSize, isActive, onInvestigate }: { 
+/**
+ * Componente interno de renderização do conteúdo do parágrafo.
+ * Separado para evitar re-renders desnecessários e ser usado dentro do wrapper virtual.
+ */
+const ParagraphContent = memo(({ p, fontSize, isActive, onInvestigate }: { 
   p: CatechismParagraph, 
   fontSize: number, 
   isActive: boolean,
   onInvestigate: (p: CatechismParagraph) => void 
 }) => {
-  const itemRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isActive && itemRef.current) {
-      const yOffset = -180; 
-      const y = itemRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  }, [isActive]);
-
   return (
     <article 
-      ref={itemRef}
-      id={`para-${p.number}`}
-      className={`p-6 md:p-10 rounded-[2.5rem] border-2 transition-all duration-700 group relative overflow-hidden mb-6 ${
+      className={`p-6 md:p-10 rounded-[2.5rem] border-2 transition-all duration-700 group relative overflow-hidden h-full ${
         isActive 
-          ? 'bg-gold/15 border-gold shadow-[0_20px_50px_rgba(212,175,55,0.2)] ring-8 ring-gold/5 scale-[1.02] z-10' 
+          ? 'bg-gold/15 border-gold shadow-[0_20px_50px_rgba(212,175,55,0.2)] ring-8 ring-gold/5 scale-[1.01] z-10' 
           : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold/30'
       }`}
       style={{ fontSize: `${fontSize}rem` }}
@@ -64,6 +56,75 @@ const ParagraphItem = memo(({ p, fontSize, isActive, onInvestigate }: {
           {p.content}
        </p>
     </article>
+  );
+});
+
+/**
+ * Componente de Virtualização (Windowing) para cada parágrafo.
+ * Monitora a visibilidade e descarrega o conteúdo quando fora de vista.
+ */
+const VirtualParagraph = memo(({ p, fontSize, isActive, onInvestigate }: { 
+  p: CatechismParagraph, 
+  fontSize: number, 
+  isActive: boolean,
+  onInvestigate: (p: CatechismParagraph) => void 
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Lógica de Scroll para parágrafo ativo
+  useEffect(() => {
+    if (isActive && containerRef.current) {
+      setIsVisible(true); // Força visibilidade se for o alvo
+      const yOffset = -180; 
+      const y = containerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }, [isActive]);
+
+  // Observer de Interseção para renderização sob demanda
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Se estiver ativo (jump-to), mantemos renderizado para evitar saltos
+        if (isActive) {
+          setIsVisible(true);
+          return;
+        }
+        setIsVisible(entry.isIntersecting);
+      },
+      { 
+        // Margem de segurança: carrega 600px antes/depois de entrar na tela
+        rootMargin: '600px 0px 600px 0px',
+        threshold: 0.01 
+      }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [isActive]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      id={`para-${p.number}`} 
+      className="mb-6 min-h-[160px] transition-opacity duration-300"
+    >
+      {isVisible ? (
+        <ParagraphContent p={p} fontSize={fontSize} isActive={isActive} onInvestigate={onInvestigate} />
+      ) : (
+        /* Placeholder leve para preservar espaço e scroll */
+        <div className="p-10 rounded-[2.5rem] border-2 border-dashed border-stone-100 dark:border-stone-800 bg-stone-50/20 dark:bg-stone-900/20 flex flex-col items-center justify-center space-y-4 h-[200px]">
+           <div className="w-10 h-10 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center">
+             <span className="text-[10px] font-black text-stone-300">§ {p.number}</span>
+           </div>
+           <p className="text-[9px] font-black uppercase tracking-widest text-stone-200 dark:text-stone-700">Contemplatio Profunda...</p>
+        </div>
+      )}
+    </div>
   );
 });
 
@@ -168,7 +229,7 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
             </div>
             <div className="space-y-4 px-2">
               {searchResults.map(p => (
-                <ParagraphItem 
+                <VirtualParagraph 
                   key={`res_${p.number}`} 
                   p={p} 
                   fontSize={fontSize} 
@@ -232,7 +293,7 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
                                    {isChapterOpen && (
                                      <div className="px-2 pb-4 pt-4 max-h-[600px] overflow-y-auto custom-scrollbar">
                                         {chapterParas.map(p => (
-                                          <ParagraphItem 
+                                          <VirtualParagraph 
                                             key={`${chapterKey}_${p.number}`} 
                                             p={p} 
                                             fontSize={fontSize} 

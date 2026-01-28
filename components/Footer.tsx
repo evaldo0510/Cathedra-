@@ -9,84 +9,123 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const scrollToTop = () => {
-    const mainArea = document.querySelector('main');
+    const mainArea = document.getElementById('main-content');
     if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <footer className="bg-[#0c0a09] text-stone-400 border-t border-white/5 pt-16 pb-12 px-6 overflow-hidden">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-        
-        {/* Branding */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <MobileLogo className="w-10 h-10 border border-white/10 p-1.5 rounded-xl bg-white/5" />
-            <div>
-              <h3 className="text-lg font-serif font-bold text-white tracking-widest leading-none">CATHEDRA</h3>
-              <p className="text-[8px] font-black uppercase text-gold/60 mt-1 tracking-[0.2em]">Sanctuarium Digitale</p>
+    <footer className="bg-[#0c0a09] text-stone-400 border-t border-white/5 pt-20 pb-12 px-6 relative overflow-hidden mt-auto">
+      {/* Background Texture & Glow */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
+      
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
+          
+          {/* Branding & Mission */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <MobileLogo className="w-12 h-12 border border-white/10 p-2 rounded-2xl bg-white/5 shadow-2xl" />
+              <div>
+                <h3 className="text-xl font-serif font-bold text-white tracking-widest leading-none">CATHEDRA</h3>
+                <p className="text-[9px] font-black uppercase text-gold mt-1 tracking-[0.3em]">Sanctuarium Digitale</p>
+              </div>
+            </div>
+            <p className="text-sm font-serif italic leading-relaxed text-stone-500 max-w-xs">
+              "A tecnologia a serviço da Verdade Eterna. Um repositório vivo da tradição apostólica para o fiel moderno."
+            </p>
+            <div className="flex gap-4 pt-2">
+              <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-stone-400 hover:text-gold transition-all"><Icons.Message className="w-4 h-4" /></button>
+              <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-stone-400 hover:text-gold transition-all"><Icons.Globe className="w-4 h-4" /></button>
             </div>
           </div>
-          <p className="text-xs font-serif italic leading-relaxed text-stone-500 max-w-xs">
-            "A tecnologia a serviço da Tradição. Um santuário digital para o estudo, a oração e a contemplação da Verdade Eterna."
-          </p>
-        </div>
 
-        {/* Navegação */}
-        <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Navegação</h4>
-          <nav className="flex flex-col gap-3">
-            <button onClick={() => onNavigate(AppRoute.BIBLE)} className="text-left text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <div className="w-1 h-1 rounded-full bg-gold/20" /> Bíblia Sagrada
-            </button>
-            <button onClick={() => onNavigate(AppRoute.DAILY_LITURGY)} className="text-left text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <div className="w-1 h-1 rounded-full bg-gold/20" /> Liturgia Diária
-            </button>
-            <button onClick={() => onNavigate(AppRoute.CATECHISM)} className="text-left text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <div className="w-1 h-1 rounded-full bg-gold/20" /> Catecismo da Igreja
-            </button>
-          </nav>
-        </div>
-
-        {/* Fontes Oficiais */}
-        <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Fontes Oficiais</h4>
-          <nav className="flex flex-col gap-3">
-            <a href="https://www.vatican.va" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <Icons.ExternalLink className="w-3 h-3 text-gold/40" /> Santa Sé (Vaticano)
-            </a>
-            <a href="https://www.vaticannews.va/pt.html" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <Icons.ExternalLink className="w-3 h-3 text-gold/40" /> Vatican News
-            </a>
-            <a href="https://www.vatican.va/archive/cod-iuris-canonici/cic_index_pt.html" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <Icons.ExternalLink className="w-3 h-3 text-gold/40" /> Direito Canônico
-            </a>
-            <a href="https://www.cnbb.org.br" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2">
-              <Icons.ExternalLink className="w-3 h-3 text-gold/40" /> Portal CNBB
-            </a>
-          </nav>
-        </div>
-
-        {/* Suporte/Membro */}
-        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden group">
-          <Icons.Cross className="absolute -bottom-6 -right-6 w-24 h-24 text-gold/5 group-hover:rotate-12 transition-transform duration-1000" />
-          <h4 className="text-[10px] font-black uppercase text-gold mb-3">Membro Scholar</h4>
-          <p className="text-[10px] italic mb-6 leading-relaxed text-stone-400">Desbloqueie o Cathedra AI e ferramentas avançadas de exegese para um estudo profundo.</p>
-          <button onClick={() => onNavigate(AppRoute.CHECKOUT)} className="w-full py-4 bg-gold text-stone-900 rounded-2xl font-black uppercase text-[9px] tracking-widest shadow-lg hover:scale-[1.02] active:scale-95 transition-all">Tornar-me Membro</button>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-stone-600">
-        <div className="text-center md:text-left">
-          <p>Ad Maiorem Dei Gloriam</p>
-          <p className="mt-1 opacity-50">© {new Date().getFullYear()} Cathedra Digital • Product v1.2</p>
-        </div>
-        
-        <button onClick={scrollToTop} className="flex flex-col items-center gap-2 group">
-          <div className="p-3 rounded-full bg-white/5 border border-white/10 group-hover:border-gold/50 transition-all">
-            <Icons.ArrowDown className="w-4 h-4 rotate-180 text-gold" />
+          {/* Core Navigation */}
+          <div className="space-y-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-gold pl-4">Navegação</h4>
+            <nav className="flex flex-col gap-4">
+              {[
+                { label: 'Bíblia Sagrada', route: AppRoute.BIBLE },
+                { label: 'Catecismo Universal', route: AppRoute.CATECHISM },
+                { label: 'Liturgia das Horas', route: AppRoute.BREVIARY },
+                { label: 'Suma Teológica', route: AppRoute.AQUINAS_OPERA },
+                { label: 'Perfil do Membro', route: AppRoute.PROFILE }
+              ].map(item => (
+                <button 
+                  key={item.label}
+                  onClick={() => onNavigate(item.route)} 
+                  className="text-left text-sm hover:text-gold transition-all flex items-center gap-3 group"
+                >
+                  <div className="w-1 h-1 rounded-full bg-stone-700 group-hover:bg-gold transition-colors" /> 
+                  {item.label}
+                </button>
+              ))}
+            </nav>
           </div>
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity">Sursum Corda</span>
-        </button>
+
+          {/* Official References */}
+          <div className="space-y-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-sacred pl-4">Fontes Oficiais</h4>
+            <nav className="flex flex-col gap-4">
+              <a href="https://www.vatican.va" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-all flex items-center gap-3 group">
+                <Icons.ExternalLink className="w-4 h-4 text-stone-600 group-hover:text-gold transition-colors" /> 
+                Santa Sé (Vaticano)
+              </a>
+              <a href="https://www.vaticannews.va/pt.html" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-all flex items-center gap-3 group">
+                <Icons.ExternalLink className="w-4 h-4 text-stone-600 group-hover:text-gold transition-colors" /> 
+                Vatican News
+              </a>
+              <a href="https://www.cnbb.org.br" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-all flex items-center gap-3 group">
+                <Icons.ExternalLink className="w-4 h-4 text-stone-600 group-hover:text-gold transition-colors" /> 
+                Portal CNBB
+              </a>
+              <a href="https://www.vatican.va/archive/cod-iuris-canonici/cic_index_pt.html" target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-all flex items-center gap-3 group">
+                <Icons.ExternalLink className="w-4 h-4 text-stone-600 group-hover:text-gold transition-colors" /> 
+                Direito Canônico
+              </a>
+            </nav>
+          </div>
+
+          {/* Partners Area */}
+          <div className="space-y-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-emerald-500 pl-4">Parceiros & Apoio</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="aspect-[3/2] bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center grayscale hover:grayscale-0 opacity-40 hover:opacity-100 transition-all cursor-pointer group">
+                  <div className="text-[8px] font-black uppercase tracking-tighter text-stone-600 group-hover:text-gold">Sócio {i}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] italic text-stone-600 leading-relaxed">
+              Deseja apoiar a digitalização da fé? <button onClick={() => onNavigate(AppRoute.CHECKOUT)} className="text-gold underline">Saiba como ser um parceiro.</button>
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
+              <Icons.Cross className="w-5 h-5 text-sacred" />
+              <p className="text-[10px] font-black uppercase tracking-[0.6em] text-stone-500">Ad Maiorem Dei Gloriam</p>
+            </div>
+            <p className="text-[9px] text-stone-700 font-bold uppercase tracking-widest">
+              © {new Date().getFullYear()} CATHEDRA DIGITAL • SISTEMA NACIONAL DE INTELIGÊNCIA TEOLÓGICA • V1.5.0
+            </p>
+          </div>
+
+          <div className="flex items-center gap-10">
+            <button 
+              onClick={scrollToTop} 
+              className="flex flex-col items-center gap-2 group transition-all"
+            >
+              <div className="p-3.5 rounded-full bg-white/5 border border-white/10 group-hover:border-gold/50 group-hover:bg-gold/10 shadow-xl transition-all">
+                <Icons.ArrowDown className="w-5 h-5 rotate-180 text-gold" />
+              </div>
+              <span className="text-[8px] font-black uppercase tracking-widest text-stone-600 group-hover:text-gold transition-colors">Sursum Corda</span>
+            </button>
+          </div>
+        </div>
       </div>
     </footer>
   );

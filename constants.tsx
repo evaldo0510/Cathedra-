@@ -8,71 +8,43 @@ export const COLORS = {
   background: '#fdfcf8', 
 };
 
-// Logo Principal - Heráldica Moderna e Majestosa
+// Novo Logo Cátedra - Heráldica Monumental v2
 export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
   <div className={`relative flex items-center justify-center group ${className}`}>
-    {/* Brilho de Fundo Dinâmico */}
-    <div className="absolute inset-[-20%] bg-gold/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-    
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-full h-full drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]">
-      <defs>
-        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#d4af37" />
-          <stop offset="50%" stopColor="#fbfbfb" />
-          <stop offset="100%" stopColor="#b8952e" />
-        </linearGradient>
-        <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-      </defs>
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+      {/* Círculo de Glória */}
+      <circle cx="50" cy="50" r="48" fill="#1a1a1a" />
+      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="1" strokeDasharray="2 2" className="opacity-40" />
       
-      {/* Anel de Glória Externo */}
-      <circle cx="50" cy="50" r="46" stroke="url(#goldGrad)" strokeWidth="0.75" strokeDasharray="4 6" className="opacity-40 animate-[spin_30s_linear_infinite]" />
-      
-      {/* Estrutura da Cathedra (Trono) */}
+      {/* Estrutura da Cátedra (Trono) */}
       <path 
-        d="M25 75V35C25 29.4772 29.4772 25 35 25H65C70.5228 25 75 29.4772 75 35V75" 
-        stroke="url(#goldGrad)" 
-        strokeWidth="5" 
+        d="M30 75V35C30 29.4772 34.4772 25 40 25H60C65.5228 25 70 29.4772 70 35V75" 
+        stroke="#d4af37" 
+        strokeWidth="6" 
         strokeLinecap="round" 
-        style={{ filter: 'url(#goldGlow)' }}
       />
       
-      {/* Base do Trono com chanfro */}
+      {/* Base do Altar */}
       <path 
-        d="M20 75H80L85 85H15L20 75Z" 
+        d="M25 75H75L80 85H20L25 75Z" 
         fill="#d4af37" 
-        fillOpacity="0.15"
-        stroke="url(#goldGrad)" 
-        strokeWidth="3" 
       />
       
-      {/* Cruz Central (Chi-Rho inspirada) */}
-      <path d="M50 32V63" stroke="url(#goldGrad)" strokeWidth="5" strokeLinecap="round" />
-      <path d="M36 44H64" stroke="url(#goldGrad)" strokeWidth="5" strokeLinecap="round" />
+      {/* Cruz Central (Luz do Mundo) */}
+      <path d="M50 35V65" stroke="#d4af37" strokeWidth="6" strokeLinecap="round" />
+      <path d="M40 48H60" stroke="#d4af37" strokeWidth="6" strokeLinecap="round" />
       
-      {/* Detalhes Pontuais (As 4 Marcas da Igreja) */}
+      {/* Pontos de Revelação */}
       <circle cx="50" cy="15" r="3" fill="#d4af37" className="animate-pulse" />
-      <circle cx="85" cy="50" r="3" fill="#d4af37" className="animate-pulse [animation-delay:0.5s]" />
-      <circle cx="50" cy="85" r="3" fill="#d4af37" className="animate-pulse [animation-delay:1s]" />
-      <circle cx="15" cy="50" r="3" fill="#d4af37" className="animate-pulse [animation-delay:1.5s]" />
     </svg>
   </div>
 );
 
-// Logo Mobile - Monograma de Alta Fidelidade
 export const MobileLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
   <div className={`relative flex items-center justify-center ${className}`}>
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-md">
-      <path 
-        d="M30 70V40C30 34.4772 34.4772 30 40 30H60C65.5228 30 70 34.4772 70 40V70" 
-        stroke="#d4af37" 
-        strokeWidth="8" 
-        strokeLinecap="round" 
-      />
-      <path d="M50 35V65" stroke="#d4af37" strokeWidth="8" strokeLinecap="round" />
-      <path d="M38 48H62" stroke="#d4af37" strokeWidth="8" strokeLinecap="round" />
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="8" />
+      <path d="M50 25V75M30 50H70" stroke="#d4af37" strokeWidth="12" strokeLinecap="round" />
     </svg>
   </div>
 );
@@ -148,34 +120,24 @@ export const Icons = {
       <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12ZM8.8 14L10 12.8V4H14V12.8L15.2 14H8.8Z" />
     </svg>
   ),
-  ArrowDown: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  ),
   Star: (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.175 0l-3.976 2.888c-.783.57-1.838-.197-1.539-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
     </svg>
   ),
-  Mobile: (props: React.SVGProps<SVGSVGElement>) => (
+  Heart: (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-    </svg>
-  ),
-  Download: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
     </svg>
   ),
   Message: (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
     </svg>
   ),
-  Share: (props: React.SVGProps<SVGSVGElement>) => (
+  ArrowDown: (props: React.SVGProps<SVGSVGElement>) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
-  ),
+  )
 };
