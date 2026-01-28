@@ -30,6 +30,7 @@ interface Feature {
   image: string;
   component: React.ReactNode;
   icon: any;
+  color?: string;
 }
 
 const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null }> = ({ onSearch, user }) => {
@@ -41,35 +42,35 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
     {
       title: "Prática Devocional Diária",
       items: [
-        { id: 'liturgy', title: 'Liturgia Diária', subtitle: 'Lecionário Oficial', source: 'CNBB / Nova Vulgata', image: 'https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=800', icon: Icons.History, component: <DailyLiturgy /> },
-        { id: 'rosary', title: 'Santo Rosário', subtitle: 'Mistérios Meditados', source: 'Diretório sobre Piedade Popular', image: 'https://images.unsplash.com/photo-1512403754473-27835f7b9984?q=80&w=800', icon: Icons.Star, component: <Rosary /> },
-        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Mergulho na Palavra', source: 'Verbum Domini, 87', image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=800', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
-        { id: 'missal', title: 'Missal Romano', subtitle: '3ª Edição Típica', source: 'Congregação para o Culto Divino', image: 'https://images.unsplash.com/photo-1543158021-00212008304f?q=80&w=800', icon: Icons.Cross, component: <Missal /> },
+        { id: 'liturgy', title: 'Liturgia Diária', subtitle: 'Lecionário Oficial', source: 'Ano B / Ciclo II', image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3', icon: Icons.History, component: <DailyLiturgy /> },
+        { id: 'rosary', title: 'Santo Rosário', subtitle: 'Mistérios Meditados', source: 'Piedade Popular', image: 'https://images.unsplash.com/photo-1544427920-c49ccfb85579', icon: Icons.Star, component: <Rosary /> },
+        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Mergulho na Palavra', source: 'Verbum Domini', image: 'https://images.unsplash.com/photo-1507434965515-61970f2bd7c6', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
+        { id: 'missal', title: 'Missal Romano', subtitle: '3ª Edição Típica', source: 'Culto Divino', image: 'https://images.unsplash.com/photo-1543158021-00212008304f', icon: Icons.Cross, component: <Missal /> },
       ]
     },
     {
       title: "Estudo e Doutrina",
       items: [
-        { id: 'bible', title: 'Escrituras', subtitle: 'Scriptura Sacra', source: 'Cânon de Trento (73 Livros)', image: 'https://images.unsplash.com/photo-1473186578172-c141e6798ee4?q=80&w=800', icon: Icons.Book, component: <Bible /> },
-        { id: 'catechism', title: 'Catecismo', subtitle: 'Codex Fidei (CIC)', source: 'Editio Typica (1997)', image: 'https://images.unsplash.com/photo-1593526612308-d46fd73f2edb?q=80&w=800', icon: Icons.Pin, component: <Catechism onDeepDive={onSearch} /> },
-        { id: 'aquinas', title: 'Suma Teológica', subtitle: 'Doutor Angélico', source: 'Opera Omnia S. Thomae', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800', icon: Icons.Feather, component: <AquinasOpera /> },
-        { id: 'dogmas', title: 'Dogmas e Verdades', subtitle: 'Depositum Fidei', source: 'Denzinger-Hünermann (DH)', image: 'https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800', icon: Icons.Star, component: <Dogmas /> },
+        { id: 'bible', title: 'Escrituras', subtitle: 'Scriptura Sacra', source: 'Cânon de Trento', image: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df', icon: Icons.Book, component: <Bible /> },
+        { id: 'catechism', title: 'Catecismo', subtitle: 'Codex Fidei (CIC)', source: 'Editio Typica', image: 'https://images.unsplash.com/photo-1541339907198-e08759df9a73', icon: Icons.Pin, component: <Catechism onDeepDive={onSearch} /> },
+        { id: 'aquinas', title: 'Suma Teológica', subtitle: 'Doutor Angélico', source: 'Opera Omnia', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a', icon: Icons.Feather, component: <AquinasOpera /> },
+        { id: 'dogmas', title: 'Dogmas e Verdades', subtitle: 'Depositum Fidei', source: 'Denzinger (DH)', image: 'https://images.unsplash.com/photo-1520694478166-dafeb4d0b9de', icon: Icons.Star, component: <Dogmas /> },
       ]
     },
     {
       title: "Caminho de Conversão",
       items: [
-        { id: 'viacrucis', title: 'Via Crucis', subtitle: 'Paixão do Senhor', source: 'Tradição Apostólica', image: 'https://images.unsplash.com/photo-1515606378517-3451a42adc42?q=80&w=800', icon: Icons.Cross, component: <ViaCrucis /> },
-        { id: 'poenitentia', title: 'Confissão', subtitle: 'Exame de Consciência', source: 'Moral de S. Afonso de Ligório', image: 'https://images.unsplash.com/photo-1548610762-656391d1ad4d?q=80&w=800', icon: Icons.Search, component: <Poenitentia /> },
-        { id: 'quiz', title: 'Certamen Sacrum', subtitle: 'Desafio Teológico', source: 'Cathedra Academy IA', image: 'https://images.unsplash.com/photo-1590073844006-3a78a7e37e5e?q=80&w=800', icon: Icons.Layout, component: <Certamen /> },
+        { id: 'viacrucis', title: 'Via Crucis', subtitle: 'Paixão do Senhor', source: 'Tradição Apostólica', image: 'https://images.unsplash.com/photo-1515606378517-3451a42adc42', icon: Icons.Cross, component: <ViaCrucis /> },
+        { id: 'poenitentia', title: 'Confissão', subtitle: 'Exame de Consciência', source: 'Moral S. Afonso', image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149', icon: Icons.Search, component: <Poenitentia /> },
+        { id: 'quiz', title: 'Certamen Sacrum', subtitle: 'Desafio Teológico', source: 'Academy IA', image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765', icon: Icons.Layout, component: <Certamen /> },
       ]
     },
     {
       title: "Tesouros da Tradição",
       items: [
-        { id: 'magisterium', title: 'Magistério', subtitle: 'Documentos Papais', source: 'Arquivo Secreto do Vaticano', image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=800', icon: Icons.Globe, component: <Magisterium /> },
-        { id: 'prayers', title: 'Orações Clássicas', subtitle: 'Thesaurus Precum', source: 'Enchiridion Indulgentiarum', image: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=800', icon: Icons.Heart, component: <Prayers /> },
-        { id: 'litanies', title: 'Ladainhas', subtitle: 'Súplicas Rítmicas', source: 'Litanarium Romanum', image: 'https://images.unsplash.com/photo-1543158021-00212008304f?q=80&w=800', icon: Icons.History, component: <Litanies /> },
+        { id: 'magisterium', title: 'Magistério', subtitle: 'Documentos Papais', source: 'Santa Sé', image: 'https://images.unsplash.com/photo-1515431039535-64906f35a065', icon: Icons.Globe, component: <Magisterium /> },
+        { id: 'prayers', title: 'Orações Clássicas', subtitle: 'Thesaurus Precum', source: 'Enchiridion', image: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94', icon: Icons.Heart, component: <Prayers /> },
+        { id: 'litanies', title: 'Ladainhas', subtitle: 'Súplicas Rítmicas', source: 'Litanarium', image: 'https://images.unsplash.com/photo-1563242636-6e465a39626e', icon: Icons.History, component: <Litanies /> },
       ]
     }
   ];
@@ -83,7 +84,7 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
         <div className="absolute bottom-0 left-0 p-8 md:p-16 space-y-4 max-w-4xl">
            <div className="flex items-center gap-3">
              <span className="bg-gold text-stone-900 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">Verbum Diei</span>
-             <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">Fonte: Nova Vulgata</span>
+             <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">Fonte: Ano B / 2024</span>
            </div>
            <h1 className="text-2xl md:text-5xl font-serif font-bold text-white leading-tight italic">"{dailyData.verse.verse}"</h1>
            <p className="text-gold font-serif text-xl">{dailyData.verse.reference}</p>

@@ -1,38 +1,41 @@
 
 import { Saint, Verse, DailyLiturgyContent } from "../types";
 
+// Versículos curados para o Tempo Comum - Ano B
 export const NATIVE_DAILY_VERSES = [
-  { verse: "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus.", reference: "João 1, 1", imageUrl: "https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=1600" },
-  { verse: "O Senhor é o meu pastor, nada me faltará.", reference: "Salmo 22 (23), 1", imageUrl: "https://images.unsplash.com/photo-1512403754473-27835f7b9984?q=80&w=1600" }
+  { verse: "Permanecei em mim e eu permanecerei em vós; quem permanece em mim dá muito fruto.", reference: "João 15, 5", imageUrl: "https://images.unsplash.com/photo-1543158021-00212008304f?q=80&w=1600" },
+  { verse: "O Senhor é o meu pastor, nada me faltará.", reference: "Salmo 22 (23), 1", imageUrl: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=1600" },
+  { verse: "Fazei tudo o que Ele vos disser.", reference: "João 2, 5", imageUrl: "https://images.unsplash.com/photo-1544033527-b192daee1f5b?q=80&w=1600" }
 ];
 
 export const NATIVE_SAINTS: Saint[] = [
   { 
     name: "Santo Agostinho", 
     feastDay: "28 de Agosto", 
-    patronage: "Teólogos", 
-    biography: "Bispo de Hipona e Doutor da Igreja. Sua jornada de conversão, descrita nas 'Confissões', é um farol para a inteligência da fé.",
-    image: "https://images.unsplash.com/photo-1543158021-00212008304f?q=80&w=800",
+    patronage: "Teólogos e Eruditos", 
+    biography: "Doutor da Graça, cujas Confissões moldaram o pensamento ocidental.",
+    image: "https://images.unsplash.com/photo-1541339907198-e08759df9a73?q=80&w=800",
     quote: "Fizeste-nos para Ti, Senhor, e inquieto está o nosso coração enquanto não repousar em Ti."
   }
 ];
 
 export const getNativeLiturgy = (dateStr: string): DailyLiturgyContent => {
+  // Simulação de retorno baseada no Ano B - Ciclo II
   return {
     date: dateStr,
-    collect: "Deus eterno e todo-poderoso, guiai-nos em nossas ações para que possamos produzir frutos de boas obras.",
+    collect: "Deus eterno e todo-poderoso, aumentai em nós a fé, a esperança e a caridade.",
     firstReading: { 
-      reference: "Filipenses 4, 4-9", 
-      text: "Irmãos: Alegrai-vos sempre no Senhor; repito, alegrai-vos! Seja a vossa amabilidade conhecida de todos os homens. O Senhor está próximo. Não vos inquieteis com nada; mas apresentai a Deus todas as vossas necessidades pela oração e pela súplica, acompanhadas de ação de graças. E a paz de Deus, que sobrepassa todo o entendimento, guardará os vossos corações e os vossos pensamentos em Cristo Jesus." 
+      reference: "Tg 2, 14-24.26", 
+      text: "Meus irmãos, que aproveita se alguém disser que tem fé, e não tiver as obras? Porventura a fé pode salvá-lo? Assim também a fé, se não tiver as obras, é morta em si mesma." 
     },
     psalm: { 
-      title: "Salmo 22 (23)", 
-      text: "O Senhor é o meu pastor: nada me faltará." 
+      title: "Salmo 111 (112)", 
+      text: "Feliz o homem que respeita o Senhor e ama com carinho a sua lei." 
     },
     gospel: { 
-      reference: "João 15, 1-8", 
-      text: "Eu sou a videira verdadeira, e Meu Pai é o agricultor. Todo ramo que em Mim não dá fruto, Ele o corta; e todo ramo que dá fruto, Ele o limpa, para que dê mais fruto ainda. Vós já estais limpos por causa da palavra que vos tenho falado. Permanecei em Mim, e Eu permanecerei em vós.",
-      reflection: "A Palavra de hoje nos convida a permanecer em Cristo como os ramos na videira."
+      reference: "Mc 8, 34–9, 1", 
+      text: "Quem quiser salvar a sua vida, perdê-la-á; mas quem perder a sua vida por causa de mim e do Evangelho, salvá-la-á. De que aproveita ao homem ganhar o mundo inteiro se perder a sua alma?" ,
+      reflection: "A radicalidade do seguimento de Cristo exige a entrega total da vontade."
     }
   };
 };
@@ -43,7 +46,7 @@ export const getDailyNativeContent = () => {
   const month = d.getMonth();
   const idx = (day + month) % NATIVE_SAINTS.length;
   return {
-    verse: NATIVE_DAILY_VERSES[idx % NATIVE_DAILY_VERSES.length],
+    verse: NATIVE_DAILY_VERSES[day % NATIVE_DAILY_VERSES.length],
     saint: NATIVE_SAINTS[idx]
   };
 };

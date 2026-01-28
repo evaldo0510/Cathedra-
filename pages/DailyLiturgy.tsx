@@ -4,7 +4,6 @@ import { Icons } from '../constants';
 import { getNativeLiturgy } from '../services/nativeData';
 import { LangContext } from '../App';
 import ActionButtons from '../components/ActionButtons';
-import VoicePlayer from '../components/VoicePlayer';
 import { DailyLiturgyContent } from '../types';
 
 const DailyLiturgy: React.FC = () => {
@@ -78,7 +77,6 @@ const DailyLiturgy: React.FC = () => {
             <header className="flex justify-between items-center border-b pb-4 dark:border-stone-800">
               <span className="text-[10px] font-black uppercase tracking-widest text-gold">I Leitura</span>
               <div className="flex gap-2">
-                <VoicePlayer text={data.firstReading.text} />
                 <ActionButtons itemId={`l1_${date}`} type="liturgy" title="Leitura I" content={data.firstReading.text} />
               </div>
             </header>
@@ -98,7 +96,6 @@ const DailyLiturgy: React.FC = () => {
             <header className="flex justify-between items-center border-b border-white/10 pb-6">
                <span className="text-[11px] font-black uppercase tracking-widest text-gold">Santo Evangelho</span>
                <div className="flex gap-2">
-                 <VoicePlayer text={data.gospel.text} />
                  <ActionButtons itemId={`lg_${date}`} type="liturgy" title="Evangelho" content={data.gospel.text} />
                </div>
             </header>

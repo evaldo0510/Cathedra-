@@ -14,7 +14,6 @@ import { LangContext } from '../App';
 
 /**
  * Componente interno de renderização do conteúdo do parágrafo.
- * Separado para evitar re-renders desnecessários e ser usado dentro do wrapper virtual.
  */
 const ParagraphContent = memo(({ p, fontSize, isActive, onInvestigate }: { 
   p: CatechismParagraph, 
@@ -42,12 +41,14 @@ const ParagraphContent = memo(({ p, fontSize, isActive, onInvestigate }: {
           </div>
           
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => onInvestigate(p)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-sacred text-white hover:bg-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
-            >
-               Análise IA
-            </button>
+            {p.number > 0 && (
+              <button 
+                onClick={() => onInvestigate(p)}
+                className="flex items-center gap-2 px-6 py-2.5 bg-sacred text-white hover:bg-stone-900 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
+              >
+                 Análise IA
+              </button>
+            )}
             <ActionButtons itemId={`cic_${p.number}`} type="catechism" title={`CIC §${p.number}`} content={p.content} className="scale-90" />
           </div>
        </header>
@@ -60,8 +61,7 @@ const ParagraphContent = memo(({ p, fontSize, isActive, onInvestigate }: {
 });
 
 /**
- * Componente de Virtualização (Windowing) para cada parágrafo.
- * Monitora a visibilidade e descarrega o conteúdo quando fora de vista.
+ * Componente de Virtualização para cada parágrafo.
  */
 const VirtualParagraph = memo(({ p, fontSize, isActive, onInvestigate }: { 
   p: CatechismParagraph, 
@@ -72,51 +72,36 @@ const VirtualParagraph = memo(({ p, fontSize, isActive, onInvestigate }: {
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Lógica de Scroll para parágrafo ativo
   useEffect(() => {
     if (isActive && containerRef.current) {
-      setIsVisible(true); // Força visibilidade se for o alvo
+      setIsVisible(true);
       const yOffset = -180; 
       const y = containerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
   }, [isActive]);
 
-  // Observer de Interseção para renderização sob demanda
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Se estiver ativo (jump-to), mantemos renderizado para evitar saltos
         if (isActive) {
           setIsVisible(true);
           return;
         }
         setIsVisible(entry.isIntersecting);
       },
-      { 
-        // Margem de segurança: carrega 600px antes/depois de entrar na tela
-        rootMargin: '600px 0px 600px 0px',
-        threshold: 0.01 
-      }
+      { rootMargin: '600px 0px 600px 0px', threshold: 0.01 }
     );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
+    if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [isActive]);
 
   return (
-    <div 
-      ref={containerRef} 
-      id={`para-${p.number}`} 
-      className="mb-6 min-h-[160px] transition-opacity duration-300"
-    >
+    <div ref={containerRef} id={`para-${p.number}`} className="mb-6 min-h-[160px]">
       {isVisible ? (
         <ParagraphContent p={p} fontSize={fontSize} isActive={isActive} onInvestigate={onInvestigate} />
       ) : (
-        /* Placeholder leve para preservar espaço e scroll */
         <div className="p-10 rounded-[2.5rem] border-2 border-dashed border-stone-100 dark:border-stone-800 bg-stone-50/20 dark:bg-stone-900/20 flex flex-col items-center justify-center space-y-4 h-[200px]">
            <div className="w-10 h-10 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center">
              <span className="text-[10px] font-black text-stone-300">§ {p.number}</span>
@@ -167,7 +152,6 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
     e.preventDefault();
     const num = parseInt(paragraphJump);
     if (isNaN(num)) return;
-
     const p = getParagraphLocal(num);
     if (p) {
       setSearchResults([p]);
@@ -191,7 +175,9 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
     <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-1000 pb-40 px-2 md:px-4">
        <header className="text-center space-y-6 pt-4">
           <div className="flex justify-center">
-             <Icons.Cross className="w-12 h-12 text-gold p-3 bg-stone-900 rounded-full shadow-sacred" />
+             <div className="p-5 bg-stone-900 rounded-full shadow-sacred border border-gold/30 group">
+                <Icons.Cross className="w-8 h-8 text-gold group-hover:rotate-180 transition-transform duration-1000" />
+             </div>
           </div>
           <h2 className="text-4xl md:text-8xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tighter">Codex Fidei</h2>
           
@@ -200,7 +186,7 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
                <Icons.Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
                <input 
                 type="text" 
-                placeholder="Busca temática..." 
+                placeholder="Busca temática (Ex: Eucaristia, Oração...)" 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-14 pr-12 py-5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-[2rem] outline-none focus:ring-8 focus:ring-gold/5 focus:border-gold transition-all font-serif italic shadow-lg"
@@ -220,7 +206,6 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
           </div>
        </header>
 
-       {/* RESULTADOS / JUMP VIEW */}
        {searchResults && (
          <section className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4 px-4">
@@ -241,7 +226,6 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
          </section>
        )}
 
-       {/* ESTRUTURA COLAPSÁVEL NATIVA INTEGRAL */}
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
           {CIC_PARTS.map(part => (
             <div key={part.id} className="bg-white dark:bg-stone-950 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-xl overflow-hidden h-fit">
@@ -292,7 +276,7 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
                                    
                                    {isChapterOpen && (
                                      <div className="px-2 pb-4 pt-4 max-h-[600px] overflow-y-auto custom-scrollbar">
-                                        {chapterParas.map(p => (
+                                        {chapterParas.length > 0 ? chapterParas.map(p => (
                                           <VirtualParagraph 
                                             key={`${chapterKey}_${p.number}`} 
                                             p={p} 
@@ -300,7 +284,9 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
                                             isActive={activeParaNumber === p.number}
                                             onInvestigate={(item) => onDeepDive(`Investigação teológica: CIC §${item.number}`)} 
                                           />
-                                        ))}
+                                        )) : (
+                                          <div className="p-8 text-center text-stone-400 italic text-xs">Carregando parágrafos...</div>
+                                        )}
                                      </div>
                                    )}
                                 </div>
@@ -316,7 +302,6 @@ const Catechism: React.FC<{ onDeepDive: (topic: string) => void }> = ({ onDeepDi
           ))}
        </div>
 
-       {/* ACESSIBILIDADE FIXA */}
        <div className="fixed bottom-24 right-4 md:right-8 z-[300] flex flex-col gap-2">
           <button onClick={() => setFontSize(f => Math.min(f + 0.1, 1.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 text-stone-500 hover:text-gold transition-all"><span className="text-xl font-black">A+</span></button>
           <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-4 bg-white/90 dark:bg-stone-800/95 backdrop-blur-xl rounded-full shadow-4xl border border-stone-100 text-stone-500 hover:text-gold transition-all"><span className="text-lg font-black">A-</span></button>

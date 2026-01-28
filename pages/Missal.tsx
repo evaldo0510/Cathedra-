@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Icons } from '../constants';
 import { getMissalLocal } from '../services/missalLocal';
-import VoicePlayer from '../components/VoicePlayer';
 import ActionButtons from '../components/ActionButtons';
 
 const Missal: React.FC = () => {
@@ -67,7 +66,6 @@ const Missal: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <h4 className="text-lg font-serif font-bold text-stone-800 dark:text-stone-200">{part.name}</h4>
                   <div className="flex items-center gap-2">
-                    <VoicePlayer text={part.vernacular} />
                     <ActionButtons itemId={`missal_${sIdx}_${pIdx}`} type="liturgy" title={part.name} content={part.vernacular} />
                   </div>
                 </div>
