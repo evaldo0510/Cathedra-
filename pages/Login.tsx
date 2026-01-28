@@ -8,26 +8,35 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [isRegister, setIsRegister] = useState(true);
+  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
-    // Simulação de registro profissional com integração Supabase futura
     setTimeout(() => {
-      const isAdmin = email === 'admin@cathedra.com';
+      // Regra de Negócio: Admin Primário solicitado pelo David
+      const isAdmin = email.toLowerCase() === 'evaldo0510@gmail.com' && password === '123456';
+      const isRegularAdmin = email === 'admin@cathedra.com' && password === 'admin';
       
-      // Fixed Error: Added missing 'progress' property to comply with User interface
+      if (!isAdmin && email.toLowerCase() === 'evaldo0510@gmail.com' && password !== '123456') {
+         setError('Senha incorreta para a conta administradora.');
+         setLoading(false);
+         return;
+      }
+
       const mockUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: isAdmin ? 'Administrador' : (isRegister ? name : email.split('@')[0]),
+        id: isAdmin ? 'evaldo_admin' : Math.random().toString(36).substr(2, 9),
+        name: isAdmin ? 'Evaldo (Diretor)' : (isRegister ? name : email.split('@')[0]),
         email: email,
-        role: isAdmin ? 'admin' : 'scholar',
+        role: (isAdmin || isRegularAdmin) ? 'admin' : 'scholar',
+        isPremium: isAdmin || isRegularAdmin,
         joinedAt: new Date().toISOString(),
         progress: {
           streak: 1,
@@ -42,9 +51,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       };
       
       localStorage.setItem('cathedra_user', JSON.stringify(mockUser));
+      
+      // Se for o evaldo, garantimos que ele está na lista de admins rastreáveis
+      if (isAdmin) {
+         const admins = JSON.parse(localStorage.getItem('cathedra_system_admins') || '[]');
+         if (!admins.includes(email)) {
+            admins.push(email);
+            localStorage.setItem('cathedra_system_admins', JSON.stringify(admins));
+         }
+      }
+
       onLogin(mockUser);
       setLoading(false);
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -64,10 +83,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 {isRegister ? 'Criar sua Cátedra' : 'Acessar Santuário'}
               </h2>
               <p className="text-stone-400 italic font-serif text-xl">
-                {isRegister ? 'Registre-se gratuitamente para desbloquear a Investigação IA.' : 'Bem-vindo de volta ao centro de estudos.'}
+                {isRegister ? 'Registre-se para desbloquear a Investigação IA.' : 'Bem-vindo de volta ao centro de estudos.'}
               </p>
             </div>
           </header>
+
+          {error && (
+            <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-center text-sm font-bold animate-pulse">
+               {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {isRegister && (
@@ -92,7 +117,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-10 py-6 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-[2rem] outline-none focus:ring-8 focus:ring-gold/5 font-serif italic text-xl transition-all dark:text-white"
-                placeholder="exemplo@igreja.com"
+                placeholder="exemplo@gmail.com"
               />
             </div>
 
@@ -116,7 +141,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               {loading ? (
                 <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin mx-auto" />
               ) : (
-                isRegister ? 'Criar Conta Gratuita' : 'Entrar no Santuário'
+                isRegister ? 'Criar Conta' : 'Entrar no Santuário'
               )}
             </button>
           </form>
@@ -126,13 +151,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               onClick={() => setIsRegister(!isRegister)}
               className="text-[10px] font-black uppercase tracking-widest text-gold hover:text-sacred transition-colors"
              >
-               {isRegister ? 'Já possuo registro de membro' : 'Não sou membro? Criar conta gratuita'}
+               {isRegister ? 'Já possuo registro' : 'Não sou membro? Criar conta'}
              </button>
-             <div className="p-6 bg-[#fcf8e8] dark:bg-stone-800/40 rounded-3xl border border-gold/10">
-                <p className="text-[9px] text-stone-500 dark:text-stone-400 uppercase tracking-widest leading-relaxed">
-                  Nota: A Bíblia e o Catecismo permanecem acessíveis offline para todos os peregrinos. O registro é exclusivo para uso de ferramentas de IA.
-                </p>
-             </div>
           </footer>
         </div>
       </div>

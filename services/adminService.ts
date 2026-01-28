@@ -15,8 +15,8 @@ export interface Financials {
 }
 
 const STATS_KEY = 'cathedra_admin_telemetry';
-const ASSIGNMENT_PRICE = 9.90;
-const AVG_COST_PER_AI_REQ = 0.09; // Estimativa ponderada em Reais (tokens)
+const ASSIGNMENT_PRICE = 19.90;
+const AVG_COST_PER_AI_REQ = 0.05; 
 
 export const trackAccess = (isMember: boolean = false, isAI: boolean = false) => {
   const stats: Telemetry = JSON.parse(localStorage.getItem(STATS_KEY) || JSON.stringify({
@@ -50,6 +50,20 @@ export const getFinancialPreview = (memberCount: number, aiReqs: number): Financ
 };
 
 export const getRegisteredUsers = () => {
-  const user = localStorage.getItem('cathedra_user');
-  return user ? [JSON.parse(user)] : [];
+  // Simulação de busca de usuários no Supabase/DB
+  const localUsers = JSON.parse(localStorage.getItem('cathedra_registered_users') || '[]');
+  // Garantir que pelo menos o admin e alguns mocks apareçam se vazio
+  if (localUsers.length === 0) {
+    return [
+      { name: 'Evaldo (Diretor)', email: 'evaldo0510@gmail.com', role: 'admin', joinedAt: '2024-01-01' },
+      { name: 'João Silva', email: 'joao@exemplo.com', role: 'scholar', joinedAt: '2024-02-15' },
+      { name: 'Maria Santos', email: 'maria@exemplo.com', role: 'pilgrim', joinedAt: '2024-03-10' }
+    ];
+  }
+  return localUsers;
+};
+
+export const updatePartnersList = (partners: string[]) => {
+  localStorage.setItem('cathedra_partners', JSON.stringify(partners));
+  window.dispatchEvent(new CustomEvent('cathedra-partners-updated'));
 };

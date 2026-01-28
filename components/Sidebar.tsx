@@ -28,23 +28,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       ]
     },
     {
-      title: 'Caminho Espiritual',
-      items: [
-        { name: 'Diário Espiritual', icon: Icons.Feather, path: AppRoute.DIARY },
-        { name: 'Santo Rosário', icon: Icons.Star, path: AppRoute.ROSARY },
-        { name: 'Via Crucis', icon: Icons.Cross, path: AppRoute.VIA_CRUCIS },
-        { name: 'Lectio Divina', icon: Icons.Audio, path: AppRoute.LECTIO_DIVINA },
-        { name: 'Confissão (Exame)', icon: Icons.Search, path: AppRoute.POENITENTIA },
-        { name: 'Tesouro de Orações', icon: Icons.Heart, path: AppRoute.PRAYERS },
-      ]
-    },
-    {
       title: 'Depósito da Fé',
       items: [
         { name: 'Catecismo (CIC)', icon: Icons.Pin, path: AppRoute.CATECHISM },
         { name: 'Magistério', icon: Icons.Globe, path: AppRoute.MAGISTERIUM },
         { name: 'Dogmas e Verdades', icon: Icons.Star, path: AppRoute.DOGMAS },
         { name: 'Suma Teológica', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA },
+      ]
+    },
+    {
+      title: 'Caminho Espiritual',
+      items: [
+        { name: 'Santo Rosário', icon: Icons.Star, path: AppRoute.ROSARY },
+        { name: 'Via Crucis', icon: Icons.Cross, path: AppRoute.VIA_CRUCIS },
+        { name: 'Lectio Divina', icon: Icons.Audio, path: AppRoute.LECTIO_DIVINA },
+        { name: 'Confissão (Exame)', icon: Icons.Search, path: AppRoute.POENITENTIA },
+        { name: 'Tesouro de Orações', icon: Icons.Heart, path: AppRoute.PRAYERS },
       ]
     }
   ];

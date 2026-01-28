@@ -1,7 +1,7 @@
 
 import React, { useState, useContext } from 'react';
 import { Icons } from '../constants';
-import { User } from '../types';
+import { User, AppRoute } from '../types';
 import SacredImage from '../components/SacredImage';
 import { LangContext } from '../App';
 import { getDailyNativeContent } from '../services/nativeData';
@@ -21,17 +21,14 @@ import Poenitentia from './Poenitentia';
 import Dogmas from './Dogmas';
 import Prayers from './Prayers';
 import Litanies from './Litanies';
-import SpiritualDiary from './SpiritualDiary';
 
 interface Feature {
   id: string;
   title: string;
   subtitle: string;
   source: string;
-  image: string;
   component: React.ReactNode;
   icon: any;
-  color?: string;
 }
 
 const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null }> = ({ onSearch, user }) => {
@@ -43,76 +40,64 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
     {
       title: "Prática Devocional Diária",
       items: [
-        { id: 'liturgy', title: 'Liturgia Diária', subtitle: 'Lecionário Oficial', source: 'Ano B / Ciclo II', image: 'https://images.unsplash.com/photo-1543158021-00212008304f', icon: Icons.History, component: <DailyLiturgy /> },
-        { id: 'rosary', title: 'Santo Rosário', subtitle: 'Mistérios Meditados', source: 'Piedade Popular', image: 'https://images.unsplash.com/photo-1555529733-0e670560f7e1', icon: Icons.Star, component: <Rosary /> },
-        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Mergulho na Palavra', source: 'Verbum Domini', image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
-        { id: 'missal', title: 'Missal Romano', subtitle: '3ª Edição Típica', source: 'Culto Divino', image: 'https://images.unsplash.com/photo-1544033527-b192daee1f5b', icon: Icons.Cross, component: <Missal /> },
-      ]
-    },
-    {
-      title: "Caminho de Conversão",
-      items: [
-        { id: 'diary', title: 'Diário Espiritual', subtitle: 'Registro Memorial', source: 'Vida Interior', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a', icon: Icons.Feather, component: <SpiritualDiary /> },
-        { id: 'viacrucis', title: 'Via Crucis', subtitle: 'Paixão do Senhor', source: 'Tradição Apostólica', image: 'https://images.unsplash.com/photo-1471107340929-a87cd0f5b5f3', icon: Icons.Cross, component: <ViaCrucis /> },
-        { id: 'poenitentia', title: 'Confissão', subtitle: 'Exame de Consciência', source: 'Moral S. Afonso', image: 'https://images.unsplash.com/photo-1515606378517-3451a42adc42', icon: Icons.Search, component: <Poenitentia /> },
-        { id: 'quiz', title: 'Certamen Sacrum', subtitle: 'Desafio Teológico', source: 'Academy IA', image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765', icon: Icons.Layout, component: <Certamen /> },
+        { id: 'liturgy', title: 'Liturgia', subtitle: 'Lecionário', source: 'Ano B / 2024', icon: Icons.History, component: <DailyLiturgy /> },
+        { id: 'rosary', title: 'Rosário', subtitle: 'Piedade', source: 'Tradição', icon: Icons.Star, component: <Rosary /> },
+        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Palavra', source: 'Orante', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
+        { id: 'missal', title: 'Missal', subtitle: 'Culto', source: '3ª Edição', icon: Icons.Cross, component: <Missal /> },
       ]
     },
     {
       title: "Estudo e Doutrina",
       items: [
-        { id: 'bible', title: 'Escrituras', subtitle: 'Scriptura Sacra', source: 'Cânon de Trento', image: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df', icon: Icons.Book, component: <Bible /> },
-        { id: 'catechism', title: 'Catecismo', subtitle: 'Codex Fidei (CIC)', source: 'Editio Typica', image: 'https://images.unsplash.com/photo-1541339907198-e08759df9a73', icon: Icons.Pin, component: <Catechism onDeepDive={onSearch} /> },
-        { id: 'aquinas', title: 'Suma Teológica', subtitle: 'Doutor Angélico', source: 'Opera Omnia', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a', icon: Icons.Feather, component: <AquinasOpera /> },
-        { id: 'dogmas', title: 'Dogmas e Verdades', subtitle: 'Depositum Fidei', source: 'Denzinger (DH)', image: 'https://images.unsplash.com/photo-1548610762-656391d1ad4d', icon: Icons.Star, component: <Dogmas /> },
-      ]
-    },
-    {
-      title: "Tesouros da Tradição",
-      items: [
-        { id: 'magisterium', title: 'Magistério', subtitle: 'Documentos Papais', source: 'Santa Sé', image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149', icon: Icons.Globe, component: <Magisterium /> },
-        { id: 'prayers', title: 'Orações Clássicas', subtitle: 'Thesaurus Precum', source: 'Enchiridion', image: 'https://images.unsplash.com/photo-1520694478166-dafeb4d0b9de', icon: Icons.Heart, component: <Prayers /> },
-        { id: 'litanies', title: 'Ladainhas', subtitle: 'Súplicas Rítmicas', source: 'Litanarium', image: 'https://images.unsplash.com/photo-1563242636-6e465a39626e', icon: Icons.History, component: <Litanies /> },
+        { id: 'bible', title: 'Bíblia', subtitle: 'Escrituras', source: 'Nova Vulgata', icon: Icons.Book, component: <Bible /> },
+        { id: 'catechism', title: 'Catecismo', subtitle: 'Doutrina', source: 'CIC', icon: Icons.Pin, component: <Catechism onDeepDive={onSearch} /> },
+        { id: 'aquinas', title: 'Suma Teológica', subtitle: 'Escolástica', source: 'S. Tomás', icon: Icons.Feather, component: <AquinasOpera /> },
+        { id: 'dogmas', title: 'Dogmas', subtitle: 'Verdades', source: 'Denzinger', icon: Icons.Star, component: <Dogmas /> },
       ]
     }
   ];
 
   return (
     <div className="space-y-12 pb-48 animate-in fade-in duration-700 px-2 md:px-0">
-      {/* DESTAQUE PRINCIPAL */}
-      <section className="relative h-[45vh] md:h-[55vh] rounded-[3.5rem] overflow-hidden shadow-4xl group">
-        <SacredImage src={dailyData.verse.imageUrl} alt="Hero" className="w-full h-full object-cover transition-transform duration-[20s] group-hover:scale-110" priority />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 p-8 md:p-16 space-y-4 max-w-4xl">
+      {/* BANNER DE IMPACTO - SEM IMAGEM, SÓ TEXTO SACRO */}
+      <section className="relative h-[40vh] md:h-[45vh] rounded-[3rem] overflow-hidden shadow-4xl bg-stone-950 flex flex-col justify-center p-8 md:p-16 border border-white/5">
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
+        <div className="relative z-10 space-y-6 max-w-4xl">
            <div className="flex items-center gap-3">
-             <span className="bg-gold text-stone-900 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">Verbum Diei</span>
-             <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">Fonte: Ano B / 2024</span>
+             <span className="bg-gold text-stone-900 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl">Verbum Diei</span>
+             <span className="text-white/40 text-[8px] font-black uppercase tracking-widest">Ano B • Ciclo II</span>
            </div>
-           <h1 className="text-2xl md:text-5xl font-serif font-bold text-white leading-tight italic">"{dailyData.verse.verse}"</h1>
-           <p className="text-gold font-serif text-xl">{dailyData.verse.reference}</p>
+           <h1 className="text-3xl md:text-6xl font-serif font-bold text-white leading-tight italic">"{dailyData.verse.verse}"</h1>
+           <p className="text-gold font-serif text-xl md:text-2xl">{dailyData.verse.reference}</p>
+        </div>
+        <div className="absolute bottom-0 right-0 p-10 opacity-10">
+           <Icons.Cross className="w-48 h-48 text-gold" />
         </div>
       </section>
 
-      {/* TRILHOS NETFLIX */}
-      <div className="space-y-12">
+      {/* CARDS TEXT-ONLY */}
+      <div className="space-y-16">
         {ROWS.map((row, rIdx) => (
-          <section key={rIdx} className="space-y-6">
-            <h2 className="text-xl md:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 px-2">{row.title}</h2>
-            <div className="flex overflow-x-auto gap-5 no-scrollbar pb-6 px-2 scroll-smooth">
+          <section key={rIdx} className="space-y-8">
+            <h2 className="text-lg font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 px-2 flex items-center gap-4">
+              <div className="h-px w-8 bg-gold/30" />
+              {row.title}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-2">
               {row.items.map((item) => (
                 <button 
                   key={item.id}
-                  onClick={() => setActiveFeature(item as Feature)}
-                  className="flex-shrink-0 w-64 md:w-80 group relative aspect-[16/10] rounded-[2.5rem] overflow-hidden shadow-xl transition-all duration-500 hover:scale-[1.05] hover:z-10"
+                  onClick={() => setActiveFeature(item as any)}
+                  className="group relative aspect-square rounded-[3rem] overflow-hidden shadow-xl transition-all duration-500 hover:scale-[1.03] bg-white dark:bg-[#151310] border border-stone-100 dark:border-white/5 flex flex-col items-center justify-center text-center p-6"
                 >
-                  <SacredImage src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950/90 via-stone-950/20 to-transparent" />
-                  <div className="absolute bottom-6 left-6 text-left">
-                    <p className="text-[7px] font-black uppercase tracking-[0.3em] text-gold/80 mb-1">{item.subtitle}</p>
-                    <h3 className="text-lg md:text-xl font-serif font-bold text-white leading-tight">{item.title}</h3>
-                    <p className="text-[6px] font-black uppercase text-white/30 tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Fonte: {item.source}</p>
+                  <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="p-5 bg-stone-50 dark:bg-stone-900 rounded-3xl mb-4 group-hover:bg-gold transition-all duration-500 shadow-inner">
+                    <item.icon className="w-8 h-8 text-gold group-hover:text-stone-950 transition-colors" />
                   </div>
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-gold/30 rounded-[2.5rem] transition-all pointer-events-none" />
+                  <div className="space-y-1">
+                    <p className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 group-hover:text-gold/60">{item.subtitle}</p>
+                    <h3 className="text-xl md:text-2xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-gold transition-colors">{item.title}</h3>
+                  </div>
                 </button>
               ))}
             </div>
@@ -132,11 +117,7 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
                     </div>
                     <div className="flex flex-col">
                       <h2 className="text-lg md:text-xl font-serif font-bold text-stone-900 dark:text-gold leading-none">{activeFeature.title}</h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[8px] font-black uppercase text-stone-400 tracking-widest">{activeFeature.subtitle}</span>
-                        <div className="w-1 h-1 rounded-full bg-stone-200" />
-                        <span className="text-[8px] font-black uppercase text-sacred tracking-widest">Fonte: {activeFeature.source}</span>
-                      </div>
+                      <span className="text-[8px] font-black uppercase text-sacred tracking-widest mt-1">Fonte: {activeFeature.source}</span>
                     </div>
                  </div>
                  <button onClick={() => setActiveFeature(null)} className="p-3 bg-stone-100 dark:bg-stone-800 hover:bg-sacred hover:text-white rounded-full transition-all">

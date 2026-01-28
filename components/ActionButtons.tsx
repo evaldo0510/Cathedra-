@@ -51,13 +51,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, type, title, cont
     window.dispatchEvent(new CustomEvent('cathedra-saved-updated'));
   };
 
-  const openInDiary = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.dispatchEvent(new CustomEvent('cathedra-open-diary-modal', { 
-      detail: { title, content, category: type === 'verse' ? 'lectio' : 'prayer' } 
-    }));
-  };
-
   const copyToClipboard = (e: React.MouseEvent) => {
     e.stopPropagation();
     const text = `${title}\n\n${content}`;
@@ -74,15 +67,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, type, title, cont
         </div>
       )}
 
+      {/* NOVO: PLAYER DE VOZ GRATUITO */}
       {content && <VoicePlayer text={content} />}
-
-      <button 
-        onClick={openInDiary}
-        className="p-3 rounded-2xl text-stone-300 hover:bg-gold/10 hover:text-gold transition-all"
-        title="Refletir no Diário"
-      >
-        <Icons.Feather className="w-5 h-5" />
-      </button>
 
       <button 
         onClick={toggleBookmark}
