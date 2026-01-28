@@ -21,6 +21,7 @@ import Poenitentia from './Poenitentia';
 import Dogmas from './Dogmas';
 import Prayers from './Prayers';
 import Litanies from './Litanies';
+import SpiritualDiary from './SpiritualDiary';
 
 interface Feature {
   id: string;
@@ -42,10 +43,19 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
     {
       title: "Prática Devocional Diária",
       items: [
-        { id: 'liturgy', title: 'Liturgia Diária', subtitle: 'Lecionário Oficial', source: 'Ano B / Ciclo II', image: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3', icon: Icons.History, component: <DailyLiturgy /> },
-        { id: 'rosary', title: 'Santo Rosário', subtitle: 'Mistérios Meditados', source: 'Piedade Popular', image: 'https://images.unsplash.com/photo-1544427920-c49ccfb85579', icon: Icons.Star, component: <Rosary /> },
-        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Mergulho na Palavra', source: 'Verbum Domini', image: 'https://images.unsplash.com/photo-1507434965515-61970f2bd7c6', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
-        { id: 'missal', title: 'Missal Romano', subtitle: '3ª Edição Típica', source: 'Culto Divino', image: 'https://images.unsplash.com/photo-1543158021-00212008304f', icon: Icons.Cross, component: <Missal /> },
+        { id: 'liturgy', title: 'Liturgia Diária', subtitle: 'Lecionário Oficial', source: 'Ano B / Ciclo II', image: 'https://images.unsplash.com/photo-1543158021-00212008304f', icon: Icons.History, component: <DailyLiturgy /> },
+        { id: 'rosary', title: 'Santo Rosário', subtitle: 'Mistérios Meditados', source: 'Piedade Popular', image: 'https://images.unsplash.com/photo-1555529733-0e670560f7e1', icon: Icons.Star, component: <Rosary /> },
+        { id: 'lectio', title: 'Lectio Divina', subtitle: 'Mergulho na Palavra', source: 'Verbum Domini', image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65', icon: Icons.Audio, component: <LectioDivina onNavigateDashboard={() => setActiveFeature(null)} /> },
+        { id: 'missal', title: 'Missal Romano', subtitle: '3ª Edição Típica', source: 'Culto Divino', image: 'https://images.unsplash.com/photo-1544033527-b192daee1f5b', icon: Icons.Cross, component: <Missal /> },
+      ]
+    },
+    {
+      title: "Caminho de Conversão",
+      items: [
+        { id: 'diary', title: 'Diário Espiritual', subtitle: 'Registro Memorial', source: 'Vida Interior', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a', icon: Icons.Feather, component: <SpiritualDiary /> },
+        { id: 'viacrucis', title: 'Via Crucis', subtitle: 'Paixão do Senhor', source: 'Tradição Apostólica', image: 'https://images.unsplash.com/photo-1471107340929-a87cd0f5b5f3', icon: Icons.Cross, component: <ViaCrucis /> },
+        { id: 'poenitentia', title: 'Confissão', subtitle: 'Exame de Consciência', source: 'Moral S. Afonso', image: 'https://images.unsplash.com/photo-1515606378517-3451a42adc42', icon: Icons.Search, component: <Poenitentia /> },
+        { id: 'quiz', title: 'Certamen Sacrum', subtitle: 'Desafio Teológico', source: 'Academy IA', image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765', icon: Icons.Layout, component: <Certamen /> },
       ]
     },
     {
@@ -54,22 +64,14 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
         { id: 'bible', title: 'Escrituras', subtitle: 'Scriptura Sacra', source: 'Cânon de Trento', image: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df', icon: Icons.Book, component: <Bible /> },
         { id: 'catechism', title: 'Catecismo', subtitle: 'Codex Fidei (CIC)', source: 'Editio Typica', image: 'https://images.unsplash.com/photo-1541339907198-e08759df9a73', icon: Icons.Pin, component: <Catechism onDeepDive={onSearch} /> },
         { id: 'aquinas', title: 'Suma Teológica', subtitle: 'Doutor Angélico', source: 'Opera Omnia', image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a', icon: Icons.Feather, component: <AquinasOpera /> },
-        { id: 'dogmas', title: 'Dogmas e Verdades', subtitle: 'Depositum Fidei', source: 'Denzinger (DH)', image: 'https://images.unsplash.com/photo-1520694478166-dafeb4d0b9de', icon: Icons.Star, component: <Dogmas /> },
-      ]
-    },
-    {
-      title: "Caminho de Conversão",
-      items: [
-        { id: 'viacrucis', title: 'Via Crucis', subtitle: 'Paixão do Senhor', source: 'Tradição Apostólica', image: 'https://images.unsplash.com/photo-1515606378517-3451a42adc42', icon: Icons.Cross, component: <ViaCrucis /> },
-        { id: 'poenitentia', title: 'Confissão', subtitle: 'Exame de Consciência', source: 'Moral S. Afonso', image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149', icon: Icons.Search, component: <Poenitentia /> },
-        { id: 'quiz', title: 'Certamen Sacrum', subtitle: 'Desafio Teológico', source: 'Academy IA', image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765', icon: Icons.Layout, component: <Certamen /> },
+        { id: 'dogmas', title: 'Dogmas e Verdades', subtitle: 'Depositum Fidei', source: 'Denzinger (DH)', image: 'https://images.unsplash.com/photo-1548610762-656391d1ad4d', icon: Icons.Star, component: <Dogmas /> },
       ]
     },
     {
       title: "Tesouros da Tradição",
       items: [
-        { id: 'magisterium', title: 'Magistério', subtitle: 'Documentos Papais', source: 'Santa Sé', image: 'https://images.unsplash.com/photo-1515431039535-64906f35a065', icon: Icons.Globe, component: <Magisterium /> },
-        { id: 'prayers', title: 'Orações Clássicas', subtitle: 'Thesaurus Precum', source: 'Enchiridion', image: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94', icon: Icons.Heart, component: <Prayers /> },
+        { id: 'magisterium', title: 'Magistério', subtitle: 'Documentos Papais', source: 'Santa Sé', image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149', icon: Icons.Globe, component: <Magisterium /> },
+        { id: 'prayers', title: 'Orações Clássicas', subtitle: 'Thesaurus Precum', source: 'Enchiridion', image: 'https://images.unsplash.com/photo-1520694478166-dafeb4d0b9de', icon: Icons.Heart, component: <Prayers /> },
         { id: 'litanies', title: 'Ladainhas', subtitle: 'Súplicas Rítmicas', source: 'Litanarium', image: 'https://images.unsplash.com/photo-1563242636-6e465a39626e', icon: Icons.History, component: <Litanies /> },
       ]
     }
