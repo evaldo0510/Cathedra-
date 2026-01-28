@@ -26,9 +26,10 @@ import ViaCrucis from './pages/ViaCrucis';
 import LectioDivina from './pages/LectioDivina';
 import Dogmas from './pages/Dogmas';
 import Prayers from './pages/Prayers';
+import SpiritualDiary from './pages/SpiritualDiary';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
-import { AppRoute, StudyResult, User, Language } from './types';
+import { AppRoute, StudyResult, User, Language, DiaryEntry } from './types';
 import { getIntelligentStudy } from './services/gemini';
 import { Icons, Logo } from './constants';
 import { UI_TRANSLATIONS } from './services/translations';
@@ -59,6 +60,10 @@ const App: React.FC = () => {
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
+  
+  // Diary Modal State
+  const [diaryModal, setDiaryModal] = useState<{ isOpen: boolean, initialTitle?: string, initialContent?: string, category?: string }>({ isOpen: false });
+  
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   
@@ -92,7 +97,17 @@ const App: React.FC = () => {
       handleSearch(e.detail.topic);
     };
 
+    const handleDiaryModal = (e: any) => {
+      setDiaryModal({ 
+        isOpen: true, 
+        initialTitle: e.detail.title, 
+        initialContent: e.detail.content,
+        category: e.detail.category
+      });
+    };
+
     window.addEventListener('cathedra-open-ai-study', handleAIRequest);
+    window.addEventListener('cathedra-open-diary-modal', handleDiaryModal);
     window.addEventListener('beforeinstallprompt', (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -108,6 +123,7 @@ const App: React.FC = () => {
     return () => {
       clearTimeout(timer);
       window.removeEventListener('cathedra-open-ai-study', handleAIRequest);
+      window.removeEventListener('cathedra-open-diary-modal', handleDiaryModal);
     };
   }, [lang, isDark, user]);
 
@@ -152,6 +168,19 @@ const App: React.FC = () => {
     return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS['en'][key] || key;
   }, [lang]);
 
+  const saveDiaryEntry = (entry: Partial<DiaryEntry>) => {
+    const saved = JSON.parse(localStorage.getItem('cathedra_diary') || '[]');
+    const newEntry = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      tags: [],
+      ...entry
+    };
+    localStorage.setItem('cathedra_diary', JSON.stringify([newEntry, ...saved]));
+    setDiaryModal({ isOpen: false });
+    // Feedback visual opcional aqui
+  };
+
   const content = useMemo(() => {
     switch (route) {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} />;
@@ -175,6 +204,7 @@ const App: React.FC = () => {
       case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.DOGMAS: return <Dogmas />;
       case AppRoute.PRAYERS: return <Prayers />;
+      case AppRoute.DIARY: return <SpiritualDiary />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => setUser(null)} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       default: return <Dashboard onSearch={handleSearch} user={user} />;
@@ -188,6 +218,32 @@ const App: React.FC = () => {
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         <OfflineIndicator state={connectivity} />
         <CommandCenter isOpen={isOmnisearchOpen} onClose={() => setIsOmnisearchOpen(false)} onNavigate={navigateTo} onSearchSelection={handleSearch} />
+
+        {/* DIARY MODAL OVERLAY */}
+        {diaryModal.isOpen && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
+             <div className="absolute inset-0 bg-stone-950/90 backdrop-blur-md" onClick={() => setDiaryModal({ isOpen: false })} />
+             <div className="relative w-full max-w-4xl h-[80vh] bg-[#fdfcf8] dark:bg-[#0c0a09] md:rounded-[4rem] shadow-4xl overflow-hidden flex flex-col animate-modal-zoom border border-white/5">
+                <header className="p-8 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                      <div className="p-3 bg-stone-900 rounded-2xl"><Icons.Feather className="w-6 h-6 text-gold" /></div>
+                      <h3 className="text-2xl font-serif font-bold text-stone-900 dark:text-gold">Scribe Memoriam</h3>
+                   </div>
+                   <button onClick={() => setDiaryModal({ isOpen: false })} className="p-4 bg-stone-100 dark:bg-stone-800 hover:bg-sacred hover:text-white rounded-full transition-all">
+                      <Icons.Cross className="w-6 h-6 rotate-45" />
+                   </button>
+                </header>
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                   <DiaryForm 
+                      initialTitle={diaryModal.initialTitle} 
+                      initialContent={diaryModal.initialContent}
+                      initialCategory={diaryModal.category as any}
+                      onSave={saveDiaryEntry} 
+                   />
+                </div>
+             </div>
+          </div>
+        )}
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
@@ -269,6 +325,72 @@ const App: React.FC = () => {
         </nav>
       </div>
     </LangContext.Provider>
+  );
+};
+
+// Internal Form Component for Diary Modal
+const DiaryForm: React.FC<{ initialTitle?: string, initialContent?: string, initialCategory?: DiaryEntry['category'], onSave: (e: Partial<DiaryEntry>) => void }> = ({ initialTitle, initialContent, initialCategory = 'lectio', onSave }) => {
+  const [title, setTitle] = useState(initialTitle || '');
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState<DiaryEntry['category']>(initialCategory);
+
+  return (
+    <div className="space-y-10">
+       <div className="space-y-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Qual o foco desta reflexão?</p>
+          <div className="flex flex-wrap gap-2">
+             {[
+               { id: 'lectio', label: 'Lectio Divina', icon: Icons.Book },
+               { id: 'prayer', label: 'Oração', icon: Icons.Heart },
+               { id: 'grace', label: 'Graça', icon: Icons.Star },
+               { id: 'resolution', label: 'Resolução', icon: Icons.Feather }
+             ].map(cat => (
+               <button 
+                 key={cat.id}
+                 onClick={() => setCategory(cat.id as any)}
+                 className={`px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border-2 flex items-center gap-3 ${category === cat.id ? 'bg-stone-900 text-gold border-stone-900' : 'bg-white dark:bg-stone-800 text-stone-400 border-transparent hover:border-gold/20'}`}
+               >
+                 <cat.icon className="w-4 h-4" />
+                 {cat.label}
+               </button>
+             ))}
+          </div>
+       </div>
+
+       {initialContent && (
+         <div className="p-6 bg-stone-50 dark:bg-stone-900 rounded-3xl border-l-8 border-gold">
+            <p className="text-[10px] font-black uppercase text-gold mb-2">Referência de Estudo:</p>
+            <p className="text-lg font-serif italic text-stone-500 line-clamp-3">"{initialContent}"</p>
+         </div>
+       )}
+
+       <div className="space-y-6">
+          <input 
+            type="text" 
+            placeholder="Título da Meditação..."
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="w-full bg-transparent border-none outline-none font-serif font-bold text-3xl md:text-5xl text-stone-900 dark:text-white placeholder-stone-200"
+          />
+          <div className="h-px w-full bg-stone-100 dark:bg-stone-800" />
+          <textarea 
+            placeholder="O que Deus sussurrou ao seu coração hoje?"
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            className="w-full h-64 bg-transparent border-none outline-none font-serif italic text-2xl md:text-3xl text-stone-700 dark:text-stone-300 placeholder-stone-200 resize-none"
+          />
+       </div>
+
+       <div className="flex justify-end pt-10">
+          <button 
+            onClick={() => onSave({ title, content, category })}
+            disabled={!content.trim()}
+            className="px-12 py-5 bg-gold text-stone-900 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl hover:scale-105 transition-all disabled:opacity-30"
+          >
+             Selar e Guardar Reflexão
+          </button>
+       </div>
+    </div>
   );
 };
 
