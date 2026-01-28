@@ -18,27 +18,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
 
   const menuGroups = [
     {
-      title: 'Hodie',
+      title: 'Hoje',
       items: [
-        { name: 'Dashboard', icon: Icons.Home, path: AppRoute.DASHBOARD },
-        { name: 'Escrituras', icon: Icons.Book, path: AppRoute.BIBLE },
-        { name: 'Liturgia', icon: Icons.History, path: AppRoute.DAILY_LITURGY },
+        { name: 'Painel Inicial', icon: Icons.Home, path: AppRoute.DASHBOARD },
+        { name: 'Escrituras Sagradas', icon: Icons.Book, path: AppRoute.BIBLE },
+        { name: 'Liturgia Diária', icon: Icons.History, path: AppRoute.DAILY_LITURGY },
       ]
     },
     {
-      title: 'Sacra Doctrina',
+      title: 'Doutrina Sagrada',
       items: [
-        { name: 'Catecismo', icon: Icons.Cross, path: AppRoute.CATECHISM },
-        { name: 'Magistério', icon: Icons.Globe, path: AppRoute.MAGISTERIUM },
-        { name: 'Suma IA', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA },
+        { name: 'Catecismo Oficial', icon: Icons.Cross, path: AppRoute.CATECHISM },
+        { name: 'Magistério da Igreja', icon: Icons.Globe, path: AppRoute.MAGISTERIUM },
+        { name: 'Suma Teológica IA', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA },
       ]
     },
     {
-      title: 'Cultus',
+      title: 'Oração e Liturgia',
       items: [
-        { name: 'Missal', icon: Icons.Cross, path: AppRoute.ORDO_MISSAE },
-        { name: 'Rosário', icon: Icons.Star, path: AppRoute.ROSARY },
-        { name: 'Confissão', icon: Icons.Pin, path: AppRoute.POENITENTIA },
+        { name: 'Missal Romano', icon: Icons.Cross, path: AppRoute.ORDO_MISSAE },
+        { name: 'Santo Rosário', icon: Icons.Star, path: AppRoute.ROSARY },
+        { name: 'Exame de Consciência', icon: Icons.Pin, path: AppRoute.POENITENTIA },
       ]
     }
   ];
@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
       <div className="mb-12 flex flex-col items-center justify-center pt-8 text-center">
         <Logo className="w-16 h-16 mb-6 transition-all duration-1000 hover:scale-110" />
         <h1 className="text-3xl font-serif font-bold text-gold tracking-widest">CATHEDRA</h1>
-        <p className="text-[8px] uppercase tracking-[0.6em] text-white/30 font-black mt-2">Sanctuarium Digitale</p>
+        <p className="text-[8px] uppercase tracking-[0.6em] text-white/30 font-black mt-2">Santuário Digital</p>
       </div>
 
       <nav className="flex-1 space-y-10 overflow-y-auto no-scrollbar pb-10">
@@ -91,7 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
             <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold">{user.name.charAt(0)}</div>
             <div className="text-left truncate flex-1">
               <p className="text-xs font-bold">{user.name}</p>
-              <p className="text-[8px] text-gold/60 uppercase font-black">Scholar Member</p>
+              <p className="text-[8px] text-gold/60 uppercase font-black">Membro Scholar</p>
             </div>
           </button>
         ) : (

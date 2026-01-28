@@ -8,21 +8,14 @@ import Bible from './pages/Bible';
 import Catechism from './pages/Catechism';
 import Saints from './pages/Saints';
 import Magisterium from './pages/Magisterium';
-import Dogmas from './pages/Dogmas';
 import DailyLiturgy from './pages/DailyLiturgy';
-import Prayers from './pages/Prayers';
 import AquinasOpera from './pages/AquinasOpera';
-import LiturgicalCalendar from './pages/LiturgicalCalendar';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
-import Community from './pages/Community';
-import LectioDivina from './pages/LectioDivina';
 import Checkout from './pages/Checkout';
-import Admin from './pages/Admin';
 import Poenitentia from './pages/Poenitentia';
 import OrdoMissae from './pages/OrdoMissae';
 import Rosary from './pages/Rosary';
-import ViaCrucis from './pages/ViaCrucis';
 import Litanies from './pages/Litanies';
 import Certamen from './pages/Certamen';
 import Diagnostics from './pages/Diagnostics';
@@ -70,7 +63,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('cathedra_user');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      console.error("Erro ao carregar usuário:", e);
       return null;
     }
   });
@@ -104,8 +96,10 @@ const App: React.FC = () => {
 
     const timer = setTimeout(() => {
         setLoading(false);
-        window.dispatchEvent(new CustomEvent('cathedra-ready'));
-    }, 400);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('cathedra-ready'));
+        });
+    }, 600);
 
     return () => {
       clearTimeout(timer);
@@ -121,18 +115,13 @@ const App: React.FC = () => {
   }, [deferredPrompt]);
 
   const navigateTo = useCallback((r: AppRoute) => {
-    const protectedRoutes = [AppRoute.STUDY_MODE, AppRoute.COMMUNITY];
-    if (protectedRoutes.includes(r) && !user) {
-      setRoute(AppRoute.LOGIN);
-    } else {
-      if (route !== r) {
-        setRouteHistory(prev => [...prev, route]);
-        setRoute(r);
-      }
+    if (route !== r) {
+      setRouteHistory(prev => [...prev, route]);
+      setRoute(r);
     }
     setIsSidebarOpen(false);
     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [user, route]);
+  }, [route]);
 
   const goBack = useCallback(() => {
     if (routeHistory.length > 0) {
@@ -146,20 +135,14 @@ const App: React.FC = () => {
   }, [routeHistory]);
 
   const handleSearch = useCallback(async (topic: string) => {
-    if (!user) {
-      setRoute(AppRoute.LOGIN);
-      return;
-    }
     setRoute(AppRoute.STUDY_MODE);
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
-      const history = JSON.parse(localStorage.getItem('cathedra_history') || '[]');
-      localStorage.setItem('cathedra_history', JSON.stringify([result, ...history.slice(0, 19)]));
     } catch (e) { 
-      console.error("Erro na busca IA:", e); 
+      console.error(e); 
     } 
-  }, [lang, user]);
+  }, [lang]);
 
   const t = useCallback((key: string) => {
     return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS['en'][key] || key;
@@ -167,36 +150,30 @@ const App: React.FC = () => {
 
   const content = useMemo(() => {
     switch (route) {
-      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
-      case AppRoute.BIBLE: return <Bible />;
-      case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
+      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
-      case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.PROFILE); }} />;
+      case AppRoute.BIBLE: return <Bible />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
-      case AppRoute.MAGISTERIUM: return <Magisterium />;
       case AppRoute.SAINTS: return <Saints />;
-      case AppRoute.COMMUNITY: return <Community user={user} onNavigateLogin={() => setRoute(AppRoute.LOGIN)} />;
+      case AppRoute.MAGISTERIUM: return <Magisterium />;
+      case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
       case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
-      case AppRoute.LITURGICAL_CALENDAR: return <LiturgicalCalendar />;
-      case AppRoute.PRAYERS: return <Prayers />;
-      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.CERTAMEN: return <Certamen />;
-      case AppRoute.POENITENTIA: return <Poenitentia />;
       case AppRoute.ORDO_MISSAE: return <OrdoMissae />;
       case AppRoute.ROSARY: return <Rosary />;
-      case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
+      case AppRoute.POENITENTIA: return <Poenitentia />;
       case AppRoute.LITANIES: return <Litanies />;
+      case AppRoute.CERTAMEN: return <Certamen />;
+      case AppRoute.FAVORITES: return <Favorites />;
+      case AppRoute.DIAGNOSTICS: return <Diagnostics />;
       case AppRoute.BREVIARY: return <Breviary />;
       case AppRoute.MISSAL: return <Missal />;
-      case AppRoute.FAVORITES: return <Favorites />;
-      case AppRoute.LOGIN: return <Login onLogin={(u) => { setUser(u); setRoute(AppRoute.DASHBOARD); }} />;
+      case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => setUser(null)} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.DIAGNOSTICS: return user?.role === 'admin' ? <Diagnostics /> : <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
-      default: return <Dashboard onSearch={handleSearch} onNavigate={navigateTo} user={user} />;
+      default: return <Dashboard onSearch={handleSearch} user={user} />;
     }
   }, [route, user, lang, handleSearch, navigateTo, studyData]);
 
-  if (loading) return null;
+  if (loading) return <div className="bg-[#0c0a09] h-screen w-screen" />;
 
   return (
     <LangContext.Provider value={{ lang, setLang: setLangState, t, installPrompt: deferredPrompt, handleInstall }}>
@@ -206,21 +183,21 @@ const App: React.FC = () => {
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
-          <div className={`relative h-full w-80 shadow-3xl transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => { setUser(null); localStorage.removeItem('cathedra_user'); }} onOpenSearch={() => setIsOmnisearchOpen(true)} />
+          <div className={`relative h-full w-80 transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => setUser(null)} onOpenSearch={() => setIsOmnisearchOpen(true)} />
           </div>
         </div>
         
-        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar scroll-smooth">
+        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative scroll-smooth custom-scrollbar">
           <div className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
              <div className="flex items-center gap-2">
                {route !== AppRoute.DASHBOARD ? (
                  <button 
                   onClick={goBack}
-                  className="p-3 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-gold rounded-2xl hover:bg-gold hover:text-stone-900 transition-all active:scale-90"
-                  aria-label="Voltar"
+                  className="p-3 bg-stone-900 text-gold rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 pr-5 animate-in slide-in-from-left-4 duration-300 shadow-xl"
                  >
                    <Icons.ArrowDown className="w-5 h-5 rotate-90" />
+                   <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Voltar</span>
                  </button>
                ) : (
                  <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-2xl transition-colors">
@@ -228,28 +205,22 @@ const App: React.FC = () => {
                  </button>
                )}
                
-               <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
-                  <Logo className="w-9 h-9 md:w-11 md:h-11 transition-transform duration-700 group-hover:scale-110" />
-                  <div className="flex flex-col">
-                    <span className="text-sm md:text-base font-serif font-black uppercase tracking-[0.25em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
-                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-stone-400 dark:text-stone-500 leading-none mt-1">Digital Sanctuarium</span>
-                  </div>
-               </div>
+               {route === AppRoute.DASHBOARD && (
+                 <div className="flex items-center gap-3 ml-2">
+                    <Logo className="w-9 h-9" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-serif font-black uppercase tracking-[0.2em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
+                    </div>
+                 </div>
+               )}
              </div>
 
              <div className="flex items-center gap-2">
-               <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-stone-400 hover:text-gold transition-colors hidden sm:block">
+               <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-stone-400 hover:text-gold transition-colors">
                  <Icons.Search className="w-5 h-5" />
                </button>
-               {user?.role === 'admin' && (
-                 <button onClick={() => setRoute(AppRoute.DIAGNOSTICS)} className="p-3 text-stone-400 hover:text-gold transition-colors"><Icons.Layout className="w-5 h-5" /></button>
-               )}
                <button 
-                onClick={() => {
-                  const next = !isDark;
-                  setIsDark(next);
-                  localStorage.setItem('cathedra_dark', String(next));
-                }} 
+                onClick={() => setIsDark(!isDark)} 
                 className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700 transition-all"
                >
                 {isDark ? <Icons.Star className="w-5 h-5 text-gold fill-current" /> : <Icons.History className="w-5 h-5" />}
@@ -263,21 +234,20 @@ const App: React.FC = () => {
 
           <Footer onNavigate={navigateTo} />
           
-          {/* BOTÃO SURSUM CORDA (SOBE) */}
           <button 
             onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`fixed bottom-24 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl border-2 border-white transition-all duration-500 active:scale-90 ${showScrollTop ? 'translate-y-0 opacity-100 rotate-0' : 'translate-y-20 opacity-0 rotate-180'}`}
+            className={`fixed bottom-24 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl border-2 border-white transition-all duration-500 active:scale-90 ${showScrollTop ? 'translate-y-0 opacity-100 rotate-0' : 'translate-y-20 opacity-0 rotate-180 pointer-events-none'}`}
           >
              <Icons.ArrowDown className="w-6 h-6 rotate-180" />
           </button>
         </main>
 
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.1)] pb-[calc(12px+var(--sab))]">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-2xl">
           {[
             { id: AppRoute.DASHBOARD, icon: Icons.Home, label: 'Início' },
             { id: AppRoute.BIBLE, icon: Icons.Book, label: 'Bíblia' },
             { id: AppRoute.STUDY_MODE, icon: Icons.Search, label: 'IA' },
-            { id: AppRoute.PROFILE, icon: Icons.Users, label: 'Membro' }
+            { id: AppRoute.PROFILE, icon: Icons.Users, label: 'Perfil' }
           ].map(item => (
             <button 
               key={item.id}

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Icons } from '../constants';
 import { SavedItem } from '../types';
+import VoicePlayer from './VoicePlayer';
 
 interface ActionButtonsProps {
   itemId: string;
@@ -42,17 +43,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, type, title, cont
       };
       next = [...bookmarks, newItem];
       setIsBookmarked(true);
-      
-      // Feedback Profissional: Toast Animado
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
-
-      // Trigger Background Sync se suportado
-      if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        navigator.serviceWorker.ready.then(reg => {
-          (reg as any).sync.register('sync-favorites').catch(() => {});
-        });
-      }
     }
     
     localStorage.setItem('cathedra_saved_items', JSON.stringify(next));
@@ -75,10 +67,13 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, type, title, cont
         </div>
       )}
 
+      {/* NOVO: PLAYER DE VOZ GRATUITO */}
+      {content && <VoicePlayer text={content} />}
+
       <button 
         onClick={toggleBookmark}
         className={`p-3 rounded-2xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center ${isBookmarked ? 'text-sacred bg-sacred/10 ring-1 ring-sacred/20' : 'text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-        aria-label="Guardar no Florilégio"
+        aria-label="Guardar"
       >
         <Icons.Star className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
       </button>
@@ -86,16 +81,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ itemId, type, title, cont
       <button 
         onClick={copyToClipboard}
         className={`p-3 rounded-2xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center ${isCopied ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30' : 'text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-        aria-label="Copiar Citação"
+        aria-label="Copiar"
       >
-        {isCopied ? (
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-1 bg-current rounded-full animate-ping" />
-            <Icons.ExternalLink className="w-4 h-4" />
-          </div>
-        ) : (
-          <Icons.ExternalLink className="w-4 h-4" />
-        )}
+        <Icons.ExternalLink className="w-4 h-4" />
       </button>
     </div>
   );

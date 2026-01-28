@@ -1,5 +1,5 @@
 
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext } from 'react';
 import { Icons } from '../constants';
 import { StudyResult } from '../types';
 import { LangContext } from '../App';
@@ -7,7 +7,6 @@ import { LangContext } from '../App';
 const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string) => void }> = ({ data, onSearch }) => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [localData, setLocalData] = useState<StudyResult | null>(data || null);
   
   const handleTriggerSearch = async () => {
     if (!query.trim()) return;
@@ -19,11 +18,11 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
     }
   };
 
-  const handleReset = () => {
-    setQuery('');
-    // Forçar atualização via App resetando o studyData no pai seria ideal, 
-    // mas localmente garantimos a limpeza da UI.
-    window.location.reload(); // Fallback simples para limpar estado global de busca se necessário
+  const resetSearch = () => {
+    window.dispatchEvent(new CustomEvent('cathedra-open-ai-study', { detail: { topic: '' } }));
+    // Isso forçará o App a limpar o studyData e voltaremos ao estado inicial.
+    // Para efeito visual imediato, recarregamos o estado local se necessário.
+    window.location.reload(); 
   };
 
   return (
@@ -31,40 +30,37 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
       <header className={`transition-all duration-700 ${data ? 'mb-8' : 'min-h-[50vh] flex flex-col justify-center pt-20'}`}>
         {data && (
           <button 
-            onClick={handleReset}
+            onClick={resetSearch}
             className="flex items-center gap-3 text-gold text-[10px] font-black uppercase tracking-widest mb-10 hover:translate-x-[-4px] transition-transform group"
           >
-            <Icons.ArrowDown className="w-4 h-4 rotate-90 group-hover:scale-125 transition-transform" /> 
+            <Icons.ArrowDown className="w-4 h-4 rotate-90" /> 
             Nova Investigação
           </button>
         )}
 
         <div className="text-center space-y-6 mb-12">
-          <h2 className="text-5xl md:text-8xl lg:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tight leading-none">Investigação Cruzada</h2>
-          <p className="text-stone-400 font-serif italic text-2xl md:text-3xl">IA conectando Escritura, Tradição e Magistério</p>
+          <h2 className="text-5xl md:text-9xl font-serif font-bold text-stone-900 dark:text-gold tracking-tight leading-none">Investigação IA</h2>
+          <p className="text-stone-400 font-serif italic text-2xl md:text-3xl">O nexo entre Escritura e Tradição.</p>
         </div>
         
         {!data && (
           <div className="max-w-4xl mx-auto px-2 animate-in slide-in-from-bottom-8 duration-1000">
-            <div className="relative w-full max-w-3xl mx-auto flex flex-col gap-6">
-              <div className="relative group w-full">
-                <Icons.Search className="absolute left-8 top-1/2 -translate-y-1/2 h-8 w-8 text-gold/40 transition-colors group-focus-within:text-gold z-10" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
-                  className="block w-full pl-20 pr-16 py-10 border border-stone-200 dark:border-white/10 rounded-[3rem] bg-white dark:bg-[#151310] text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:ring-16 focus:ring-gold/5 focus:border-gold transition-all font-serif italic text-2xl md:text-3xl shadow-4xl"
-                  placeholder="Tema para correlação teológica..." 
-                />
-              </div>
-
+            <div className="relative group w-full">
+              <Icons.Search className="absolute left-8 top-1/2 -translate-y-1/2 h-8 w-8 text-gold/40 z-10" />
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && handleTriggerSearch()}
+                className="block w-full pl-20 pr-16 py-10 border border-stone-200 dark:border-white/10 rounded-[3rem] bg-white dark:bg-[#151310] text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:ring-16 focus:ring-gold/5 outline-none font-serif italic text-2xl md:text-3xl shadow-4xl transition-all"
+                placeholder="Tema para correlação teológica..." 
+              />
               <button 
                 onClick={handleTriggerSearch}
                 disabled={loading}
-                className="w-full py-8 bg-sacred hover:bg-stone-900 text-white rounded-[3rem] font-black uppercase tracking-[0.4em] text-[12px] shadow-4xl active:scale-95 transition-all disabled:opacity-50"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-6 bg-gold text-stone-900 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
               >
-                {loading ? "Processando Analogias..." : "Iniciar Cruzamento de Dados"}
+                {loading ? <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Feather className="w-6 h-6" />}
               </button>
             </div>
           </div>
