@@ -1,6 +1,4 @@
 
-import { Verse } from "../types";
-
 export type Book = {
   id: number;
   name: string;
@@ -8,20 +6,6 @@ export type Book = {
   testament: "AT" | "NT";
   category: string;
 };
-
-export type BibleVersion = {
-  id: string;
-  slug: string; 
-  name: string;
-  lang: string;
-  description: string;
-  isCatholic: boolean;
-};
-
-export const BIBLE_VERSIONS: BibleVersion[] = [
-  { id: 'ave_maria', slug: 'ave_maria', name: 'Ave Maria', lang: 'pt', description: 'Tradução católica clássica e piedosa.', isCatholic: true },
-  { id: 'vulgata', slug: 'clementine', name: 'Vulgata Clementina', lang: 'la', description: 'Bíblia Sacra (Ed. 1592). Padrão latino.', isCatholic: true },
-];
 
 export const CATHOLIC_BIBLE_BOOKS: Book[] = [
   // PENTATEUCO
@@ -109,68 +93,25 @@ export const CATHOLIC_BIBLE_BOOKS: Book[] = [
   { id: 73, name: "Apocalipse", chapters: 22, testament: "NT", category: "Profecia" }
 ];
 
-// Added DEUTEROCANONICAL_BOOKS export to fix bibleApi.ts import error
-export const DEUTEROCANONICAL_BOOKS = [
-  "Tobias",
-  "Judite",
-  "Sabedoria",
-  "Eclesiástico",
-  "Baruc",
-  "1 Macabeus",
-  "2 Macabeus"
-];
-
-export const getCatholicCanon = () => {
-  const canon: any = { "Antigo Testamento": {}, "Novo Testamento": {} };
-  CATHOLIC_BIBLE_BOOKS.forEach(b => {
-    const test = b.testament === "AT" ? "Antigo Testamento" : "Novo Testamento";
-    if (!canon[test][b.category]) canon[test][b.category] = [];
-    canon[test][b.category].push(b.name);
-  });
-  return canon;
-};
-
 export const getBibleBooks = () => CATHOLIC_BIBLE_BOOKS;
 
-export const getChapterCount = (bookName: string): number => {
-  const book = CATHOLIC_BIBLE_BOOKS.find(b => b.name === bookName);
-  return book ? book.chapters : 1;
-};
+// Livros Deuterocanônicos do Cânon Católico
+export const DEUTEROCANONICAL_BOOKS = ["Tobias", "Judite", "Sabedoria", "Eclesiástico", "Baruc", "1 Macabeus", "2 Macabeus"];
 
-// Exemplos estáticos para gratificação instantânea nos livros mais lidos
-export const BIBLE_VERSES_STATIC: Record<string, Record<string, string[]>> = {
-  "Gênesis": {
-    "1": [
-      "No princípio, criou Deus os céus e a terra.",
-      "A terra era sem forma e vazia; havia trevas sobre a face do abismo, e o Espírito de Deus pairava sobre as águas.",
-      "Disse Deus: Haja luz; e houve luz.",
-      "Viu Deus que a luz era boa; e fez separação entre a luz e as trevas.",
-      "Chamou Deus à luz dia, e às trevas noite. Houve entardecer e madrugada: foi o primeiro dia."
-    ]
-  },
-  "Salmos": {
-    "23": [
-      "O Senhor é o meu pastor, nada me faltará.",
-      "Em verdes pastagens me faz repousar e conduz-me a águas tranquilas.",
-      "Restaura-me as forças e guia-me por caminhos retos, por amor do seu nome.",
-      "Ainda que eu ande pelo vale da sombra da morte, não temerei mal algum, porque tu estás comigo."
-    ]
-  },
-  "João": {
-    "1": [
-      "No princípio era o Verbo, e o Verbo estava com Deus, e o Verbo era Deus.",
-      "Ele estava no princípio com Deus.",
-      "Todas as coisas foram feitas por intermédio dele; e sem ele, nada do que foi feito se fez.",
-      "Nela estava a vida, e a vida era a luz dos homens.",
-      "A luz resplandece nas trevas, e as trevas não prevaleceram contra ela."
-    ]
-  }
-};
-
-export const getBibleVersesLocal = (book: string, chapter: number): Verse[] => {
-  const content = BIBLE_VERSES_STATIC[book]?.[String(chapter)];
-  if (content) {
-    return content.map((text, i) => ({ book, chapter, verse: i + 1, text }));
-  }
-  return [];
+// Auxiliar para retornar o Cânon Católico completo organizado
+export const getCatholicCanon = () => {
+  const canon: any = {
+    'Antigo Testamento': {},
+    'Novo Testamento': {}
+  };
+  
+  CATHOLIC_BIBLE_BOOKS.forEach(b => {
+    const testament = b.testament === 'AT' ? 'Antigo Testamento' : 'Novo Testamento';
+    if (!canon[testament][b.category]) {
+      canon[testament][b.category] = [];
+    }
+    canon[testament][b.category].push(b.name);
+  });
+  
+  return canon;
 };

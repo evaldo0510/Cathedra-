@@ -67,17 +67,14 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('cathedra_user');
       return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   });
 
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
   const connectivity = useOfflineMode();
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    const top = e.currentTarget.scrollTop;
-    setShowScrollTop(top > 400);
+    setShowScrollTop(e.currentTarget.scrollTop > 400);
   }, []);
 
   useEffect(() => {
@@ -86,10 +83,7 @@ const App: React.FC = () => {
     else document.documentElement.classList.remove('dark');
 
     const handleAIRequest = (e: any) => {
-      if (!user) {
-        setRoute(AppRoute.LOGIN);
-        return;
-      }
+      if (!user) { setRoute(AppRoute.LOGIN); return; }
       handleSearch(e.detail.topic);
     };
 
@@ -100,24 +94,15 @@ const App: React.FC = () => {
     });
 
     const timer = setTimeout(() => {
-        setLoading(false);
-        requestAnimationFrame(() => {
-          window.dispatchEvent(new CustomEvent('cathedra-ready'));
-        });
-    }, 600);
+      setLoading(false);
+      window.dispatchEvent(new CustomEvent('cathedra-ready'));
+    }, 800);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('cathedra-open-ai-study', handleAIRequest);
     };
   }, [lang, isDark, user]);
-
-  const handleInstall = useCallback(async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
-  }, [deferredPrompt]);
 
   const navigateTo = useCallback((r: AppRoute) => {
     if (route !== r) {
@@ -133,7 +118,6 @@ const App: React.FC = () => {
       const prev = routeHistory[routeHistory.length - 1];
       setRouteHistory(prevHistory => prevHistory.slice(0, -1));
       setRoute(prev);
-      document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setRoute(AppRoute.DASHBOARD);
     }
@@ -144,9 +128,7 @@ const App: React.FC = () => {
     try {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
-    } catch (e) { 
-      console.error("Erro na busca IA:", e);
-    } 
+    } catch (e) { console.error(e); } 
   }, [lang]);
 
   const t = useCallback((key: string) => {
@@ -183,10 +165,10 @@ const App: React.FC = () => {
     }
   }, [route, user, lang, handleSearch, studyData, navigateTo]);
 
-  if (loading) return <div className="bg-[#0c0a09] h-screen w-screen" />;
+  if (loading) return null;
 
   return (
-    <LangContext.Provider value={{ lang, setLang: setLangState, t, installPrompt: deferredPrompt, handleInstall }}>
+    <LangContext.Provider value={{ lang, setLang: setLangState, t, installPrompt: deferredPrompt, handleInstall: () => deferredPrompt?.prompt() }}>
       <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         <OfflineIndicator state={connectivity} />
         <CommandCenter isOpen={isOmnisearchOpen} onClose={() => setIsOmnisearchOpen(false)} onNavigate={navigateTo} onSearchSelection={handleSearch} />
@@ -198,45 +180,33 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative scroll-smooth custom-scrollbar">
-          <div className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
+        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar scroll-smooth">
+          <header className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
              <div className="flex items-center gap-2">
                {route !== AppRoute.DASHBOARD ? (
-                 <button 
-                  onClick={goBack}
-                  className="p-3 bg-stone-900 text-gold rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2 pr-5 animate-in slide-in-from-left-4 duration-300 shadow-xl"
-                 >
+                 <button onClick={goBack} className="p-3 bg-stone-900 text-gold rounded-2xl flex items-center gap-2 pr-5 shadow-xl animate-in slide-in-from-left-4">
                    <Icons.ArrowDown className="w-5 h-5 rotate-90" />
-                   <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Voltar</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest">Voltar</span>
                  </button>
                ) : (
-                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 text-stone-900 dark:text-gold hover:bg-stone-50 dark:hover:bg-white/5 rounded-2xl transition-colors">
+                 <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 text-stone-900 dark:text-gold">
                    <Icons.Menu className="w-6 h-6" />
                  </button>
                )}
-               
                {route === AppRoute.DASHBOARD && (
                  <div className="flex items-center gap-3 ml-2">
                     <Logo className="w-9 h-9" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-serif font-black uppercase tracking-[0.2em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
-                    </div>
+                    <span className="text-sm font-serif font-black uppercase tracking-[0.2em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
                  </div>
                )}
              </div>
-
              <div className="flex items-center gap-2">
-               <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-stone-400 hover:text-gold transition-colors">
-                 <Icons.Search className="w-5 h-5" />
-               </button>
-               <button 
-                onClick={() => setIsDark(!isDark)} 
-                className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700 transition-all"
-               >
+               <button onClick={() => setIsOmnisearchOpen(true)} className="p-3 text-stone-400 hover:text-gold"><Icons.Search className="w-5 h-5" /></button>
+               <button onClick={() => setIsDark(!isDark)} className="p-3 bg-stone-50 dark:bg-stone-800/50 text-stone-400 hover:text-gold rounded-2xl border border-stone-100 dark:border-stone-700">
                 {isDark ? <Icons.Star className="w-5 h-5 text-gold fill-current" /> : <Icons.History className="w-5 h-5" />}
                </button>
              </div>
-          </div>
+          </header>
 
           <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto page-enter">
             {content}
@@ -246,29 +216,11 @@ const App: React.FC = () => {
           
           <button 
             onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`fixed bottom-24 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl border-2 border-white transition-all duration-500 active:scale-90 ${showScrollTop ? 'translate-y-0 opacity-100 rotate-0' : 'translate-y-20 opacity-0 rotate-180 pointer-events-none'}`}
+            className={`fixed bottom-8 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl transition-all duration-500 ${showScrollTop ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
           >
              <Icons.ArrowDown className="w-6 h-6 rotate-180" />
           </button>
         </main>
-
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[200] bg-white/95 dark:bg-stone-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/5 px-6 py-3 flex items-center justify-between shadow-2xl">
-          {[
-            { id: AppRoute.DASHBOARD, icon: Icons.Home, label: 'Início' },
-            { id: AppRoute.BIBLE, icon: Icons.Book, label: 'Bíblia' },
-            { id: AppRoute.STUDY_MODE, icon: Icons.Search, label: 'IA' },
-            { id: AppRoute.PROFILE, icon: Icons.Users, label: 'Perfil' }
-          ].map(item => (
-            <button 
-              key={item.id}
-              onClick={() => navigateTo(item.id)}
-              className={`flex flex-col items-center gap-1 transition-all ${route === item.id ? 'text-sacred dark:text-gold scale-110' : 'text-stone-400'}`}
-            >
-              <item.icon className="w-6 h-6" />
-              <span className="text-[8px] font-black uppercase tracking-tighter">{item.label}</span>
-            </button>
-          ))}
-        </nav>
       </div>
     </LangContext.Provider>
   );

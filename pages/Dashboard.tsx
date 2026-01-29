@@ -3,7 +3,6 @@ import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Icons } from '../constants';
 import { User, AppRoute } from '../types';
 import { LangContext } from '../App';
-import { getDailyNativeContent } from '../services/nativeData';
 import { fetchLatestPapalAudience } from '../services/gemini';
 import Progress from '../components/Progress';
 
@@ -119,7 +118,7 @@ const Dashboard: React.FC<{ onSearch: (topic: string) => void; user: User | null
               <div className="flex items-center justify-center md:justify-start gap-3">
                  <span className="text-[9px] font-black uppercase text-sacred tracking-widest">Cátedra de Pedro</span>
                  <span className="text-stone-300 dark:text-stone-700">•</span>
-                 <span className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">{papalAudience?.date || "Consultando..."}</span>
+                 <span className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">{papalAudience?.date || "Consultando Vaticano..."}</span>
               </div>
               {loadingPapal ? (
                 <div className="h-8 w-64 bg-stone-100 dark:bg-stone-800 rounded-lg animate-pulse" />
