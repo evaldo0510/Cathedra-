@@ -26,6 +26,7 @@ import ViaCrucis from './pages/ViaCrucis';
 import LectioDivina from './pages/LectioDivina';
 import Dogmas from './pages/Dogmas';
 import Prayers from './pages/Prayers';
+import About from './pages/About';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
@@ -144,7 +145,7 @@ const App: React.FC = () => {
       const result = await getIntelligentStudy(topic, lang);
       setStudyData(result);
     } catch (e) { 
-      console.error(e); 
+      console.error("Erro na busca IA:", e);
     } 
   }, [lang]);
 
@@ -154,7 +155,7 @@ const App: React.FC = () => {
 
   const content = useMemo(() => {
     switch (route) {
-      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} />;
+      case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
       case AppRoute.BIBLE: return <Bible />;
       case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
@@ -175,11 +176,12 @@ const App: React.FC = () => {
       case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
       case AppRoute.DOGMAS: return <Dogmas />;
       case AppRoute.PRAYERS: return <Prayers />;
+      case AppRoute.ABOUT: return <About />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => setUser(null)} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
-      default: return <Dashboard onSearch={handleSearch} user={user} />;
+      default: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
     }
-  }, [route, user, lang, handleSearch, navigateTo, studyData]);
+  }, [route, user, lang, handleSearch, studyData, navigateTo]);
 
   if (loading) return <div className="bg-[#0c0a09] h-screen w-screen" />;
 

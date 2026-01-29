@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
     <aside className="h-full bg-stone-950 text-white flex flex-col p-6 shadow-4xl border-r border-white/5 z-50 overflow-hidden relative">
       <div className="absolute inset-0 pointer-events-none opacity-[0.015] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
 
-      <div className="mb-8 flex flex-col items-center justify-center pt-8 text-center">
+      <div className="mb-8 flex flex-col items-center justify-center pt-8 text-center cursor-pointer" onClick={() => handleNavigation(AppRoute.DASHBOARD)}>
         <Logo className="w-16 h-16 mb-4 transition-all duration-1000 hover:scale-110" />
         <h1 className="text-2xl font-serif font-bold text-gold tracking-widest leading-none">CATHEDRA</h1>
         <p className="text-[7px] uppercase tracking-[0.5em] text-white/30 font-black mt-2">Santuário de Inteligência Teológica</p>
@@ -88,6 +88,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
             </div>
           </div>
         ))}
+
+        <div className="space-y-3">
+           <h3 className="px-4 text-[7px] font-black uppercase tracking-[0.4em] text-gold/40">Institucional</h3>
+           <button 
+             onClick={() => handleNavigation(AppRoute.ABOUT)}
+             className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all ${
+               currentPath === AppRoute.ABOUT ? 'bg-white/10 border border-gold/30 text-gold' : 'hover:bg-white/5 text-stone-400'
+             }`}
+           >
+             <Icons.Globe className="w-4 h-4" />
+             <span className="text-[10px] font-bold tracking-widest uppercase">Manifesto e Propósito</span>
+           </button>
+        </div>
       </nav>
 
       <div className="pt-6 border-t border-white/5 space-y-4">

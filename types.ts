@@ -27,7 +27,8 @@ export enum AppRoute {
   MISSAL = '/missal',
   BREVIARY = '/breviary',
   FAVORITES = '/favorites',
-  DIAGNOSTICS = '/diagnostics'
+  DIAGNOSTICS = '/diagnostics',
+  ABOUT = '/about'
 }
 
 export interface ReadingProgress {
@@ -36,6 +37,9 @@ export interface ReadingProgress {
   streak: number;
   totalMinutesRead: number;
   completedBooks: string[];
+  xp: number;
+  level: number;
+  badges: string[];
 }
 
 export interface User {
@@ -147,7 +151,6 @@ export interface AquinasWork {
   parts: string[];
 }
 
-// Added Dogma interface to resolve module error
 export interface Dogma {
   title: string;
   definition: string;
@@ -158,14 +161,12 @@ export interface Dogma {
   sourceUrl?: string;
 }
 
-// Added Gospel interface to resolve module error
 export interface Gospel {
   reference: string;
   text: string;
   reflection?: string;
 }
 
-// Added MagisteriumDoc interface to resolve module error
 export interface MagisteriumDoc {
   title: string;
   source: string;
@@ -173,16 +174,6 @@ export interface MagisteriumDoc {
   summary: string;
 }
 
-// Added CommunityQuestion interface to resolve module error
-export interface CommunityQuestion {
-  id: string;
-  title: string;
-  content: string;
-  author: string;
-  timestamp: string;
-}
-
-// Added Prayer interface to resolve module error
 export interface Prayer {
   id: string;
   title: string;

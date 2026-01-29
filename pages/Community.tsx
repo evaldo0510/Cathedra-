@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Icons } from '../constants';
-import { CommunityQuestion, User, AppRoute } from '../types';
+import { User, AppRoute } from '../types';
 
 interface CommunityProps {
   user: User | null;

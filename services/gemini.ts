@@ -1,22 +1,84 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { StudyResult, Verse, Saint, ThomisticArticle, Language, Dogma, LiturgyInfo, Gospel, QuizQuestion, UniversalSearchResult } from "../types";
+import { StudyResult, Verse, Saint, ThomisticArticle, Language, Dogma, LiturgyInfo, Gospel, QuizQuestion, UniversalSearchResult, DailyLiturgyContent } from "../types";
 
-// Always use a named parameter for the API key as per guidelines.
+// Helper to create a new instance every time to avoid stale keys
 const getAIInstance = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const safeJsonParse = (text: string | undefined, fallback: any) => {
   try {
     if (!text) return fallback;
-    // Clean markdown code blocks if present
     const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(clean) || fallback;
   } catch (e) { return fallback; }
 };
 
 /**
- * CATEGORIA 1: ESTUDO APROFUNDADO (Symphonia)
+ * BUSCA DA ÚLTIMA AUDIÊNCIA PAPAL (Grounding)
+ * Conecta-se ao site do Vaticano via busca para trazer a mensagem mais recente de quarta-feira.
  */
+export const fetchLatestPapalAudience = async (lang: Language = 'pt'): Promise<any> => {
+  const ai = getAIInstance();
+  
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Identifique o tema e forneça um resumo curto (2 a 3 linhas) da ÚLTIMA Audiência Geral de quarta-feira do Papa Francisco. 
+    Busque especificamente no site oficial vatican.va ou Vatican News.
+    Idioma: ${lang}.
+    
+    Retorne EXATAMENTE este formato JSON:
+    {
+      "date": "Data da audiência (Ex: 23 de Outubro de 2024)",
+      "topic": "Título ou tema central da catequese",
+      "summary": "Resumo teológico conciso",
+      "vaticanUrl": "Link direto para o texto no Vaticano"
+    }`,
+    config: { 
+      tools: [{ googleSearch: {} }],
+      responseMimeType: "application/json"
+    }
+  });
+
+  return safeJsonParse(response.text, { 
+    topic: "Magistério Vivo", 
+    summary: "Conectando-se à Cátedra de Pedro para trazer as últimas exortações do Santo Padre.",
+    date: "Atualizando...",
+    vaticanUrl: "https://www.vatican.va"
+  });
+};
+
+/**
+ * BUSCA DE LITURGIA EM TEMPO REAL (Grounding)
+ */
+export const fetchLiveLiturgy = async (date: string, lang: Language = 'pt'): Promise<{ data: DailyLiturgyContent, sources: any[] }> => {
+  const ai = getAIInstance();
+  const year = new Date().getFullYear();
+  
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Consulte a Liturgia Diária Católica Oficial do Brasil (CNBB) para a data específica: ${date}. 
+    Estamos no ano de ${year}. Busque os textos integrais do Lecionário para Missa do Dia.
+    
+    Retorne JSON:
+    {
+      "date": "${date}",
+      "collect": "Oração do dia",
+      "firstReading": { "reference": "Ref", "text": "Texto" },
+      "psalm": { "title": "Ref", "text": "Texto" },
+      "gospel": { "reference": "Ref", "text": "Texto", "reflection": "Reflexão" }
+    }`,
+    config: { 
+      tools: [{ googleSearch: {} }],
+      responseMimeType: "application/json"
+    }
+  });
+
+  const data = safeJsonParse(response.text, null);
+  const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  
+  return { data, sources };
+};
+
 export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'): Promise<StudyResult> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -27,22 +89,6 @@ export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'):
   return safeJsonParse(response.text, {});
 };
 
-/**
- * CATEGORIA 2: ANALOGIAS E REFERÊNCIAS
- */
-export const getTheologicalCorrelation = async (sourceText: string, lang: Language = 'pt'): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Dada a citação: "${sourceText}", identifique 3 parágrafos do CIC e 2 passagens bíblicas análogas. Idioma: ${lang}. Retorne JSON.`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, {});
-};
-
-/**
- * CATEGORIA 3: O QUE OS OUTROS DISSERAM (Hagiografia e Tradição)
- */
 export const searchSaint = async (name: string): Promise<Partial<Saint>> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -63,7 +109,6 @@ export const getMagisteriumDeepDive = async (title: string, lang: Language = 'pt
   return safeJsonParse(response.text, {});
 };
 
-// Funções de suporte a componentes existentes que chamam Gemini
 export const fetchThomisticArticle = async (work: string, ref: string, lang: Language = 'pt'): Promise<ThomisticArticle> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -86,11 +131,6 @@ export const generateSpeech = async (text: string): Promise<string | undefined> 
   } catch (e) { return undefined; }
 };
 
-/**
- * MISSING EXPORTS TO FIX MODULE ERRORS
- */
-
-// Added getDogmas for pages/Dogmas.tsx
 export const getDogmas = async (query: string): Promise<Dogma[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -101,7 +141,6 @@ export const getDogmas = async (query: string): Promise<Dogma[]> => {
   return safeJsonParse(response.text, []);
 };
 
-// Added getTheologicalDialogueStream for pages/Colloquium.tsx
 export async function* getTheologicalDialogueStream(message: string) {
   const ai = getAIInstance();
   const response = await ai.models.generateContentStream({
@@ -117,51 +156,16 @@ export async function* getTheologicalDialogueStream(message: string) {
   }
 }
 
-// Added getThomisticSynthesis for pages/Aquinas.tsx
-export const getThomisticSynthesis = async (topic: string): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Crie uma síntese escolástica (Summa) sobre: "${topic}". Siga o método da Quaestio Disputata. Retorne JSON: { "title": "string", "objections": ["string"], "sedContra": "string", "respondeo": "string", "replies": ["string"] }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, null);
-};
-
-// Added getCatenaAureaCommentary for pages/Aquinas.tsx
-export const getCatenaAureaCommentary = async (verse: Verse): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Comentário da Catena Aurea (Cadeia de Ouro) compilado por São Tomás de Aquino para ${verse.book} ${verse.chapter}:${verse.verse}. Retorne JSON: { "content": "string", "fathers": ["string"], "sources": [{ "title": "string", "uri": "string" }] }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, null);
-};
-
-// Added fetchMonthlyCalendar for pages/LiturgicalCalendar.tsx
-export const fetchMonthlyCalendar = async (month: number, year: number, lang: Language): Promise<LiturgyInfo[]> => {
+export const universalSearch = async (query: string, lang: Language): Promise<UniversalSearchResult[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Gere o calendário litúrgico católico romano para o mês ${month} do ano ${year}. Idioma: ${lang}. Retorne JSON: Array<{ color: "green"|"purple"|"white"|"red"|"rose"|"black", season: string, rank: string, dayName: string, cycle: string, week: string, date: "YYYY-MM-DD" }>`,
+    contents: `Busca universal no santuário digital católico para o termo: "${query}". Pesquise em Bíblia, Catecismo, Magistério e Vida dos Santos. Idioma: ${lang}. Retorne JSON: Array<{ id: string, type: "verse"|"catechism"|"dogma"|"saint"|"aquinas"|"magisterium", title: string, snippet: string, source: { name: string, code: string, reliability: "high"|"medium" }, relevance: number }>`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, []);
 };
 
-// Added getLectioPoints for pages/LectioDivina.tsx
-export const getLectioPoints = async (text: string): Promise<string[]> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Dada a leitura bíblica: "${text}", forneça 3 pontos de meditação espiritual profunda seguindo a tradição da Lectio Divina. Retorne JSON: ["string", "string", "string"]`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, []);
-};
-
-// Added getDailyGospel for pages/LectioDivina.tsx
 export const getDailyGospel = async (): Promise<Gospel> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -172,51 +176,16 @@ export const getDailyGospel = async (): Promise<Gospel> => {
   return safeJsonParse(response.text, { reference: '', text: '' });
 };
 
-// Added getDailyBundle for services/notifications.ts
-export const getDailyBundle = async (lang: Language): Promise<{ saint: Saint, gospel: Gospel }> => {
+export const getLectioPoints = async (text: string): Promise<string[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Forneça o santo do dia e o evangelho da liturgia de hoje. Idioma: ${lang}. Retorne JSON: { "saint": { "name": "string", "feastDay": "string", "patronage": "string", "biography": "string", "image": "string" }, "gospel": { "reference": "string", "text": "string" } }`,
+    contents: `Dada a leitura bíblica: "${text}", forneça 3 pontos de meditação espiritual profunda seguindo a tradição da Lectio Divina. Retorne JSON: ["string", "string", "string"]`,
     config: { responseMimeType: "application/json" }
   });
-  return safeJsonParse(response.text, null);
+  return safeJsonParse(response.text, []);
 };
 
-// Added fetchBreviaryHour for pages/Breviary.tsx
-export const fetchBreviaryHour = async (hour: string, lang: Language): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Forneça os textos para a Liturgia das Horas (Breviário) da hora: ${hour}. Idioma: ${lang}. Retorne JSON: { "hourName": "string", "invitatory": "string", "hymn": "string", "psalms": [{ "ref": "string", "text": "string" }], "prayer": "string" }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, null);
-};
-
-// Added getMoralDiscernment for pages/Poenitentia.tsx
-export const getMoralDiscernment = async (input: string, lang: Language): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Realize um discernimento moral baseado no Catecismo e na Teologia Moral para o seguinte ato ou dúvida: "${input}". Idioma: ${lang}. Retorne JSON: { "gravity": "mortal"|"venial", "explanation": "string", "cicRef": "string" }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, null);
-};
-
-// Added fetchLitanies for pages/Litanies.tsx
-export const fetchLitanies = async (type: string, lang: Language): Promise<any> => {
-  const ai = getAIInstance();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Forneça o texto da ladainha: "${type}". Idioma: ${lang}. Retorne JSON: { "title": "string", "items": [{ "call": "string", "response": "string" }] }`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, null);
-};
-
-// Added fetchQuizQuestions for pages/Certamen.tsx
 export const fetchQuizQuestions = async (category: string, difficulty: string, lang: Language): Promise<QuizQuestion[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
@@ -227,13 +196,72 @@ export const fetchQuizQuestions = async (category: string, difficulty: string, l
   return safeJsonParse(response.text, []);
 };
 
-// Added universalSearch for components/CommandCenter.tsx
-export const universalSearch = async (query: string, lang: Language): Promise<UniversalSearchResult[]> => {
+export const fetchBreviaryHour = async (hour: string, lang: Language): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Forneça os textos para a Liturgia das Horas (Breviário) da hora: ${hour}. Idioma: ${lang}. Retorne JSON: { "hourName": "string", "invitatory": "string", "hymn": "string", "psalms": [{ "ref": "string", "text": "string" }], "prayer": "string" }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
+};
+
+export const fetchMonthlyCalendar = async (month: number, year: number, lang: Language): Promise<LiturgyInfo[]> => {
   const ai = getAIInstance();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Busca universal no santuário digital católico para o termo: "${query}". Pesquise em Bíblia, Catecismo, Magistério e Vida dos Santos. Idioma: ${lang}. Retorne JSON: Array<{ id: string, type: "verse"|"catechism"|"dogma"|"saint"|"aquinas"|"magisterium", title: string, snippet: string, source: { name: string, code: string, reliability: "high"|"medium" }, relevance: number }>`,
+    contents: `Gere o calendário litúrgico católico romano para o mês ${month} do ano ${year}. Idioma: ${lang}. Retorne JSON: Array<{ color: "green"|"purple"|"white"|"red"|"rose"|"black", season: string, rank: string, dayName: string, cycle: string, week: string, date: "YYYY-MM-DD" }>`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, []);
+};
+
+export const getMoralDiscernment = async (input: string, lang: Language): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Realize um discernimento moral baseado no Catecismo e na Teologia Moral para o seguinte ato ou dúvida: "${input}". Idioma: ${lang}. Retorne JSON: { "gravity": "mortal"|"venial", "explanation": "string", "cicRef": "string" }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
+};
+
+export const fetchLitanies = async (type: string, lang: Language): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Forneça o texto da ladainha: "${type}". Idioma: ${lang}. Retorne JSON: { "title": "string", "items": [{ "call": "string", "response": "string" }] }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
+};
+
+export const getDailyBundle = async (lang: Language): Promise<{ saint: Saint, gospel: Gospel }> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Forneça o santo do dia e o evangelho da liturgia de hoje. Idioma: ${lang}. Retorne JSON: { "saint": { "name": "string", "feastDay": "string", "patronage": "string", "biography": "string", "image": "string" }, "gospel": { "reference": "string", "text": "string" } }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
+};
+
+export const getThomisticSynthesis = async (topic: string): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Crie uma síntese escolástica (Summa) sobre: "${topic}". Siga o método da Quaestio Disputata. Retorne JSON: { "title": "string", "objections": ["string"], "sedContra": "string", "respondeo": "string", "replies": ["string"] }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
+};
+
+export const getCatenaAureaCommentary = async (verse: Verse): Promise<any> => {
+  const ai = getAIInstance();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Comentário da Catena Aurea (Cadeia de Ouro) compilado por São Tomás de Aquino para ${verse.book} ${verse.chapter}:${verse.verse}. Retorne JSON: { "content": "string", "fathers": ["string"], "sources": [{ "title": "string", "uri": "string" }] }`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, null);
 };

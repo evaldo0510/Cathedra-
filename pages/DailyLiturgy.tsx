@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Icons } from '../constants';
 import { getNativeLiturgy } from '../services/nativeData';
 import { LangContext } from '../App';
@@ -15,10 +15,19 @@ const DailyLiturgy: React.FC = () => {
   const [data, setData] = useState<DailyLiturgyContent>(getNativeLiturgy(date));
   const [isImmersive, setIsImmersive] = useState(false);
   const [fontSize, setFontSize] = useState(1.15);
+  const [loading, setLoading] = useState(false);
+
+  const loadContent = useCallback((targetDate: string) => {
+    setLoading(true);
+    // Modo 100% Nativo e Offline
+    const localData = getNativeLiturgy(targetDate);
+    setData(localData);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    setData(getNativeLiturgy(date));
-  }, [date]);
+    loadContent(date);
+  }, [date, loadContent]);
 
   const changeDate = (offset: number) => {
     const d = new Date(date + 'T12:00:00');
@@ -33,7 +42,7 @@ const DailyLiturgy: React.FC = () => {
         <div className="fixed inset-0 z-[1000] overflow-y-auto bg-[#fdfcf8] dark:bg-[#0c0a09] p-4 md:p-20 animate-in fade-in duration-500">
            <div className="max-w-3xl mx-auto space-y-12 md:space-y-16 pb-40">
               <header className="text-center space-y-4 pt-10">
-                 <span className="text-[10px] font-black uppercase text-gold tracking-widest">Hodie • Lecionário</span>
+                 <span className="text-[10px] font-black uppercase text-gold tracking-widest">Hodie • Lecionário Nativo</span>
                  <h1 className="text-4xl md:text-7xl font-serif font-bold tracking-tight dark:text-gold">Lectio Divina</h1>
               </header>
               <div className="space-y-12 md:space-y-16 font-serif leading-[1.8] text-stone-800 dark:text-stone-300" style={{ fontSize: `${fontSize * 1.1}rem` }}>
@@ -69,11 +78,21 @@ const DailyLiturgy: React.FC = () => {
         <button onClick={() => changeDate(1)} className="p-3 md:p-3.5 bg-stone-900 dark:bg-gold text-gold dark:text-stone-900 rounded-2xl shadow-xl transition-all active:scale-95"><Icons.ArrowDown className="w-5 h-5 -rotate-90" /></button>
       </nav>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-4">
          <button onClick={() => setIsImmersive(true)} className="px-6 md:px-10 py-3 md:py-4 bg-sacred text-white rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Iniciar Lectio Divina</button>
+         <div className="px-4 py-1.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-400 border border-stone-200 dark:border-stone-700 text-[8px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />
+            Conteúdo Nativo Offline
+         </div>
       </div>
 
       <article className="space-y-8 md:space-y-12" style={{ fontSize: `${fontSize}rem` }}>
+          {/* ORAÇÃO DO DIA (COLLECT) */}
+          <section className="bg-[#fcf8e8] dark:bg-stone-950 p-6 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-gold/10 shadow-inner italic text-center">
+             <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-gold block mb-4">Oratio (Oração do Dia)</span>
+             <p className="font-serif text-stone-700 dark:text-stone-300 text-xl leading-relaxed">"{data.collect}"</p>
+          </section>
+
           {/* PRIMEIRA LEITURA */}
           <section className="bg-white dark:bg-stone-900 p-6 md:p-14 rounded-[2.5rem] md:rounded-[3.5rem] shadow-lg border border-stone-100 dark:border-stone-800 space-y-6 md:space-y-8">
             <header className="flex justify-between items-center border-b pb-3 md:pb-4 dark:border-stone-800">
@@ -81,7 +100,7 @@ const DailyLiturgy: React.FC = () => {
               <ActionButtons itemId={`l1_${date}`} type="liturgy" title="Leitura I" content={data.firstReading.text} className="scale-90" />
             </header>
             <h4 className="font-serif font-bold text-2xl md:text-4xl text-sacred leading-tight">{data.firstReading.reference}</h4>
-            <p className="font-serif text-stone-800 dark:text-stone-200 leading-relaxed text-justify indent-6 md:indent-8">
+            <p className="font-serif text-stone-800 dark:text-stone-200 leading-relaxed text-justify indent-6 md:indent-8 whitespace-pre-wrap">
               {data.firstReading.text}
             </p>
           </section>
@@ -89,7 +108,8 @@ const DailyLiturgy: React.FC = () => {
           {/* SALMO */}
           <section className="bg-stone-50 dark:bg-stone-950 p-8 md:p-12 rounded-[2.5rem] md:rounded-[3.5rem] shadow-inner text-center space-y-4 md:space-y-6">
             <h3 className="text-[8px] md:text-[10px] font-black uppercase text-stone-400 tracking-[0.2em]">Salmo Responsorial</h3>
-            <p className="font-serif font-bold text-xl md:text-4xl text-stone-900 dark:text-stone-100 italic leading-snug">"{data.psalm.text}"</p>
+            <p className="text-sm font-bold text-sacred mb-2 uppercase tracking-widest">{data.psalm.title}</p>
+            <p className="font-serif font-bold text-xl md:text-4xl text-stone-900 dark:text-stone-100 italic leading-snug whitespace-pre-wrap">"{data.psalm.text}"</p>
           </section>
 
           {/* EVANGELHO */}
@@ -100,7 +120,7 @@ const DailyLiturgy: React.FC = () => {
                <ActionButtons itemId={`lg_${date}`} type="liturgy" title="Evangelho" content={data.gospel.text} className="scale-90" />
             </header>
             <h4 className="font-serif font-bold text-2xl md:text-5xl text-gold leading-tight relative z-10">{data.gospel.reference}</h4>
-            <p className="font-serif text-white font-bold text-xl md:text-4xl leading-relaxed italic text-justify drop-shadow-lg relative z-10">
+            <p className="font-serif text-white font-bold text-xl md:text-4xl leading-relaxed italic text-justify drop-shadow-lg relative z-10 whitespace-pre-wrap">
               "{data.gospel.text}"
             </p>
           </section>

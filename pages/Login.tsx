@@ -38,10 +38,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         role: (isAdmin || isRegularAdmin) ? 'admin' : 'scholar',
         isPremium: isAdmin || isRegularAdmin,
         joinedAt: new Date().toISOString(),
+        // Add missing properties to satisfy ReadingProgress interface
         progress: {
           streak: 1,
           totalMinutesRead: 0,
-          completedBooks: []
+          completedBooks: [],
+          xp: 0,
+          level: 1,
+          badges: []
         },
         stats: {
           versesSaved: 0,
