@@ -1,11 +1,12 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Icons } from '../constants';
 import { CATHOLIC_BIBLE_BOOKS, Book } from '../services/bibleLocal';
-import { fetchBibleChapter } from '../services/gemini';
+import { fetchBibleChapter, generateBibleAudio } from '../services/gemini';
 import { Verse } from '../types';
 import ActionButtons from '../components/ActionButtons';
 import { offlineStorage } from '../services/offlineStorage';
+import { decodeBase64, decodeAudioData } from '../utils/audio';
 
 const Bible: React.FC = () => {
   const [viewMode, setViewMode] = useState<'library' | 'chapters' | 'reading'>('library');
@@ -15,6 +16,10 @@ const Bible: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [fontSize, setFontSize] = useState(1.2);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const filteredBooks = useMemo(() => {
     return CATHOLIC_BIBLE_BOOKS.filter(b => 
@@ -24,8 +29,13 @@ const Bible: React.FC = () => {
   }, [searchTerm]);
 
   const loadContent = useCallback(async (bookName: string, chapter: number) => {
+    // Aborta qualquer carga anterior para evitar duplicidade de "cells"
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
-    setVerses([]); // Reseta estado para evitar duplicação visual de capítulos anteriores
+    setVerses([]); // Reseta estado imediatamente
+    
     try {
       let data = await offlineStorage.getBibleVerses(bookName, chapter);
       if (!data || data.length === 0) {
@@ -43,10 +53,36 @@ const Bible: React.FC = () => {
     }
   }, []);
 
+  const handleAudioPlay = async () => {
+    if (verses.length === 0 || isAudioLoading) return;
+    setIsAudioLoading(true);
+    
+    try {
+      const fullText = verses.map(v => v.text).join(" ");
+      const audioData = await generateBibleAudio(fullText);
+      
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      
+      const base64Data = audioData.split(',')[1];
+      const buffer = await decodeAudioData(decodeBase64(base64Data), audioContextRef.current);
+      
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContextRef.current.destination);
+      source.start();
+      
+    } catch (e) {
+      console.error("Audio generation failed:", e);
+    } finally {
+      setIsAudioLoading(false);
+    }
+  };
+
   const handleBookSelect = (book: Book) => {
     setSelectedBook(book);
     setViewMode('chapters');
-    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleChapterSelect = (ch: number) => {
@@ -118,9 +154,19 @@ const Bible: React.FC = () => {
                  <button onClick={() => setViewMode('chapters')} className="text-[9px] font-black uppercase text-stone-400 hover:text-gold flex items-center gap-2 mb-2"><Icons.ArrowDown className="w-4 h-4 rotate-90" /> Outro Capítulo</button>
                  <h1 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 dark:text-stone-100">{selectedBook.name} {selectedChapter}</h1>
               </div>
-              <div className="flex gap-2">
-                 <button onClick={() => setFontSize(f => Math.min(f + 0.1, 2))} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl hover:bg-gold transition-colors font-bold">A+</button>
-                 <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-3 bg-stone-100 dark:bg-stone-800 rounded-xl hover:bg-gold transition-colors font-bold">A-</button>
+              <div className="flex gap-4">
+                 <button 
+                  onClick={handleAudioPlay}
+                  disabled={isAudioLoading || loading}
+                  className="p-4 bg-stone-900 text-gold rounded-2xl shadow-xl flex items-center gap-3 hover:bg-sacred hover:text-white transition-all disabled:opacity-50"
+                 >
+                    {isAudioLoading ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Icons.Audio className="w-5 h-5" />}
+                    <span className="text-[10px] font-black uppercase tracking-widest">Ouvir Capítulo</span>
+                 </button>
+                 <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+                    <button onClick={() => setFontSize(f => Math.min(f + 0.1, 2))} className="p-3 text-stone-500 hover:text-gold transition-colors font-bold">A+</button>
+                    <button onClick={() => setFontSize(f => Math.max(f - 0.1, 0.8))} className="p-3 text-stone-500 hover:text-gold transition-colors font-bold">A-</button>
+                 </div>
               </div>
            </header>
 
@@ -132,17 +178,12 @@ const Bible: React.FC = () => {
            ) : (
              <div className="space-y-10" style={{ fontSize: `${fontSize}rem` }}>
                 {verses.map(v => (
-                  <div key={`${v.book}-${v.chapter}-${v.verse}`} className="flex gap-6 group">
+                  <div key={`${selectedBook.id}-${selectedChapter}-${v.verse}`} className="flex gap-6 group">
                      <span className="text-gold font-black font-serif text-sm mt-1.5 opacity-40 group-hover:opacity-100 transition-opacity">{v.verse}</span>
                      <div className="space-y-4 flex-1">
                         <p className="font-serif leading-[1.8] text-stone-800 dark:text-stone-200 text-justify">{v.text}</p>
                         <div className="opacity-0 group-hover:opacity-100 transition-all flex items-center gap-3">
-                           <button 
-                            onClick={() => window.dispatchEvent(new CustomEvent('cathedra-open-ai-study', { detail: { topic: `Exegese de ${selectedBook.name} ${selectedChapter}:${v.verse}` } }))} 
-                            className="text-[9px] font-black uppercase text-sacred border-b border-sacred/20 pb-0.5"
-                           >
-                             Análise IA
-                           </button>
+                           <button onClick={() => window.dispatchEvent(new CustomEvent('cathedra-open-ai-study', { detail: { topic: `Exegese de ${selectedBook.name} ${selectedChapter}:${v.verse}` } }))} className="text-[9px] font-black uppercase text-sacred border-b border-sacred/20 pb-0.5">Análise IA</button>
                            <ActionButtons itemId={`bible_${selectedBook.id}_${selectedChapter}_${v.verse}`} type="verse" title={`${selectedBook.name} ${selectedChapter}:${v.verse}`} content={v.text} className="scale-75" />
                         </div>
                      </div>

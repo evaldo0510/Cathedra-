@@ -27,37 +27,26 @@ if (document.readyState === 'loading') {
   startApp();
 }
 
-// Registro otimizado do Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .then(reg => {
-        console.log('Cathedra SW ativo:', reg.scope);
+        console.log('Cathedra SW v15 ativo');
         
-        // Verifica atualizações a cada 5 minutos
-        setInterval(() => { reg.update(); }, 1000 * 60 * 5);
-
         reg.onupdatefound = () => {
           const installingWorker = reg.installing;
           if (installingWorker) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                window.dispatchEvent(new CustomEvent('pwa-update-available'));
+                // Notifica a UI ou força recarga se necessário
+                if (confirm("Uma nova versão do Santuário está disponível. Atualizar agora?")) {
+                   window.location.reload();
+                }
               }
             };
           }
         };
       })
-      .catch(err => {
-        console.warn('Falha ao registrar SW. O modo offline pode estar limitado:', err);
-      });
-  });
-
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
-    }
+      .catch(err => console.warn('SW Fail:', err));
   });
 }

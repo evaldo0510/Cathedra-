@@ -1,10 +1,10 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Version: 14.0.0 - Production Safe
+ * Version: 15.0.0 - Extreme Deployment Stability
  */
 
-const CACHE_NAME = 'cathedra-v14';
+const CACHE_NAME = 'cathedra-v15';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -33,7 +33,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // NUNCA CACHEAR CHAMADAS DE API DO GOOGLE/GEMINI
   if (url.hostname.includes('googleapis.com') || url.hostname.includes('generativelanguage')) {
     return;
   }
@@ -44,13 +43,11 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Cachear apenas ativos estáticos de sucesso
         if (!response || response.status !== 200 || response.type !== 'basic') return response;
         const cloned = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
         return response;
       }).catch(() => {
-        // Fallback para navegação offline
         if (event.request.mode === 'navigate') return caches.match('./index.html');
       });
     })
