@@ -1,130 +1,105 @@
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { Icons, Logo } from '../constants';
 import { AppRoute, User } from '../types';
-import { LangContext } from '../App';
 
 interface SidebarProps {
   currentPath: AppRoute;
   onNavigate: (p: AppRoute) => void;
   onClose?: () => void;
   user: User | null;
-  onLogout: () => void;
-  onOpenSearch: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user, onLogout, onOpenSearch }) => {
-  const { t, installPrompt, handleInstall } = useContext(LangContext);
-
-  const menuGroups = [
+const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, user }) => {
+  const sections = [
     {
-      title: 'Vida Litúrgica',
+      label: 'Formação',
       items: [
-        { name: 'Painel Principal', icon: Icons.Home, path: AppRoute.DASHBOARD },
-        { name: 'Bíblia Sagrada', icon: Icons.Book, path: AppRoute.BIBLE },
-        { name: 'Liturgia Diária', icon: Icons.History, path: AppRoute.DAILY_LITURGY },
-        { name: 'Missal Romano', icon: Icons.Cross, path: AppRoute.ORDO_MISSAE },
-        { name: 'Breviário (Horas)', icon: Icons.Audio, path: AppRoute.BREVIARY },
+        { label: 'Bíblia Sagrada', path: AppRoute.BIBLE, icon: <Icons.Book className="w-5 h-5" /> },
+        { label: 'Catecismo (CIC)', path: AppRoute.CATECHISM, icon: <Icons.Cross className="w-5 h-5" /> },
+        { label: 'Trilhas de Estudo', path: AppRoute.TRILHAS, icon: <Icons.Layout className="w-5 h-5" /> },
+        { label: 'Magistério', path: AppRoute.MAGISTERIUM, icon: <Icons.Globe className="w-5 h-5" /> },
       ]
     },
     {
-      title: 'Depósito da Fé',
+      label: 'Recursos Pro',
       items: [
-        { name: 'Catecismo (CIC)', icon: Icons.Pin, path: AppRoute.CATECHISM },
-        { name: 'Magistério', icon: Icons.Globe, path: AppRoute.MAGISTERIUM },
-        { name: 'Dogmas e Verdades', icon: Icons.Star, path: AppRoute.DOGMAS },
-        { name: 'Suma Teológica', icon: Icons.Feather, path: AppRoute.AQUINAS_OPERA },
+        { label: 'Colloquium IA', path: AppRoute.STUDY_MODE, icon: <Icons.Feather className="w-5 h-5" /> },
+        { label: 'Suma Teológica', path: AppRoute.AQUINAS_OPERA, icon: <Icons.History className="w-5 h-5" /> },
+        { label: 'Certamen (Quiz)', path: AppRoute.CERTAMEN, icon: <Icons.Star className="w-5 h-5" /> },
       ]
     },
     {
-      title: 'Caminho Espiritual',
+      label: 'Conta',
       items: [
-        { name: 'Santo Rosário', icon: Icons.Star, path: AppRoute.ROSARY },
-        { name: 'Via Crucis', icon: Icons.Cross, path: AppRoute.VIA_CRUCIS },
-        { name: 'Lectio Divina', icon: Icons.Audio, path: AppRoute.LECTIO_DIVINA },
-        { name: 'Confissão (Exame)', icon: Icons.Search, path: AppRoute.POENITENTIA },
-        { name: 'Tesouro de Orações', icon: Icons.Heart, path: AppRoute.PRAYERS },
+        { label: 'Meu Perfil', path: AppRoute.PROFILE, icon: <Icons.Users className="w-5 h-5" /> },
+        { label: 'Favoritos', path: AppRoute.FAVORITES, icon: <Icons.Heart className="w-5 h-5" /> },
       ]
     }
   ];
 
-  const handleNavigation = (route: AppRoute) => {
-    onNavigate(route);
+  const handleNav = (path: AppRoute) => {
+    onNavigate(path);
     if (onClose) onClose();
   };
 
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-
   return (
-    <aside className="h-full bg-stone-950 text-white flex flex-col p-6 shadow-4xl border-r border-white/5 z-50 overflow-hidden relative">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.015] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
-
-      <div className="mb-8 flex flex-col items-center justify-center pt-8 text-center cursor-pointer" onClick={() => handleNavigation(AppRoute.DASHBOARD)}>
-        <Logo className="w-16 h-16 mb-4 transition-all duration-1000 hover:scale-110" />
-        <h1 className="text-2xl font-serif font-bold text-gold tracking-widest leading-none">CATHEDRA</h1>
-        <p className="text-[7px] uppercase tracking-[0.5em] text-white/30 font-black mt-2">Santuário de Inteligência Teológica</p>
+    <aside className="h-full w-80 bg-pro-main border-r border-pro-border flex flex-col p-6 overflow-hidden">
+      <div className="mb-10 px-2 flex items-center gap-3 cursor-pointer group" onClick={() => handleNav(AppRoute.DASHBOARD)}>
+        <Logo className="w-9 h-9" />
+        <div>
+          <h1 className="text-lg font-black tracking-tight text-pro-accent leading-none uppercase">CATHEDRA</h1>
+          <p className="text-[8px] font-black uppercase text-gold tracking-widest mt-1">Digital Sanctuarium</p>
+        </div>
       </div>
 
-      <nav className="flex-1 space-y-8 overflow-y-auto no-scrollbar pb-10">
-        {menuGroups.map((group, gIdx) => (
-          <div key={gIdx} className="space-y-3">
-            <h3 className="px-4 text-[7px] font-black uppercase tracking-[0.4em] text-gold/40">{group.title}</h3>
-            <div className="space-y-0.5">
-              {group.items.map(item => {
-                const isActive = currentPath === item.path;
-                return (
-                  <button 
-                    key={item.name}
-                    onClick={() => handleNavigation(item.path)}
-                    className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all ${
-                      isActive ? 'bg-white/10 border border-gold/30 shadow-lg text-gold' : 'hover:bg-white/5 border border-transparent text-stone-400'
-                    }`}
+      <nav className="flex-1 space-y-8 overflow-y-auto custom-scrollbar pb-10">
+        {sections.map((section) => (
+          <div key={section.label}>
+            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-pro-muted mb-4 px-4">
+              {section.label}
+            </h3>
+            <ul className="space-y-1">
+              {section.items.map((item) => (
+                <li key={item.path}>
+                  <button
+                    onClick={() => handleNav(item.path)}
+                    className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all
+                      ${currentPath === item.path 
+                        ? 'bg-pro-accent text-white shadow-lg' 
+                        : 'text-pro-muted hover:bg-pro-soft hover:text-pro-accent'}`}
                   >
-                    <item.icon className={`w-4 h-4 ${isActive ? 'text-gold' : 'text-stone-600'}`} />
-                    <span className={`text-[10px] font-bold tracking-widest uppercase ${isActive ? 'text-white' : ''}`}>{item.name}</span>
+                    <span className="opacity-70">{item.icon}</span>
+                    <span className="tracking-tight">{item.label}</span>
+                    {currentPath === item.path && <div className="ml-auto w-1 h-1 rounded-full bg-gold" />}
                   </button>
-                );
-              })}
-            </div>
+                </li>
+              ))}
+            </ul>
           </div>
         ))}
-
-        <div className="space-y-3">
-           <h3 className="px-4 text-[7px] font-black uppercase tracking-[0.4em] text-gold/40">Institucional</h3>
-           <button 
-             onClick={() => handleNavigation(AppRoute.ABOUT)}
-             className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all ${
-               currentPath === AppRoute.ABOUT ? 'bg-white/10 border border-gold/30 text-gold' : 'hover:bg-white/5 text-stone-400'
-             }`}
-           >
-             <Icons.Globe className="w-4 h-4" />
-             <span className="text-[10px] font-bold tracking-widest uppercase">Manifesto e Propósito</span>
-           </button>
-        </div>
       </nav>
 
-      <div className="pt-6 border-t border-white/5 space-y-4">
-        {installPrompt && !isStandalone && (
-          <button 
-            onClick={handleInstall}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-sacred/20 border border-sacred/40 text-white rounded-xl font-black uppercase text-[8px] tracking-[0.2em] animate-pulse-soft hover:bg-sacred/30 transition-all"
-          >
-            <Icons.Globe className="w-4 h-4 text-gold" />
-            <span>Baixar App (PWA)</span>
-          </button>
-        )}
-
+      <div className="pt-6 border-t border-pro-border">
         {user ? (
-          <button onClick={() => handleNavigation(AppRoute.PROFILE)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all">
-            <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold text-sm">{user.name.charAt(0)}</div>
-            <div className="text-left truncate flex-1">
-              <p className="text-[10px] font-bold">{user.name}</p>
-              <p className="text-[7px] text-gold/60 uppercase font-black">Membro Scholar</p>
+          <button 
+            onClick={() => handleNav(AppRoute.PROFILE)}
+            className="w-full flex items-center gap-3 p-3 bg-pro-soft rounded-2xl hover:border-gold border border-transparent transition-all"
+          >
+            <div className="w-10 h-10 rounded-xl bg-pro-accent flex items-center justify-center text-white font-black shadow-sm">
+              {user.name.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-bold truncate text-pro-accent">{user.name}</p>
+              <p className="text-[8px] uppercase text-gold font-black tracking-widest">Scholar</p>
             </div>
           </button>
         ) : (
-          <button onClick={() => handleNavigation(AppRoute.LOGIN)} className="w-full py-4 bg-gold text-stone-900 rounded-xl font-black uppercase text-[9px] tracking-widest shadow-xl active:scale-95 transition-transform">
-            Acessar Cátedra
+          <button 
+            onClick={() => handleNav(AppRoute.LOGIN)}
+            className="w-full py-4 bg-pro-accent text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-gold transition-all"
+          >
+            Acessar Conta
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Icons } from '../constants';
 import { User, StudyResult } from '../types';
 import { LangContext } from '../App';
+import Progress from '../components/Progress';
 
 interface ProfileProps {
   user: User;
@@ -51,18 +52,23 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
             </div>
           </div>
 
-          <div className="text-center md:text-left space-y-4">
+          <div className="text-center md:text-left space-y-6 flex-1">
              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                 <h2 className="text-5xl font-serif font-bold text-stone-900 dark:text-stone-100">{user.name}</h2>
                 <span className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${user.isPremium ? 'bg-[#d4af37] text-stone-900' : 'bg-stone-200 text-stone-500'}`}>
                   {user.role === 'scholar' || user.isPremium ? 'Membro Scholar' : 'Peregrino'}
                 </span>
              </div>
-             <p className="text-stone-400 font-serif italic text-2xl">{user.email}</p>
+             
+             {/* NOVO: Barra de progresso integrada ao cabeçalho do perfil */}
+             <div className="max-w-md">
+                <Progress percent={user.progress.level * 15} label="Progresso na Trilha Catequética" />
+             </div>
+             
              <p className="text-[10px] text-stone-300 font-black uppercase tracking-[0.4em]">Membro desde {new Date(user.joinedAt).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
           </div>
           
-          <div className="md:ml-auto flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
              {!user.isPremium && (
                <button 
                  onClick={onNavigateCheckout}
@@ -81,7 +87,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
         </div>
       </header>
 
-      {/* App Preferences & Notifications Section */}
+      {/* Preferências e Notificações */}
       <section className="bg-white dark:bg-stone-900 p-12 rounded-[4rem] border border-stone-100 dark:border-stone-800 shadow-xl space-y-10">
         <h3 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 border-b border-stone-50 dark:border-stone-800 pb-6 flex items-center gap-4">
           <Icons.Globe className="w-6 h-6 text-[#d4af37]" />
@@ -127,9 +133,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
                  </button>
                )}
              </div>
-             <p className="text-xs font-serif italic text-stone-500 leading-relaxed">
-               O Cathedra Digital está otimizado para funcionar mesmo sem internet. Ao instalar, o santuário fica guardado permanentemente em seu aparelho.
-             </p>
           </div>
         </div>
       </section>
@@ -151,41 +154,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, onSelectStudy, onNavi
            </div>
          ))}
       </section>
-
-      <section className="space-y-10">
-        <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-8">
-           <h3 className="text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 tracking-tight">Memorial de Estudos</h3>
-           <Icons.History className="w-8 h-8 text-[#d4af37]/40" />
-        </div>
-
-        {history.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-8">
-            {history.map((study, idx) => (
-              <button 
-                key={idx}
-                onClick={() => onSelectStudy(study)}
-                className="bg-white dark:bg-stone-900 p-12 rounded-[3.5rem] border border-stone-100 dark:border-stone-800 shadow-xl text-left group hover:border-[#d4af37] transition-all relative overflow-hidden"
-              >
-                 <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37]/5 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
-                 <div className="relative z-10 space-y-4">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#d4af37]">Quaestio Disputata</span>
-                    <h4 className="text-3xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-[#8b0000] transition-colors">{study.topic}</h4>
-                    <p className="text-stone-400 font-serif italic text-lg line-clamp-2 leading-relaxed">"{study.summary}"</p>
-                 </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="py-32 bg-stone-50 dark:bg-stone-900/50 rounded-[5rem] border-2 border-dashed border-stone-200 dark:border-stone-800 text-center space-y-6">
-             <Icons.History className="w-20 h-20 text-stone-200 dark:text-stone-800 mx-auto" />
-             <h4 className="text-2xl font-serif italic text-stone-300 dark:text-stone-600">Nenhum estudo registrado em sua biblioteca privada.</h4>
-          </div>
-        )}
-      </section>
-
-      <footer className="text-center pt-24 border-t border-stone-100 dark:border-stone-800">
-         <p className="text-[11px] font-black uppercase tracking-[0.8em] text-stone-200 dark:text-stone-800">Ex Umbris Et Imaginibus In Veritatem</p>
-      </footer>
     </div>
   );
 };

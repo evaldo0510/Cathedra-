@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Icons } from '../constants';
 import { getMagisteriumDeepDive } from '../services/gemini';
-import { getDocsByCategory, getMagisteriumCategories } from '../services/magisteriumLocal';
+import { magisteriumService } from '../services/magisteriumService';
 import { LangContext } from '../App';
 import { MagisteriumDoc } from '../types';
 
@@ -23,17 +23,34 @@ const CATEGORIES = [
 const Magisterium: React.FC = () => {
   const { lang } = useContext(LangContext);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].label);
-  const [docs, setDocs] = useState<MagisteriumDoc[]>(getDocsByCategory(CATEGORIES[0].label));
+  const [docs, setDocs] = useState<MagisteriumDoc[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
   
   const [selectedDoc, setSelectedDoc] = useState<MagisteriumDoc | null>(null);
   const [deepDive, setDeepDive] = useState<DeepDiveData | null>(null);
   const [loadingDeepDive, setLoadingDeepDive] = useState(false);
 
+  const loadCategory = useCallback(async (category: string) => {
+    setLoadingDocs(true);
+    try {
+      const data = await magisteriumService.getDocuments(category);
+      setDocs(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategory(CATEGORIES[0].label);
+  }, [loadCategory]);
+
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
-    setDocs(getDocsByCategory(category)); // Carregamento instantâneo nativo
     setSelectedDoc(null);
     setDeepDive(null);
+    loadCategory(category);
   };
 
   const handleDeepDive = async (doc: MagisteriumDoc) => {
@@ -47,7 +64,6 @@ const Magisterium: React.FC = () => {
     }, 100);
 
     try {
-      // Aqui a IA atua na sua função permitida: O que disseram / Analogia
       const data = await getMagisteriumDeepDive(doc.title, lang);
       setDeepDive(data);
     } catch (e) {
@@ -87,29 +103,36 @@ const Magisterium: React.FC = () => {
         ))}
       </nav>
 
-      <section className="grid md:grid-cols-2 gap-8">
-        {docs.map((doc, i) => (
-          <article 
-            key={i} 
-            className={`p-10 rounded-[3.5rem] border-2 transition-all duration-500 group relative overflow-hidden flex flex-col justify-between ${selectedDoc?.title === doc.title ? 'bg-gold/5 border-gold shadow-2xl' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold hover:shadow-xl'}`}
-          >
-            <div className="space-y-6 relative z-10">
-               <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gold/60">{doc.source} • {doc.year}</span>
-                  <Icons.Feather className="w-8 h-8 text-gold/20" />
-               </div>
-               <h3 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-gold transition-colors">{doc.title}</h3>
-               <p className="text-lg font-serif italic text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-3">"{doc.summary}"</p>
-            </div>
-            <button 
-              onClick={() => handleDeepDive(doc)}
-              className="mt-10 px-8 py-4 bg-stone-50 dark:bg-stone-800 text-stone-400 group-hover:bg-gold group-hover:text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all self-start flex items-center gap-2"
+      {loadingDocs ? (
+        <div className="py-24 text-center space-y-4">
+           <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto" />
+           <p className="text-xl font-serif italic text-stone-400">Abrindo os arquivos do Vaticano...</p>
+        </div>
+      ) : (
+        <section className="grid md:grid-cols-2 gap-8">
+          {docs.map((doc, i) => (
+            <article 
+              key={i} 
+              className={`p-10 rounded-[3.5rem] border-2 transition-all duration-500 group relative overflow-hidden flex flex-col justify-between ${selectedDoc?.title === doc.title ? 'bg-gold/5 border-gold shadow-2xl' : 'bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 hover:border-gold hover:shadow-xl'}`}
             >
-              <Icons.Search className="w-4 h-4" /> Investigação Profunda IA
-            </button>
-          </article>
-        ))}
-      </section>
+              <div className="space-y-6 relative z-10">
+                 <div className="flex justify-between items-start">
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gold/60">{doc.source} • {doc.year}</span>
+                    <Icons.Feather className="w-8 h-8 text-gold/20" />
+                 </div>
+                 <h3 className="text-3xl md:text-4xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-gold transition-colors">{doc.title}</h3>
+                 <p className="text-lg font-serif italic text-stone-500 dark:text-stone-400 leading-relaxed line-clamp-3">"{doc.summary}"</p>
+              </div>
+              <button 
+                onClick={() => handleDeepDive(doc)}
+                className="mt-10 px-8 py-4 bg-stone-50 dark:bg-stone-800 text-stone-400 group-hover:bg-gold group-hover:text-stone-900 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all self-start flex items-center gap-2"
+              >
+                <Icons.Search className="w-4 h-4" /> Investigação Profunda IA
+              </button>
+            </article>
+          ))}
+        </section>
+      )}
 
       <div id="deep-dive-section" className="scroll-mt-32 min-h-[400px]">
         {loadingDeepDive && (

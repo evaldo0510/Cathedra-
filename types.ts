@@ -28,7 +28,30 @@ export enum AppRoute {
   BREVIARY = '/breviary',
   FAVORITES = '/favorites',
   DIAGNOSTICS = '/diagnostics',
-  ABOUT = '/about'
+  ABOUT = '/about',
+  TRILHAS = '/trilhas'
+}
+
+export interface TrackStep {
+  type: 'biblia' | 'cic' | 'documento' | 'video' | 'quiz';
+  ref: string;
+  label?: string;
+}
+
+export interface TrackModule {
+  id: string;
+  title: string;
+  content: TrackStep[];
+}
+
+export interface LearningTrack {
+  id: string;
+  title: string;
+  description: string;
+  level: 'Iniciante' | 'Intermediário' | 'Avançado';
+  modules: TrackModule[];
+  icon?: string;
+  image?: string;
 }
 
 export interface ReadingProgress {

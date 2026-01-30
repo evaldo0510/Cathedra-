@@ -1,5 +1,8 @@
 
 import { CatechismParagraph } from "../types";
+import { getCatechismRangeFromCloud } from "./supabase";
+import { offlineStorage } from "./offlineStorage";
+import { fetchCatechismRange } from "./gemini";
 
 export const CIC_PARTS = [
   { id: '1', title: 'A Profissão da Fé (Credo)', color: 'bg-sacred', range: [1, 1065] },
@@ -8,7 +11,6 @@ export const CIC_PARTS = [
   { id: '4', title: 'A Oração Cristã (Pai Nosso)', color: 'bg-stone-800', range: [2558, 2865] }
 ];
 
-// Mapeamento detalhado da estrutura oficial para navegação profissional
 export const CIC_STRUCTURE: Record<string, any[]> = {
   "1": [
     { id: "1.1", title: "O Homem é capaz de Deus", chapters: [{ name: "O desejo de Deus", start: 27, end: 30 }, { name: "Caminhos do conhecimento", start: 31, end: 38 }] },
@@ -29,11 +31,45 @@ export const CIC_STRUCTURE: Record<string, any[]> = {
   ]
 };
 
-// Banco de dados simulado para performance (em produção seria um arquivo JSON externo)
-export function getParagraphLocal(num: number): CatechismParagraph {
-  return {
-    number: num,
-    content: `Conteúdo oficial do parágrafo ${num} do Catecismo da Igreja Católica. No produto final, este texto é carregado de uma base de dados local offline para garantir 100% de disponibilidade.`,
-    context: "Texto Integral do Magistério"
-  };
-}
+export const catechismService = {
+  /**
+   * Carrega parágrafos com hierarquia: IndexedDB -> Cloud SQL -> Gemini AI
+   */
+  async getParagraphs(start: number, end: number): Promise<CatechismParagraph[]> {
+    // 1. Tentar Offline (IndexedDB)
+    let cached: CatechismParagraph[] = [];
+    for (let i = start; i <= end; i++) {
+      const p = await offlineStorage.getContent(`cic-${i}`);
+      if (p) cached.push(p);
+    }
+
+    if (cached.length === (end - start + 1)) return cached;
+
+    // 2. Tentar Cloud SQL (Supabase)
+    try {
+      const cloudData = await getCatechismRangeFromCloud(start, end);
+      if (cloudData && cloudData.length > 0) {
+        const mapped: CatechismParagraph[] = cloudData.map(p => ({
+          number: p.paragraph_number,
+          content: p.text,
+          context: p.section || "Doutrina"
+        }));
+        
+        // Salvar novos dados localmente
+        for (const p of mapped) {
+          await offlineStorage.saveContent(`cic-${p.number}`, 'catechism', `CIC §${p.number}`, p);
+        }
+        return mapped;
+      }
+    } catch (e) {
+      console.warn("SQL Catechism fetch failed, falling back to AI.");
+    }
+
+    // 3. Fallback para Gemini AI
+    const fetched = await fetchCatechismRange(start, end);
+    for (const p of fetched) {
+      await offlineStorage.saveContent(`cic-${p.number}`, 'catechism', `CIC §${p.number}`, p);
+    }
+    return fetched;
+  }
+};

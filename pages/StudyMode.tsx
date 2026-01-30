@@ -1,8 +1,8 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Icons } from '../constants';
 import { StudyResult } from '../types';
-import { LangContext } from '../App';
+import Commentary from '../components/Commentary';
 
 const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string) => void }> = ({ data, onSearch }) => {
   const [query, setQuery] = useState('');
@@ -19,9 +19,6 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
   };
 
   const resetSearch = () => {
-    window.dispatchEvent(new CustomEvent('cathedra-open-ai-study', { detail: { topic: '' } }));
-    // Isso forçará o App a limpar o studyData e voltaremos ao estado inicial.
-    // Para efeito visual imediato, recarregamos o estado local se necessário.
     window.location.reload(); 
   };
 
@@ -73,9 +70,12 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
               <div className="relative z-10">
                 <span className="text-[11px] font-black uppercase tracking-[0.6em] text-gold mb-6 block">Symphonia Fidei • Síntese IA</span>
                 <h3 className="text-4xl md:text-7xl font-serif font-bold text-stone-900 dark:text-stone-100 leading-[1.1] mb-12">{data.topic}</h3>
-                <div className="p-10 md:p-16 bg-[#fcf8e8] dark:bg-stone-900/80 rounded-[4rem] border-l-[20px] border-gold shadow-inner">
-                  <p className="text-2xl md:text-4xl font-serif italic text-stone-800 dark:text-stone-100 leading-snug tracking-tight">"{data.summary}"</p>
-                </div>
+                
+                <Commentary 
+                  source="Symphonia Fidei (Inteligência Teológica)"
+                  content={data.summary}
+                  className="bg-white/50 dark:bg-stone-900/50"
+                />
               </div>
           </section>
 
@@ -85,7 +85,7 @@ const StudyMode: React.FC<{ data?: StudyResult | null, onSearch: (topic: string)
                {data.bibleVerses?.map((v, i) => (
                  <article key={i} className="p-10 bg-white dark:bg-stone-900 rounded-[3rem] border border-stone-100 dark:border-stone-800 shadow-xl group hover:border-gold transition-colors">
                     <p className="text-[10px] font-black text-sacred uppercase tracking-widest mb-4">{v.book} {v.chapter}:{v.verse}</p>
-                    <p className="text-xl md:text-2xl font-serif italic text-stone-700 dark:text-stone-300 leading-relaxed">"{v.text}"</p>
+                    <p className="text-xl md:text-2xl font-serif text-stone-700 dark:text-stone-300 leading-relaxed">"{v.text}"</p>
                  </article>
                ))}
             </div>

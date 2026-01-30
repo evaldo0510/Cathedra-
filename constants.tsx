@@ -8,34 +8,34 @@ export const COLORS = {
   background: '#fdfcf8', 
 };
 
-// Novo Logo Cátedra - Heráldica Monumental v2
+// Novo Logo Cátedra - Heráldica Monumental v3 - Totalmente Vetorial
 export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12" }) => (
   <div className={`relative flex items-center justify-center group ${className}`}>
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       {/* Círculo de Glória */}
       <circle cx="50" cy="50" r="48" fill="#1a1a1a" />
-      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="1" strokeDasharray="2 2" className="opacity-40" />
+      <circle cx="50" cy="50" r="44" stroke="#d4af37" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.5" />
       
       {/* Estrutura da Cátedra (Trono) */}
       <path 
-        d="M30 75V35C30 29.4772 34.4772 25 40 25H60C65.5228 25 70 29.4772 70 35V75" 
+        d="M32 72V38C32 33.5817 35.5817 30 40 30H60C64.4183 30 68 33.5817 68 38V72" 
         stroke="#d4af37" 
-        strokeWidth="6" 
+        strokeWidth="5" 
         strokeLinecap="round" 
       />
       
       {/* Base do Altar */}
       <path 
-        d="M25 75H75L80 85H20L25 75Z" 
+        d="M25 72H75L82 82H18L25 72Z" 
         fill="#d4af37" 
       />
       
       {/* Cruz Central (Luz do Mundo) */}
-      <path d="M50 35V65" stroke="#d4af37" strokeWidth="6" strokeLinecap="round" />
-      <path d="M40 48H60" stroke="#d4af37" strokeWidth="6" strokeLinecap="round" />
+      <path d="M50 38V62" stroke="#d4af37" strokeWidth="5" strokeLinecap="round" />
+      <path d="M42 48H58" stroke="#d4af37" strokeWidth="5" strokeLinecap="round" />
       
-      {/* Pontos de Revelação */}
-      <circle cx="50" cy="15" r="3" fill="#d4af37" className="animate-pulse" />
+      {/* Ponto de Revelação */}
+      <circle cx="50" cy="18" r="2.5" fill="#d4af37" />
     </svg>
   </div>
 );
@@ -43,8 +43,8 @@ export const Logo: React.FC<{ className?: string }> = ({ className = "w-12 h-12"
 export const MobileLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
   <div className={`relative flex items-center justify-center ${className}`}>
     <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <circle cx="50" cy="50" r="45" stroke="#d4af37" strokeWidth="8" />
-      <path d="M50 25V75M30 50H70" stroke="#d4af37" strokeWidth="12" strokeLinecap="round" />
+      <circle cx="50" cy="50" r="42" stroke="#d4af37" strokeWidth="6" fill="#1a1a1a" />
+      <path d="M50 28V72M35 50H65" stroke="#d4af37" strokeWidth="10" strokeLinecap="round" />
     </svg>
   </div>
 );

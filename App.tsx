@@ -27,6 +27,9 @@ import LectioDivina from './pages/LectioDivina';
 import Dogmas from './pages/Dogmas';
 import Prayers from './pages/Prayers';
 import About from './pages/About';
+import Tracks from './pages/Tracks';
+import Reader from './components/Reader';
+import ContentCard from './components/ContentCard';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
 import { AppRoute, StudyResult, User, Language } from './types';
@@ -63,6 +66,9 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   
+  // Parâmetros de navegação profunda
+  const [deepNav, setDeepNav] = useState<{ book?: string, chapter?: number, para?: number } | null>(null);
+
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('cathedra_user');
@@ -113,6 +119,16 @@ const App: React.FC = () => {
     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
 
+  const handleDeepNavigateBible = (book: string, chapter: number) => {
+    setDeepNav({ book, chapter });
+    navigateTo(AppRoute.BIBLE);
+  };
+
+  const handleDeepNavigateCIC = (para: number) => {
+    setDeepNav({ para });
+    navigateTo(AppRoute.CATECHISM);
+  };
+
   const goBack = useCallback(() => {
     if (routeHistory.length > 0) {
       const prev = routeHistory[routeHistory.length - 1];
@@ -139,8 +155,8 @@ const App: React.FC = () => {
     switch (route) {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
-      case AppRoute.BIBLE: return <Bible />;
-      case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} />;
+      case AppRoute.BIBLE: return <Bible initialBook={deepNav?.book} initialChapter={deepNav?.chapter} />;
+      case AppRoute.CATECHISM: return <Catechism onDeepDive={handleSearch} initialPara={deepNav?.para} />;
       case AppRoute.SAINTS: return <Saints />;
       case AppRoute.MAGISTERIUM: return <Magisterium />;
       case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
@@ -159,11 +175,12 @@ const App: React.FC = () => {
       case AppRoute.DOGMAS: return <Dogmas />;
       case AppRoute.PRAYERS: return <Prayers />;
       case AppRoute.ABOUT: return <About />;
+      case AppRoute.TRILHAS: return <Tracks onNavigateBible={handleDeepNavigateBible} onNavigateCIC={handleDeepNavigateCIC} userId={user?.id} />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => setUser(null)} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
       case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
       default: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
     }
-  }, [route, user, lang, handleSearch, studyData, navigateTo]);
+  }, [route, user, lang, handleSearch, studyData, navigateTo, deepNav]);
 
   if (loading) return null;
 
@@ -176,7 +193,7 @@ const App: React.FC = () => {
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
           <div className={`relative h-full w-80 transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} onLogout={() => setUser(null)} onOpenSearch={() => setIsOmnisearchOpen(true)} />
+            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} />
           </div>
         </div>
         
@@ -208,11 +225,14 @@ const App: React.FC = () => {
              </div>
           </header>
 
-          <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto page-enter">
-            {content}
-          </div>
+          {/* Wrapper de Conteúdo Principal */}
+          <div className="flex-1 flex flex-col w-full">
+            <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto page-enter">
+              {content}
+            </div>
 
-          <Footer onNavigate={navigateTo} />
+            <Footer onNavigate={navigateTo} />
+          </div>
           
           <button 
             onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}

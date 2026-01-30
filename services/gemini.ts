@@ -16,23 +16,19 @@ const safeJsonParse = (text: string | undefined, fallback: any) => {
 };
 
 /**
- * MOTOR DE ÁUDIO BÍBLICO PROFISSIONAL
- * Gera o áudio integral do capítulo + Pequeno trecho de meditação
+ * MOTOR DE ÁUDIO BÍBLICO (TTS)
+ * Gera narração de alta qualidade com tom solene para o mercado católico.
  */
-export const generateBibleAudio = async (text: string, includeReflection: boolean = true): Promise<string> => {
+export const generateBibleAudio = async (text: string): Promise<string> => {
   const ai = getAI();
-  const prompt = includeReflection 
-    ? `Leia solenemente este capítulo da Bíblia: ${text}. Ao final, adicione uma breve frase de 10 segundos incentivando a oração.`
-    : `Leia solenemente este capítulo da Bíblia: ${text}`;
-
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ parts: [{ text: `Leia solenemente com o tom de um clérigo experiente: ${text}` }] }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' }, // Tom equilibrado entre autoridade e doçura
+          prebuiltVoiceConfig: { voiceName: 'Kore' }, 
         },
       },
     },
@@ -46,9 +42,9 @@ export const fetchBibleChapter = async (book: string, chapter: number): Promise<
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Retorne o texto INTEGRAL (ipsis litteris) de ${book}, capítulo ${chapter}. JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": number, "text": "string"}]`,
+    contents: `Retorne o texto INTEGRAL de ${book}, capítulo ${chapter}. JSON: [{"book": "${book}", "chapter": ${chapter}, "verse": number, "text": "string"}]`,
     config: { 
-      tools: [{ googleSearch: {} }],
+      // Removed googleSearch tool as it can prevent valid JSON response format per guidelines
       responseMimeType: "application/json"
     }
   });
@@ -69,7 +65,7 @@ export const getThomisticSynthesis = async (query: string): Promise<any> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Questão teológica: "${query}". Estilo escolástico. JSON: { "title": "string", "objections": ["string"], "sedContra": "string", "respondeo": "string", "replies": ["string"] }`,
+    contents: `Investigação escolástica: "${query}". JSON: { "title": "string", "objections": ["string"], "sedContra": "string", "respondeo": "string", "replies": ["string"] }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, { title: query, objections: [], sedContra: "", respondeo: "", replies: [] });
@@ -80,16 +76,19 @@ export const getCatenaAureaCommentary = async (verse: Verse): Promise<any> => {
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: `Catena Aurea para ${verse.book} ${verse.chapter}:${verse.verse}. JSON: { "content": "string", "fathers": ["string"] }`,
-    config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+    config: { 
+      // Removed googleSearch tool as it can prevent valid JSON response format per guidelines
+      responseMimeType: "application/json" 
+    }
   });
-  return safeJsonParse(response.text, { content: "Sem comentários no momento.", fathers: [] });
+  return safeJsonParse(response.text, { content: "Indisponível.", fathers: [] });
 };
 
 export const universalSearch = async (query: string, lang: Language): Promise<UniversalSearchResult[]> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Busca católica: "${query}". JSON: Array<{ id: string, type: string, title: string, snippet: string, source: { name: string, code: string }, relevance: number }>`,
+    contents: `Busca universal católica: "${query}". JSON: Array<{ id: string, type: string, title: string, snippet: string, source: { name: string, code: string }, relevance: number }>`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, []);
@@ -99,7 +98,7 @@ export const getIntelligentStudy = async (topic: string, lang: Language = 'pt'):
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Investigação profunda sobre: "${topic}". Conecte Escritura, CIC e Magistério. JSON: { "topic": "string", "summary": "string", "bibleVerses": [], "catechismParagraphs": [], "magisteriumDocs": [], "saintsQuotes": [] }`,
+    contents: `Investigação profunda: "${topic}". JSON: { "topic": "string", "summary": "string", "bibleVerses": [], "catechismParagraphs": [], "magisteriumDocs": [], "saintsQuotes": [] }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, { topic, summary: "Erro.", bibleVerses: [], catechismParagraphs: [] });
@@ -109,8 +108,11 @@ export const fetchLatestPapalAudience = async (lang: Language): Promise<any> => 
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Resumo da última audiência papal. JSON: { "date": "string", "topic": "string", "summary": "string", "vaticanUrl": "string" }`,
-    config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+    contents: `Resumo audiência papal. JSON: { "date": "string", "topic": "string", "summary": "string", "vaticanUrl": "string" }`,
+    config: { 
+      // Removed googleSearch tool as it can prevent valid JSON response format per guidelines
+      responseMimeType: "application/json" 
+    }
   });
   return safeJsonParse(response.text, {});
 };
@@ -129,7 +131,7 @@ export const getLectioPoints = async (text: string): Promise<string[]> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `3 pontos de meditação para Lectio Divina: "${text}". JSON: Array<string>`,
+    contents: `3 pontos de Lectio Divina: "${text}". JSON: Array<string>`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, []);
@@ -139,17 +141,30 @@ export const getDailyGospel = async (): Promise<Gospel> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Evangelho católico de hoje. JSON: { "reference": "string", "text": "string" }`,
-    config: { tools: [{ googleSearch: {} }], responseMimeType: "application/json" }
+    contents: `Evangelho de hoje. JSON: { "reference": "string", "text": "string" }`,
+    config: { 
+      // Removed googleSearch tool as it can prevent valid JSON response format per guidelines
+      responseMimeType: "application/json" 
+    }
   });
   return safeJsonParse(response.text, { reference: "", text: "" });
+};
+
+export const getDogmas = async (query: string): Promise<Dogma[]> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Dogmas sobre: "${query}". JSON: Array<{ title: string, definition: string, council: string, year: string, tags: string[], period: string }>`,
+    config: { responseMimeType: "application/json" }
+  });
+  return safeJsonParse(response.text, []);
 };
 
 export const fetchMonthlyCalendar = async (m: number, y: number, l: Language): Promise<LiturgyInfo[]> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Calendário litúrgico católico ${m}/${y}. JSON: Array<{ "date": "string", "color": "string", "dayName": "string", "rank": "string" }>`,
+    contents: `Calendário católico ${m}/${y}. JSON: Array<{ "date": "string", "color": "string", "dayName": "string", "rank": "string" }>`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, []);
@@ -159,7 +174,7 @@ export const fetchBreviaryHour = async (h: string, l: Language): Promise<any> =>
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Ofício das Horas: ${h}. JSON: { "hourName": "string", "invitatory": "string", "hymn": "string", "psalms": [], "prayer": "string" }`,
+    contents: `Breviário: ${h}. JSON: { "hourName": "string", "invitatory": "string", "hymn": "string", "psalms": [], "prayer": "string" }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, {});
@@ -179,7 +194,7 @@ export const getMoralDiscernment = async (i: string, l: Language): Promise<any> 
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Análise moral católica: "${i}". JSON: { "gravity": "string", "explanation": "string", "cicRef": "string" }`,
+    contents: `Moral: "${i}". JSON: { "gravity": "string", "explanation": "string", "cicRef": "string" }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, {});
@@ -189,7 +204,7 @@ export const fetchLitanies = async (t: string, l: Language): Promise<any> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Ladainha católica: ${t}. JSON: { "title": "string", "items": [] }`,
+    contents: `Ladainha: ${t}. JSON: { "title": "string", "items": [] }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, { title: t, items: [] });
@@ -199,7 +214,7 @@ export const getMagisteriumDeepDive = async (title: string, lang: Language): Pro
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Analise o documento magisterial: "${title}". JSON: { "historicalContext": "string", "corePoints": [], "modernApplication": "string", "relatedCatechism": [] }`,
+    contents: `Documento: "${title}". JSON: { "historicalContext": "string", "corePoints": [], "modernApplication": "string", "relatedCatechism": [] }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, {});
@@ -209,27 +224,17 @@ export const searchSaint = async (name: string): Promise<Partial<Saint>> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Dados biográficos e hagiográficos: ${name}. JSON: { "biography": "string", "quote": "string" }`,
+    contents: `Santo: ${name}. JSON: { "biography": "string", "quote": "string" }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, {});
-};
-
-export const getDogmas = async (query: string): Promise<Dogma[]> => {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: `Liste dogmas católicos sobre: "${query}". JSON: Array<{ title: string, definition: string, council: string, year: string, tags: string[], period: string }>`,
-    config: { responseMimeType: "application/json" }
-  });
-  return safeJsonParse(response.text, []);
 };
 
 export const getDailyBundle = async (lang: Language): Promise<any> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Santo e Evangelho do dia. JSON: { "saint": { "name": "string" }, "gospel": { "reference": "string" } }`,
+    contents: `Hoje: santo e evangelho. JSON: { "saint": { "name": "string" }, "gospel": { "reference": "string" } }`,
     config: { responseMimeType: "application/json" }
   });
   return safeJsonParse(response.text, { saint: { name: "Santo do Dia" }, gospel: { reference: "" } });
