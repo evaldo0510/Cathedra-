@@ -8,12 +8,18 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const referenceLinks = [
+  const vaticanLinks = [
     { title: 'Santa Sé (Vaticano)', url: 'https://www.vatican.va' },
-    { title: 'Catecismo da Igreja', url: 'https://www.vatican.va/archive/ccc/index_po.htm' },
-    { title: 'Summa Theologiæ (EN)', url: 'https://www.newadvent.org/summa/' },
-    { title: 'Nova Vulgata Latina', url: 'https://www.vatican.va/archive/bible/nova_vulgata/documents/nova-vulgata_index_lt.html' },
-    { title: 'CNBB Brasil', url: 'https://www.cnbb.org.br' }
+    { title: 'Vatican News', url: 'https://www.vaticannews.va' },
+    { title: 'L\'Osservatore Romano', url: 'https://www.osservatoreromano.va' },
+    { title: 'Catecismo Oficial', url: 'https://www.vatican.va/archive/ccc/index_po.htm' }
+  ];
+
+  const formationLinks = [
+    { title: 'Corpus Thomisticum', url: 'https://www.corpusthomisticum.org/' },
+    { title: 'New Advent (Summa)', url: 'https://www.newadvent.org/summa/' },
+    { title: 'ACI Digital', url: 'https://www.acidigital.com' },
+    { title: 'Liturgia das Horas', url: 'https://www.liturgiadashoras.org' }
   ];
 
   const scrollToTop = () => {
@@ -37,27 +43,43 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <p className="text-xs font-serif italic text-stone-500 leading-relaxed max-w-xs">
               "Ex Umbris Et Imaginibus In Veritatem." <br />
-              Tecnologia a serviço da formação teológica e espiritual do fiel moderno, em fidelidade absoluta ao Magistério.
+              Um apostolado digital dedicado à preservação e ensino do Depósito da Fé através da inteligência teológica avançada.
             </p>
+            <div className="flex gap-4 opacity-50">
+               <div className="px-3 py-1 border border-white/20 rounded-full text-[7px] font-black uppercase tracking-tighter">SSL Secure</div>
+               <div className="px-3 py-1 border border-white/20 rounded-full text-[7px] font-black uppercase tracking-tighter">Offline Ready</div>
+            </div>
           </div>
 
           <div className="space-y-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-gold pl-4">Mapa do Estudo</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-gold pl-4">Acesso Direto</h4>
             <nav className="flex flex-col gap-3">
-              <button onClick={() => onNavigate(AppRoute.BIBLE)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px]">Bíblia Sagrada</button>
-              <button onClick={() => onNavigate(AppRoute.CATECHISM)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px]">Catecismo Oficial</button>
-              <button onClick={() => onNavigate(AppRoute.MAGISTERIUM)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px]">Magistério Vivo</button>
-              <button onClick={() => onNavigate(AppRoute.SAINTS)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px]">Vidas dos Santos</button>
-              <button onClick={() => onNavigate(AppRoute.ABOUT)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px]">Manifesto</button>
+              {[
+                { n: 'Bíblia Sagrada', r: AppRoute.BIBLE },
+                { n: 'Catecismo da Igreja', r: AppRoute.CATECHISM },
+                { n: 'Suma Teológica', r: AppRoute.AQUINAS_OPERA },
+                { n: 'Liturgia Diária', r: AppRoute.DAILY_LITURGY },
+                { n: 'Investigação IA', r: AppRoute.STUDY_MODE },
+                { n: 'Certamen (Quiz)', r: AppRoute.CERTAMEN }
+              ].map(item => (
+                <button key={item.n} onClick={() => onNavigate(item.r)} className="text-left text-sm hover:text-gold transition-colors uppercase font-bold tracking-tighter text-[11px] opacity-80 hover:opacity-100">{item.n}</button>
+              ))}
             </nav>
           </div>
 
           <div className="space-y-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-sacred pl-4">Fontes Primárias</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-sacred pl-4">Fontes da Tradição</h4>
             <nav className="flex flex-col gap-3">
-              {referenceLinks.map((link, idx) => (
+              {vaticanLinks.map((link, idx) => (
                 <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2 group">
                   <span className="font-bold text-[11px] tracking-tighter uppercase">{link.title}</span>
+                  <Icons.ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              ))}
+              <div className="h-px w-10 bg-white/10 my-2" />
+              {formationLinks.map((link, idx) => (
+                <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="text-sm hover:text-gold transition-colors flex items-center gap-2 group">
+                  <span className="font-bold text-[11px] tracking-tighter uppercase opacity-60">{link.title}</span>
                   <Icons.ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </a>
               ))}
@@ -65,13 +87,17 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
 
           <div className="space-y-8">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-emerald-500 pl-4">Apoio Pastoral</h4>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-white border-l-2 border-emerald-500 pl-4">Comunidade</h4>
             <div className="p-6 bg-white/5 border border-white/10 rounded-2xl text-center space-y-4">
-              <Icons.Globe className="w-8 h-8 text-gold mx-auto opacity-30" />
+              <Icons.Users className="w-8 h-8 text-gold mx-auto opacity-30" />
               <p className="text-[10px] italic text-stone-500 leading-relaxed">
-                Este projeto é um apostolado digital independente. Deseja apoiar nossa infraestrutura?
+                Este projeto é sustentado por Membros Scholars. Deseja apoiar nossa infraestrutura de IA?
               </p>
-              <button onClick={() => onNavigate(AppRoute.CHECKOUT)} className="text-gold font-black uppercase text-[9px] hover:underline">Saiba como ajudar</button>
+              <button onClick={() => onNavigate(AppRoute.CHECKOUT)} className="w-full py-3 bg-gold/10 hover:bg-gold text-gold hover:text-stone-900 border border-gold/30 rounded-xl font-black uppercase text-[9px] transition-all">Seja um Apoiador</button>
+            </div>
+            <div className="flex flex-col gap-1 text-[9px] font-bold text-stone-600">
+               <p>CONTATO: suporte@cathedra.digital</p>
+               <p>CNBB REGIONAL SUL • PARCEIRO PASTORAL</p>
             </div>
           </div>
         </div>
@@ -82,7 +108,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               © {new Date().getFullYear()} CATHEDRA DIGITAL • AD MAIOREM DEI GLORIAM
             </p>
             <p className="text-[8px] text-stone-800 font-black uppercase tracking-widest">
-              Santuário de Inteligência Teológica • v3.0 Production Ready
+              Desenvolvido para uso Eclesial e Acadêmico • v3.5 Production Build
             </p>
           </div>
           <button onClick={scrollToTop} className="p-4 rounded-full bg-white/5 border border-white/10 hover:border-gold/50 shadow-xl transition-all group">
