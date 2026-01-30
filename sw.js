@@ -1,10 +1,10 @@
 
 /**
  * Cathedra Digital - Service Worker Pro
- * Version: 15.0.0 - Extreme Deployment Stability
+ * Version: 16.0.0 - Cache Invalidation Force
  */
 
-const CACHE_NAME = 'cathedra-v15';
+const CACHE_NAME = 'cathedra-v16';
 const STATIC_ASSETS = [
   './',
   './index.html',

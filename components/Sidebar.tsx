@@ -19,12 +19,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate, onClose, use
         { label: 'Catecismo (CIC)', path: AppRoute.CATECHISM, icon: <Icons.Cross className="w-5 h-5" /> },
         { label: 'Trilhas de Estudo', path: AppRoute.TRILHAS, icon: <Icons.Layout className="w-5 h-5" /> },
         { label: 'Magistério', path: AppRoute.MAGISTERIUM, icon: <Icons.Globe className="w-5 h-5" /> },
+        { label: 'O Manifesto', path: AppRoute.ABOUT, icon: <Icons.Feather className="w-5 h-5" /> },
       ]
     },
     {
       label: 'Recursos Pro',
       items: [
-        { label: 'Colloquium IA', path: AppRoute.STUDY_MODE, icon: <Icons.Feather className="w-5 h-5" /> },
+        { label: 'Colloquium IA', path: AppRoute.STUDY_MODE, icon: <Icons.Search className="w-5 h-5" /> },
         { label: 'Suma Teológica', path: AppRoute.AQUINAS_OPERA, icon: <Icons.History className="w-5 h-5" /> },
         { label: 'Certamen (Quiz)', path: AppRoute.CERTAMEN, icon: <Icons.Star className="w-5 h-5" /> },
       ]

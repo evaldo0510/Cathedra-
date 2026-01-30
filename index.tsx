@@ -31,14 +31,13 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .then(reg => {
-        console.log('Cathedra SW v15 ativo');
+        console.log('Cathedra SW v16 ativo');
         
         reg.onupdatefound = () => {
           const installingWorker = reg.installing;
           if (installingWorker) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Notifica a UI ou força recarga se necessário
                 if (confirm("Uma nova versão do Santuário está disponível. Atualizar agora?")) {
                    window.location.reload();
                 }
