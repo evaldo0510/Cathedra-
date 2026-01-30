@@ -13,10 +13,7 @@ import AquinasOpera from './pages/AquinasOpera';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
-import Poenitentia from './pages/Poenitentia';
-import OrdoMissae from './pages/OrdoMissae';
-import Rosary from './pages/Rosary';
-import Litanies from './pages/Litanies';
+import Admin from './pages/Admin';
 import Certamen from './pages/Certamen';
 import Diagnostics from './pages/Diagnostics';
 import Favorites from './pages/Favorites';
@@ -28,10 +25,12 @@ import Dogmas from './pages/Dogmas';
 import Prayers from './pages/Prayers';
 import About from './pages/About';
 import Tracks from './pages/Tracks';
-import Reader from './components/Reader';
-import ContentCard from './components/ContentCard';
 import OfflineIndicator from './components/OfflineIndicator';
 import CommandCenter from './components/CommandCenter';
+import BibleModal from './components/BibleModal';
+import DocumentsModal from './components/DocumentsModal';
+import CatechismModal from './components/CatechismModal';
+import PersonalPrayerModal from './components/PersonalPrayerModal';
 import { AppRoute, StudyResult, User, Language } from './types';
 import { getIntelligentStudy } from './services/gemini';
 import { Icons, Logo } from './constants';
@@ -43,30 +42,25 @@ interface LanguageContextType {
   lang: Language;
   setLang: (l: Language) => void;
   t: (key: string) => string;
-  installPrompt: any;
-  handleInstall: () => void;
 }
 
 export const LangContext = createContext<LanguageContextType>({
   lang: 'pt',
   setLang: () => {},
-  t: (k) => k,
-  installPrompt: null,
-  handleInstall: () => {}
+  t: (k) => k
 });
 
 const App: React.FC = () => {
   const [lang, setLangState] = useState<Language>(() => (localStorage.getItem('cathedra_lang') as Language) || 'pt');
-  const [loading, setLoading] = useState(true);
   const [route, setRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [routeHistory, setRouteHistory] = useState<AppRoute[]>([]);
   const [studyData, setStudyData] = useState<StudyResult | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isOmnisearchOpen, setIsOmnisearchOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  
-  // Parâmetros de navegação profunda
+  const [isBibleModalOpen, setIsBibleModalOpen] = useState(false);
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
+  const [isCatechismModalOpen, setIsCatechismModalOpen] = useState(false);
+  const [isPersonalPrayerOpen, setIsPersonalPrayerOpen] = useState(false);
   const [deepNav, setDeepNav] = useState<{ book?: string, chapter?: number, para?: number } | null>(null);
 
   const [user, setUser] = useState<User | null>(() => {
@@ -79,55 +73,23 @@ const App: React.FC = () => {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('cathedra_dark') === 'true');
   const connectivity = useOfflineMode();
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
-    setShowScrollTop(e.currentTarget.scrollTop > 400);
-  }, []);
-
   useEffect(() => {
     notificationService.initNotifications(lang);
     if (isDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-
-    const handleAIRequest = (e: any) => {
-      if (!user) { setRoute(AppRoute.LOGIN); return; }
-      handleSearch(e.detail.topic);
-    };
-
-    window.addEventListener('cathedra-open-ai-study', handleAIRequest);
-    window.addEventListener('beforeinstallprompt', (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    });
-
-    const timer = setTimeout(() => {
-      setLoading(false);
+    
+    // Auto-hiding splash screen
+    setTimeout(() => {
       window.dispatchEvent(new CustomEvent('cathedra-ready'));
-    }, 800);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('cathedra-open-ai-study', handleAIRequest);
-    };
-  }, [lang, isDark, user]);
+    }, 1000);
+  }, [isDark, lang]);
 
   const navigateTo = useCallback((r: AppRoute) => {
-    if (route !== r) {
-      setRouteHistory(prev => [...prev, route]);
-      setRoute(r);
-    }
+    setRouteHistory(prev => [...prev, route]);
+    setRoute(r);
     setIsSidebarOpen(false);
-    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [route]);
-
-  const handleDeepNavigateBible = (book: string, chapter: number) => {
-    setDeepNav({ book, chapter });
-    navigateTo(AppRoute.BIBLE);
-  };
-
-  const handleDeepNavigateCIC = (para: number) => {
-    setDeepNav({ para });
-    navigateTo(AppRoute.CATECHISM);
-  };
 
   const goBack = useCallback(() => {
     if (routeHistory.length > 0) {
@@ -152,6 +114,11 @@ const App: React.FC = () => {
   }, [lang]);
 
   const content = useMemo(() => {
+    // Restricted: Se for Admin Page e não for admin, volta pro Dashboard
+    if (route === (AppRoute as any).ADMIN && user?.role !== 'admin') {
+      return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
+    }
+
     switch (route) {
       case AppRoute.DASHBOARD: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
       case AppRoute.STUDY_MODE: return <StudyMode data={studyData} onSearch={handleSearch} />;
@@ -161,47 +128,46 @@ const App: React.FC = () => {
       case AppRoute.MAGISTERIUM: return <Magisterium />;
       case AppRoute.DAILY_LITURGY: return <DailyLiturgy />;
       case AppRoute.AQUINAS_OPERA: return <AquinasOpera />;
-      case AppRoute.ORDO_MISSAE: return <OrdoMissae />;
-      case AppRoute.ROSARY: return <Rosary />;
-      case AppRoute.POENITENTIA: return <Poenitentia />;
-      case AppRoute.LITANIES: return <Litanies />;
       case AppRoute.CERTAMEN: return <Certamen />;
-      case AppRoute.FAVORITES: return <Favorites />;
-      case AppRoute.DIAGNOSTICS: return <Diagnostics />;
-      case AppRoute.BREVIARY: return <Breviary />;
       case AppRoute.MISSAL: return <Missal />;
-      case AppRoute.VIA_CRUCIS: return <ViaCrucis />;
-      case AppRoute.LECTIO_DIVINA: return <LectioDivina onNavigateDashboard={() => setRoute(AppRoute.DASHBOARD)} />;
-      case AppRoute.DOGMAS: return <Dogmas />;
-      case AppRoute.PRAYERS: return <Prayers />;
-      case AppRoute.ABOUT: return <About />;
-      case AppRoute.TRILHAS: return <Tracks onNavigateBible={handleDeepNavigateBible} onNavigateCIC={handleDeepNavigateCIC} userId={user?.id} />;
+      case AppRoute.FAVORITES: return <Favorites />;
       case AppRoute.PROFILE: return user ? <Profile user={user} onLogout={() => setUser(null)} onSelectStudy={(s) => { setStudyData(s); setRoute(AppRoute.STUDY_MODE); }} onNavigateCheckout={() => setRoute(AppRoute.CHECKOUT)} /> : <Login onLogin={setUser} />;
-      case AppRoute.CHECKOUT: return <Checkout onBack={() => setRoute(AppRoute.DASHBOARD)} />;
+      case (AppRoute as any).ADMIN: return <Admin />;
       default: return <Dashboard onSearch={handleSearch} user={user} onNavigate={navigateTo} />;
     }
-  }, [route, user, lang, handleSearch, studyData, navigateTo, deepNav]);
-
-  if (loading) return null;
+  }, [route, user, handleSearch, studyData, deepNav, navigateTo]);
 
   return (
-    <LangContext.Provider value={{ lang, setLang: setLangState, t, installPrompt: deferredPrompt, handleInstall: () => deferredPrompt?.prompt() }}>
-      <div className="flex h-[100dvh] overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
+    <LangContext.Provider value={{ lang, setLang: setLangState, t }}>
+      <div className="flex h-screen overflow-hidden bg-[#fdfcf8] dark:bg-[#0c0a09]">
         <OfflineIndicator state={connectivity} />
         <CommandCenter isOpen={isOmnisearchOpen} onClose={() => setIsOmnisearchOpen(false)} onNavigate={navigateTo} onSearchSelection={handleSearch} />
+        <BibleModal isOpen={isBibleModalOpen} onClose={() => setIsBibleModalOpen(false)} onFullRead={(b, c) => { setDeepNav({book:b, chapter:c}); navigateTo(AppRoute.BIBLE); setIsBibleModalOpen(false); }} />
+        <DocumentsModal isOpen={isDocumentsModalOpen} onClose={() => setIsDocumentsModalOpen(false)} lang={lang} />
+        <CatechismModal isOpen={isCatechismModalOpen} onClose={() => setIsCatechismModalOpen(false)} onFullRead={(p) => { setDeepNav({para:p}); navigateTo(AppRoute.CATECHISM); setIsCatechismModalOpen(false); }} />
+        <PersonalPrayerModal isOpen={isPersonalPrayerOpen} onClose={() => setIsPersonalPrayerOpen(false)} />
 
         <div className={`fixed inset-0 z-[150] lg:relative lg:block transition-all ${isSidebarOpen ? 'opacity-100' : 'pointer-events-none lg:pointer-events-auto opacity-0 lg:opacity-100'}`}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
           <div className={`relative h-full w-80 transition-transform duration-500 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-            <Sidebar currentPath={route} onNavigate={navigateTo} onClose={() => setIsSidebarOpen(false)} user={user} />
+            <Sidebar 
+              currentPath={route} 
+              onNavigate={navigateTo} 
+              onOpenQuickBible={() => setIsBibleModalOpen(true)} 
+              onOpenQuickDocs={() => setIsDocumentsModalOpen(true)}
+              onOpenQuickCIC={() => setIsCatechismModalOpen(true)}
+              onOpenPersonalPrayer={() => setIsPersonalPrayerOpen(true)}
+              onClose={() => setIsSidebarOpen(false)} 
+              user={user} 
+            />
           </div>
         </div>
         
-        <main id="main-content" onScroll={handleScroll} className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar scroll-smooth">
-          <header className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140] shadow-sm">
+        <main id="main-content" className="flex-1 overflow-y-auto flex flex-col relative custom-scrollbar">
+          <header className="p-3 md:p-4 border-b border-stone-100 dark:border-white/5 bg-white/90 dark:bg-stone-900/95 backdrop-blur-2xl flex items-center justify-between sticky top-0 z-[140]">
              <div className="flex items-center gap-2">
                {route !== AppRoute.DASHBOARD ? (
-                 <button onClick={goBack} className="p-3 bg-stone-900 text-gold rounded-2xl flex items-center gap-2 pr-5 shadow-xl animate-in slide-in-from-left-4">
+                 <button onClick={goBack} className="p-3 bg-stone-900 text-gold rounded-2xl flex items-center gap-2 pr-5 shadow-xl">
                    <Icons.ArrowDown className="w-5 h-5 rotate-90" />
                    <span className="text-[10px] font-black uppercase tracking-widest">Voltar</span>
                  </button>
@@ -211,9 +177,9 @@ const App: React.FC = () => {
                  </button>
                )}
                {route === AppRoute.DASHBOARD && (
-                 <div className="flex items-center gap-3 ml-2">
+                 <div className="flex items-center gap-3 ml-2 cursor-pointer" onClick={() => navigateTo(AppRoute.DASHBOARD)}>
                     <Logo className="w-9 h-9" />
-                    <span className="text-sm font-serif font-black uppercase tracking-[0.2em] text-stone-900 dark:text-gold leading-none">Cathedra</span>
+                    <span className="text-sm font-serif font-black uppercase tracking-[0.2em] text-stone-900 dark:text-gold">Cathedra</span>
                  </div>
                )}
              </div>
@@ -225,21 +191,11 @@ const App: React.FC = () => {
              </div>
           </header>
 
-          {/* Wrapper de Conteúdo Principal */}
-          <div className="flex-1 flex flex-col w-full">
-            <div className="flex-1 px-4 md:px-12 py-8 w-full max-w-7xl mx-auto page-enter">
-              {content}
-            </div>
-
-            <Footer onNavigate={navigateTo} />
+          <div className="flex-1 p-4 md:p-12 w-full max-w-7xl mx-auto page-enter">
+            {content}
           </div>
-          
-          <button 
-            onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`fixed bottom-8 right-4 md:right-12 z-[250] p-5 bg-gold text-stone-900 rounded-full shadow-4xl transition-all duration-500 ${showScrollTop ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
-          >
-             <Icons.ArrowDown className="w-6 h-6 rotate-180" />
-          </button>
+
+          <Footer onNavigate={navigateTo} />
         </main>
       </div>
     </LangContext.Provider>

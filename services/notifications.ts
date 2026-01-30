@@ -41,7 +41,7 @@ export class NotificationService {
   private async sendWelcomeNotification() {
     await this.sendLocalNotification(
       "Santuário Ativado 🏛️",
-      "Que a luz de Cristo ilumine sua jornada. Você receberá a liturgia e o santo do dia aqui diariamente.",
+      "Bem-vindo ao Cathedra. O depósito da fé está agora ao alcance de seus dedos.",
       AppRoute.DASHBOARD
     );
   }
@@ -56,58 +56,31 @@ export class NotificationService {
       try {
         const bundle = await getDailyBundle(lang);
         const title = `Lumen Diei: ${bundle.saint.name} 🏛️`;
-        const body = `Hoje celebramos ${bundle.saint.name}. Liturgia: ${bundle.gospel.reference}. Toque para ler agora.`;
+        const body = `Celebramos hoje: ${bundle.saint.name}. Evangelho: ${bundle.gospel.reference}.`;
         
-        await this.sendLocalNotification(title, body, AppRoute.SAINTS, {
-          actions: [
-            { action: 'read-liturgy', title: 'Ler Liturgia' },
-            { action: 'see-saint', title: 'Ver Santo' }
-          ]
+        await this.sendLocalNotification(title, body, AppRoute.DAILY_LITURGY, {
+          data: { url: AppRoute.DAILY_LITURGY }
         });
         localStorage.setItem('cathedra_last_reminder_date', today);
       } catch (e) {
-        await this.sendLocalNotification(
-          "Cathedra: Alimento Espiritual",
-          "A liturgia e o santo do dia já estão disponíveis para sua meditação.",
-          AppRoute.DAILY_LITURGY
-        );
-        localStorage.setItem('cathedra_last_reminder_date', today);
+        // Fallback silencioso se a IA falhar
       }
     }
-
-    this.setupMidnightTimer(lang);
-  }
-
-  private setupMidnightTimer(lang: any) {
-    const now = new Date();
-    const midnight = new Date();
-    midnight.setHours(24, 0, 0, 0);
-    const msUntilMidnight = midnight.getTime() - now.getTime();
-    setTimeout(() => this.scheduleDailyReminder(lang), msUntilMidnight + 60000); 
   }
 
   public async sendLocalNotification(title: string, body: string, url: string = '/', extra: any = {}) {
     if (Notification.permission !== 'granted') return;
 
     if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        registration.showNotification(title, {
-          body,
-          icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png',
-          badge: 'https://img.icons8.com/ios-filled/96/d4af37/throne.png',
-          vibrate: [200, 100, 200],
-          tag: 'daily-liturgy',
-          renotify: true,
-          requireInteraction: true,
-          data: { url },
-          ...extra
-        } as any);
-      } catch (e) {
-        new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png' });
-      }
-    } else {
-      new Notification(title, { body, icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png' });
+      const registration = await navigator.serviceWorker.ready;
+      registration.showNotification(title, {
+        body,
+        icon: 'https://img.icons8.com/ios-filled/512/d4af37/throne.png',
+        badge: 'https://img.icons8.com/ios-filled/96/d4af37/throne.png',
+        vibrate: [200, 100, 200],
+        data: { url },
+        ...extra
+      });
     }
   }
 }
